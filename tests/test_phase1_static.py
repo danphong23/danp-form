@@ -41,6 +41,8 @@ def test_phase2_contract_symbols() -> None:
         "DANFORM_OT_select_control",
         "DANFORM_OT_delete_control",
         "_draw_control_overlay",
+        "controller_edit",
+        "bmesh.from_edit_mesh(controller.data)",
         "dan_form_overlay_enabled",
     ):
         assert symbol in source

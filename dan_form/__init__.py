@@ -899,16 +899,16 @@ def _overlay_mode(context: bpy.types.Context) -> str:
 
     The model view is Source-backed so users can see where controls live.  A
     controller in Object Mode is drawn from its own proxy mesh, which keeps
-    the colored line exactly on the editable control geometry.  Controller
-    Edit Mode already has Blender's selected mesh display, so drawing a
-    second Source overlay would only create a confusing duplicate.
+    the colored line exactly on the editable control geometry.  Controller Edit
+    uses the live controller BMesh so enabled control edges remain readable;
+    Blender's own native selection colors remain visible above that base layer.
     """
     source, controller = _context_source(context)
     active = context.view_layer.objects.active
     if source is None or controller is None or active is None:
         return "none"
     if active == controller:
-        return "controller_edit_hidden" if controller.mode == "EDIT" else "controller"
+        return "controller_edit" if controller.mode == "EDIT" else "controller"
     if active == source:
         return "source"
     return "none"
@@ -926,16 +926,37 @@ def _overlay_geometry(context, overlay_mode, source, controller):
     for control in _controls(source):
         point_ids.update(_control_intent(source, control)[1])
     selected_point_ids = _control_intent(source, selected_control)[1] if selected_control else set()
-    if overlay_mode == "controller":
+    if overlay_mode in {"controller", "controller_edit"}:
         mesh = controller.data
         vl = mesh.attributes.get(PROXY_VID_ATTR)
         el = mesh.attributes.get(PROXY_EID_ATTR)
         if vl is None or el is None:
             return {}
-        matrix = controller.matrix_world
-        positions = {int(item.value): matrix @ vert.co for item, vert in zip(vl.data, mesh.vertices)}
-        index_vids = [int(item.value) for item in vl.data]
-        edges = {int(item.value): tuple(index_vids[i] for i in edge.vertices) for item, edge in zip(el.data, mesh.edges)}
+        if overlay_mode == "controller_edit":
+            # Mesh datablock coordinates can lag behind an active Edit BMesh.
+            # Borrow this BMesh for one synchronous read and never retain it.
+            bm = bmesh.from_edit_mesh(controller.data)
+            bm.verts.ensure_lookup_table()
+            bm.edges.ensure_lookup_table()
+            proxy_vl = bm.verts.layers.int.get(PROXY_VID_ATTR)
+            proxy_el = bm.edges.layers.int.get(PROXY_EID_ATTR)
+            if proxy_vl is None or proxy_el is None:
+                return {}
+            matrix = controller.matrix_world
+            positions = {int(vertex[proxy_vl]): matrix @ vertex.co for vertex in bm.verts}
+            edges = {int(edge[proxy_el]): tuple(int(vertex[proxy_vl]) for vertex in edge.verts) for edge in bm.edges}
+            # Let Blender's native Edit selection color sit above the cyan
+            # enabled-control layer. Selected elements are omitted from the
+            # custom batch instead of being painted cyan a second time.
+            native_selected_edges = {int(edge[proxy_el]) for edge in bm.edges if edge.select}
+            native_selected_vertices = {int(vertex[proxy_vl]) for vertex in bm.verts if vertex.select}
+        else:
+            matrix = controller.matrix_world
+            positions = {int(item.value): matrix @ vert.co for item, vert in zip(vl.data, mesh.vertices)}
+            index_vids = [int(item.value) for item in vl.data]
+            edges = {int(item.value): tuple(index_vids[i] for i in edge.vertices) for item, edge in zip(el.data, mesh.edges)}
+            native_selected_edges = set()
+            native_selected_vertices = set()
         vertex_ids, edge_ids = list(positions), list(edges)
     else:
         vid_indices, _ = _source_id_maps(source)
@@ -949,11 +970,23 @@ def _overlay_geometry(context, overlay_mode, source, controller):
         vertices = _source_vertices(source)
         matrix = source.matrix_world
         positions = {vid: matrix @ vertices[vid_indices[vid]].co for vid in vertex_ids if vid in vid_indices}
+    # In Controller Edit, native Blender selection must remain the top visual
+    # authority.  Do not draw an orange duplicate over its selected wires.
+    selected_edges_for_overlay = set() if overlay_mode == "controller_edit" else selected_edges
+    selected_points_for_overlay = set() if overlay_mode == "controller_edit" else selected_point_ids & selected_vertices
+    enabled_edges_for_overlay = (
+        [edge_id for edge_id in edge_ids if edge_id not in native_selected_edges]
+        if overlay_mode == "controller_edit" else edge_ids
+    )
+    point_ids_for_overlay = (
+        point_ids - native_selected_vertices
+        if overlay_mode == "controller_edit" else point_ids
+    )
     return {
-        "edges": [positions[vid] for eid in edge_ids for vid in edges[eid] if vid in positions],
-        "selected_edges": [positions[vid] for eid in selected_edges if eid in edges for vid in edges[eid] if vid in positions],
-        "points": [positions[vid] for vid in point_ids if vid in positions],
-        "selected_points": [positions[vid] for vid in selected_point_ids & selected_vertices if vid in positions],
+        "edges": [positions[vid] for eid in enabled_edges_for_overlay for vid in edges[eid] if vid in positions],
+        "selected_edges": [positions[vid] for eid in selected_edges_for_overlay if eid in edges for vid in edges[eid] if vid in positions],
+        "points": [positions[vid] for vid in point_ids_for_overlay if vid in positions and overlay_mode != "controller_edit"],
+        "selected_points": [positions[vid] for vid in selected_points_for_overlay if vid in positions],
     }
 
 
@@ -981,7 +1014,7 @@ def _overlay_batches(context, overlay_mode, source, controller):
 
 
 def _draw_control_overlay() -> None:
-    """Draw cached buffers; controller Edit displays only Blender's own mesh."""
+    """Draw cached Source/Object or live Controller Edit control buffers."""
     try:
         import gpu
 
@@ -990,7 +1023,7 @@ def _draw_control_overlay() -> None:
         if not getattr(scene, "dan_form_overlay_enabled", True):
             return
         overlay_mode = _overlay_mode(context)
-        if overlay_mode in {"controller_edit_hidden", "none"}:
+        if overlay_mode == "none":
             return
         source, controller = _context_source(context)
         if source is None or controller is None or not source.get(SOURCE_UUID_KEY):

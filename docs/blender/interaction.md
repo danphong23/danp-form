@@ -36,9 +36,10 @@ explain this. Selection never implicitly reveals hidden geometry.
 A colored Source control overlay makes edges/points readable without altering Source
 materials or geometry. When the controller is selected in Object Mode, the same
 colored lines are read directly from the controller mesh, so they remain exactly on
-the editable proxy after a control change. In Controller Edit Mode the auxiliary
-overlay is suppressed because Blender's selected wire/vertex display is already the
-authoritative view; this prevents a second, confusing line from being drawn. Show
+the editable proxy after a control change. In Controller Edit Mode the overlay reads
+the live controller BMesh and paints every effective enabled edge cyan. Blender's
+native selected wire/vertex display remains authoritative for selection, so the addon
+does not paint a duplicate orange copy over selected elements. Show
 Overlay/X-Ray/Show Hidden are display-only and distinct from DANP Form Hide/Reveal;
 rare display/maintenance actions belong in the list menu.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
@@ -90,7 +91,8 @@ Hidden portions are not selectable deformation handles until revealed.
 The controller object is parented to Source, so object transforms follow Source.
 Control vertex edits are a separate action through DANP Form transactions. Source
 selection uses Source-backed lines; controller Object Mode uses controller-backed
-lines, while Controller Edit Mode shows only the actual editable wire geometry.
+lines, while Controller Edit Mode shows the actual editable wire geometry with the
+cyan enabled-control highlight from the live controller BMesh.
 
 Controller topology is fixed to the effective Source network. Moving existing
 points is allowed; adding, extruding, duplicating, deleting, dissolving, merging,

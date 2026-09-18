@@ -978,9 +978,10 @@ explain this. Selection never implicitly reveals hidden geometry.
 A colored Source control overlay makes edges/points readable without altering Source
 materials or geometry. When the controller is selected in Object Mode, the same
 colored lines are read directly from the controller mesh, so they remain exactly on
-the editable proxy after a control change. In Controller Edit Mode the auxiliary
-overlay is suppressed because Blender's selected wire/vertex display is already the
-authoritative view; this prevents a second, confusing line from being drawn. Show
+the editable proxy after a control change. In Controller Edit Mode the overlay reads
+the live controller BMesh and paints every effective enabled edge cyan. Blender's
+native selected wire/vertex display remains authoritative for selection, so the addon
+does not paint a duplicate orange copy over selected elements. Show
 Overlay/X-Ray/Show Hidden are display-only and distinct from DANP Form Hide/Reveal;
 rare display/maintenance actions belong in the list menu.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
@@ -1032,7 +1033,8 @@ Hidden portions are not selectable deformation handles until revealed.
 The controller object is parented to Source, so object transforms follow Source.
 Control vertex edits are a separate action through DANP Form transactions. Source
 selection uses Source-backed lines; controller Object Mode uses controller-backed
-lines, while Controller Edit Mode shows only the actual editable wire geometry.
+lines, while Controller Edit Mode shows the actual editable wire geometry with the
+cyan enabled-control highlight from the live controller BMesh.
 
 Controller topology is fixed to the effective Source network. Moving existing
 points is allowed; adding, extruding, duplicating, deleting, dissolving, merging,
@@ -2798,9 +2800,12 @@ The overlay retains its shader and position batches across idle redraw. Geometry
 events, proxy rebuild, model/controller context, canonical masks, selected UUID,
 Show Hidden and world transforms invalidate position data. Runtime refresh and
 unregister release caches. Width/X-Ray change drawing state and reuse buffers.
-Controller Edit returns before geometry/GPU access. Explicit point definitions
-keep visible point markers even when sharing a vertex with an edge control;
-edge endpoints no longer receive large auxiliary dots.
+Controller Edit reads the live controller BMesh once per invalidated frame and paints
+enabled proxy edges cyan. Native Blender selection remains the visual authority; the
+addon does not draw a duplicate orange selection. Explicit point definitions keep
+visible point markers in Source/Object overlays, while Controller Edit avoids dense
+endpoint dots. Idle Edit redraws reuse GPU buffers and controller geometry events
+invalidate them.
 
 ## Measurements
 
@@ -2824,12 +2829,12 @@ the proxy legitimately; those costs are distinct from idle redraw.
 
 ## Verification
 
-[Cache/display regression](../../tests/live_edit_performance.py) passed 28 checks
+[Cache/highlight regression](../../tests/live_edit_performance.py) passed 34 checks
 using a removable fixture in this same scene. Actual geometry events verified
 Source BMesh positions, proxy sync and GPU invalidation; idle calls retained buffer
 identity and never called the position builder. Coverage includes explicit point
 highlight, canonical shared-point hiding, Show Hidden without mask mutation,
-Reveal, object transforms, controller Object pose, Controller Edit suppression,
+Reveal, object transforms, controller Object pose, Controller Edit highlighting,
 and runtime cache refresh. Test controls and meshes were removed in `finally`.
 
 [Lifecycle regression](../../tests/live_controller_lifecycle.py) passed all 37
@@ -2838,7 +2843,7 @@ checks, including native topology edits/recovery and full removal. The existing
 [sidebar regression](../../tests/live_sidebar_regression.py) checks, with Source
 definitions/masks/coordinates and controller pose/selection restored. Another 34
 [segment/visibility checks](../../tests/live_control_segments.py) passed on removable
-crossing-lines and closed-loop fixtures. Final total: 133 checks, covering span stops,
+crossing-lines and closed-loop fixtures. Final total: 139 checks, covering span stops,
 additive selection, edge/node Hide intent, partial eyes, selective reveal, scoped keys
 and Hide/Show All even on an empty controller in Edit Mode.
 The user's Source and Cube topology, coordinates and transforms remained
@@ -2846,7 +2851,7 @@ unchanged; all original definitions survived.
 
 Computer Use selected the returned Blender window, focused the model viewport,
 entered Source Edit with Tab, clicked Edit Control and Back to Model. Screenshots
-confirmed Source Edit, actual controller Edit with no auxiliary colored layer,
+confirmed Source Edit, actual controller Edit with live cyan control highlighting,
 and return to Source Edit. The original model Object Mode and mesh selection were
 restored through MCP afterward. The full character was framed in the existing
 front orientation for review. This proves those UI transitions, not a measured

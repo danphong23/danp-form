@@ -7,7 +7,8 @@
 - Kept explicit point handles visible without drawing large dots over every edge endpoint.
 - Added Ctrl+Alt+Click junction-span selection (Shift adds), scoped H/Alt-H canonical partial Hide/Reveal and edge intent that retains shared junctions.
 - Changed Hide/Show Controls to canonical bulk visibility, synchronizing every list eye; see ADR-010. Overlay options remain display-only.
-- Passed 28 cache/display, 37 lifecycle/protection, 34 sidebar and 34 segment/visibility checks (133 total) in the existing open Blender file; Computer Use verified canonical H/Alt-H mask changes.
+- Controller Edit now reads the live controller BMesh and highlights all enabled proxy edges cyan while leaving Blender's native orange selection visible above it.
+- Passed 34 cache/highlight, 37 lifecycle/protection, 34 sidebar and 34 segment/visibility checks (139 total) in the existing open Blender file; Computer Use verified canonical H/Alt-H and Controller Edit readability.
 - Added front contour definitions to the user's live character without modifying its geometry; these are scene data, not an automatic silhouette addon feature. See the [performance and contour report](docs/testing/phase-02-edit-performance-report.md).
 
 ## 2026-09-18 — DANP Form 0.2.2 lifecycle and controller protection

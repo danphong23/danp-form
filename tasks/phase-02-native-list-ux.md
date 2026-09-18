@@ -9,10 +9,10 @@ Các checkbox rộng bên dưới vẫn là gate cần bằng chứng riêng, kh
       lặp lại trong effective network, UI projection và overlay.
 - [x] Đọc topology/ID/coordinates theo lô; cache union theo mapping và canonical masks.
 - [x] Giữ GPU buffers ở idle; invalidate theo geometry, context, masks, highlight,
-      transforms, runtime refresh; Controller Edit không vẽ lớp phụ.
+      transforms, runtime refresh; Controller Edit vẽ cyan từ BMesh sống.
 - [x] Chỉ thêm chấm cho explicit point handles, không chồng lên mọi edge endpoint.
-- [x] MCP: 28 cache/display + 37 lifecycle + 34 sidebar + 34 segment/visibility
-      checks; tổng 133, fixture được dọn.
+- [x] MCP: 34 cache/highlight + 37 lifecycle + 34 sidebar + 34 segment/visibility
+      checks; tổng 139, fixture được dọn.
 - [x] Ctrl+Alt+Click chọn span giữa giao điểm; Shift cộng selection; menu/F3/MCP
       dùng active/single edge hoặc canonical edge ID. Kiểm tra cả projection pick.
 - [x] H edge mode chỉ ẩn cạnh, giữ giao điểm của đường còn bật; vertex mode ẩn
@@ -51,7 +51,7 @@ Bằng chứng và ca NOT RUN: [báo cáo 0.2.2](../docs/testing/phase-02-contro
 - [x] 0.2.1: Hide/Show Controls từng là display-only (đã thay bằng ADR-010 ở 0.2.3);
       Edit Control / Back to Model nhớ mode.
 - [x] Overlay theo ngữ cảnh: Source-backed khi chọn model, controller-backed khi
-      chọn proxy Object Mode, và tắt lớp phụ trong Controller Edit Mode.
+      chọn proxy Object Mode, và highlight cyan trong Controller Edit Mode.
 - [x] Sync ghi membership mới, no-op giữ revision; active row giữ đúng UUID sau rebuild.
 - [x] MCP live regression 33 assertions và Computer Use click sidebar trên file đang mở.
 

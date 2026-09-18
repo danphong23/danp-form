@@ -111,7 +111,7 @@ def run():
 
         check(bpy.ops.dan_form.focus_controller() == {'FINISHED'}, 'Edit Control navigation')
         check(context.view_layer.objects.active == controller and controller.mode == 'EDIT', 'Edit Control enters proxy Edit Mode')
-        check(addon._overlay_mode(context) == 'controller_edit_hidden', 'Controller Edit suppresses duplicate overlay')
+        check(addon._overlay_mode(context) == 'controller_edit', 'Controller Edit uses live control overlay')
         context.tool_settings.mesh_select_mode = (True, False, False)
         scene.dan_form_control_index = 0
         expected_vertices, expected_edges = addon._control_effective(source, controls[0])

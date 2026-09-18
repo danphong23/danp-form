@@ -127,18 +127,39 @@ def run():
         check(any((p - changed).length < 1e-7 for p in geometry('controller')['edges']), 'controller Object overlay reads proxy pose directly')
         check(tuple(mesh.vertices[0].co) == tuple(original_co), 'controller pose does not deform Source in Phase 2')
         bpy.ops.object.mode_set(mode='EDIT')
-        check(addon._overlay_mode(ctx) == 'controller_edit_hidden', 'controller Edit hides auxiliary layer')
-        original_batches = addon._overlay_batches
-        accesses = []
-        def counted_batches(*args):
-            accesses.append(True)
-            return original_batches(*args)
-        addon._overlay_batches = counted_batches
-        try:
-            addon._draw_control_overlay()
-            check(not accesses, 'controller Edit draw skips geometry and GPU allocation')
-        finally:
-            addon._overlay_batches = original_batches
+        check(addon._overlay_mode(ctx) == 'controller_edit', 'controller Edit enables live control highlight')
+        edit_bm = bmesh.from_edit_mesh(controller.data)
+        for vertex in edit_bm.verts:
+            vertex.select = False
+        for edge in edit_bm.edges:
+            edge.select = False
+        bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+        edit_batches = batches('controller_edit')
+        edit_geometry = geometry('controller_edit')
+        edit_eid_layer = edit_bm.edges.layers.int.get(addon.PROXY_EID_ATTR)
+        selected_edit_edges = {int(edge[edit_eid_layer]) for edge in edit_bm.edges if edge.select}
+        effective_edge_count = len(addon._effective_proxy_elements(model)[1])
+        check(len(edit_geometry['edges']) == 2 * (effective_edge_count - len(selected_edit_edges)) and not edit_geometry['selected_edges'], 'controller Edit cyan base excludes native selected edges')
+        check(len(edit_geometry['edges']) + 2 * len(selected_edit_edges) == 2 * effective_edge_count, 'controller Edit cyan plus native selection covers every proxy edge')
+        check(batches('controller_edit') is edit_batches, 'controller Edit idle redraw retains GPU buffers')
+        bm = bmesh.from_edit_mesh(controller.data)
+        proxy_layer = bm.verts.layers.int.get(addon.PROXY_VID_ATTR)
+        live_vertex = next(vertex for vertex in bm.verts if int(vertex[proxy_layer]) == vid)
+        live_vertex.co.x += 0.15
+        bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+        ctx.view_layer.update()
+        refreshed_edit_batches = batches('controller_edit')
+        refreshed_edit_geometry = geometry('controller_edit')
+        check(refreshed_edit_batches is not edit_batches, 'controller Edit coordinate event invalidates buffers')
+        expected_live = controller.matrix_world @ live_vertex.co
+        check(any((point - expected_live).length < 1e-7 for point in refreshed_edit_geometry['edges']), 'controller Edit highlight reads live BMesh coordinates')
+        for edge in bm.edges:
+            edge.select = False
+        bm.edges[0].select = True
+        bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+        check(not geometry('controller_edit')['selected_edges'], 'native selection is not painted over by overlay')
+        addon._draw_control_overlay()
+        check(True, 'controller Edit draw path completes with live overlay')
         old_mapping = addon._MAPPING_CACHE.get(model.as_pointer())
         addon._refresh_runtime()
         check(not addon._OVERLAY_CACHE and addon._MAPPING_CACHE.get(model.as_pointer()) is not old_mapping, 'runtime refresh drops overlay and stale topology mapping')
