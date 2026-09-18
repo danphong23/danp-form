@@ -26,8 +26,13 @@ point intent; shared masks may change other overlapping entries. Display tooltip
 explain this. Selection never implicitly reveals hidden geometry.
 
 A colored Source control overlay makes edges/points readable without altering Source
-materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
-from DAN Form Hide/Reveal; rare display/maintenance actions belong in the list menu.
+materials or geometry. When the controller is selected in Object Mode, the same
+colored lines are read directly from the controller mesh, so they remain exactly on
+the editable proxy after a control change. In Controller Edit Mode the auxiliary
+overlay is suppressed because Blender's selected wire/vertex display is already the
+authoritative view; this prevents a second, confusing line from being drawn. Show
+Overlay/X-Ray/Show Hidden are display-only and distinct from DAN Form Hide/Reveal;
+rare display/maintenance actions belong in the list menu.
 The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
 up/down controls, and Sync below it in Edit Mode. Clicking a row immediately highlights
 its effective control geometry. In Source/controller Edit Mode it also replaces the
@@ -56,8 +61,9 @@ Loop selection excludes hidden portions. Enabled unselected geometry holds its p
 Hidden portions are not selectable deformation handles until revealed.
 
 The controller object is parented to Source, so object transforms follow Source.
-Control vertex edits are a separate action through DAN Form transactions. Wires
-remain Source-backed 3D geometry when selecting contours in front/side views.
+Control vertex edits are a separate action through DAN Form transactions. Source
+selection uses Source-backed lines; controller Object Mode uses controller-backed
+lines, while Controller Edit Mode shows only the actual editable wire geometry.
 
 Show Patches, including any per-patch color toggle, controls overlay display only.
 It never toggles patch deformation or removes Source faces from solve input.

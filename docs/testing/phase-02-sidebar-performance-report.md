@@ -30,8 +30,12 @@ and masks. Proxy sync runs for Source geometry changes and only updates changed
 coordinates. Load/undo/redo handlers invalidate projections and mapping caches.
 
 The active UIList callback immediately updates overlay highlight, including point
-controls. In Edit Mode it selects corresponding Source/proxy IDs. Edit Control enters
-controller Edit Mode; Back to Model restores the previous Source Object/Edit Mode.
+controls. In Edit Mode it selects corresponding Source/proxy IDs. The overlay now
+follows the active context: Source coordinates when the model is selected, current
+controller mesh coordinates in controller Object Mode, and no auxiliary overlay in
+Controller Edit Mode because Blender's actual selected proxy mesh is clearer.
+Edit Control enters controller Edit Mode; Back to Model restores the previous Source
+Object/Edit Mode.
 Hide/Show Controls changes controller/overlay display only, without rebuilding the
 proxy or changing canonical masks. Individual eyes retain canonical Hide/Reveal.
 
@@ -49,7 +53,7 @@ explicit reconciliation now keeps the row and UUID aligned.
 | Proxy sync, unchanged coordinates | 12.962 ms | 0.0334 ms |
 
 Individual eye operators averaged about 13–22 ms per operation across regression runs
-(latest installed reload: 22.402 ms), measured in three Hide/Reveal pairs per run.
+(latest installed reload: 15.277 ms), measured in three Hide/Reveal pairs per run.
 These are Python/operator measurements in this specific live session,
 not total interaction latency or FPS. Before samples included the old implementation
 and the duplicate handler state; after samples use one registered implementation.
@@ -58,11 +62,14 @@ Cold mapping rebuilds and changed list projections still perform actual work.
 ## Verification
 
 [Live regression](../../tests/live_sidebar_regression.py) ran through MCP in this
-session and passed 29 assertions:
+session and passed 33 assertions:
 
 - Idle graph events skip proxy sync; cached list rows stay allocated; read-only
   lookups never assign Source IDs or modify Source properties.
 - Object Mode row selection changes highlight without changing object/mode.
+- Model selection keeps Source-backed color lines; controller Object Mode switches
+  the overlay coordinate source to the proxy mesh; Controller Edit Mode suppresses
+  the duplicate auxiliary overlay.
 - Global display toggles hide/show controller, preserve masks and do not rebuild it.
 - Edit Control enters proxy Edit Mode; row selection selects effective proxy IDs;
   Back restores either prior Source Object Mode or Source Edit Mode.

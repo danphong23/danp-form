@@ -968,8 +968,13 @@ point intent; shared masks may change other overlapping entries. Display tooltip
 explain this. Selection never implicitly reveals hidden geometry.
 
 A colored Source control overlay makes edges/points readable without altering Source
-materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
-from DAN Form Hide/Reveal; rare display/maintenance actions belong in the list menu.
+materials or geometry. When the controller is selected in Object Mode, the same
+colored lines are read directly from the controller mesh, so they remain exactly on
+the editable proxy after a control change. In Controller Edit Mode the auxiliary
+overlay is suppressed because Blender's selected wire/vertex display is already the
+authoritative view; this prevents a second, confusing line from being drawn. Show
+Overlay/X-Ray/Show Hidden are display-only and distinct from DAN Form Hide/Reveal;
+rare display/maintenance actions belong in the list menu.
 The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
 up/down controls, and Sync below it in Edit Mode. Clicking a row immediately highlights
 its effective control geometry. In Source/controller Edit Mode it also replaces the
@@ -998,8 +1003,9 @@ Loop selection excludes hidden portions. Enabled unselected geometry holds its p
 Hidden portions are not selectable deformation handles until revealed.
 
 The controller object is parented to Source, so object transforms follow Source.
-Control vertex edits are a separate action through DAN Form transactions. Wires
-remain Source-backed 3D geometry when selecting contours in front/side views.
+Control vertex edits are a separate action through DAN Form transactions. Source
+selection uses Source-backed lines; controller Object Mode uses controller-backed
+lines, while Controller Edit Mode shows only the actual editable wire geometry.
 
 Show Patches, including any per-patch color toggle, controls overlay display only.
 It never toggles patch deformation or removes Source faces from solve input.
@@ -2412,7 +2418,10 @@ girl chibi 1
   trạng thái lỗi, giữ definitions/masks hiện có.
 - Không có khối Display/Maintenance. Edit Control / Back to Model và nút Hide/Show
   Controls nằm trên danh sách để điều hướng và đổi hiển thị viewport nhanh.
-  Overlay màu có mặc định dễ nhìn. Các lệnh hiếm như Reveal All, Hide Whole, tùy
+  Khi chọn model, overlay màu lấy Source làm mốc để người dùng biết control nằm ở
+  đâu. Khi chọn controller ở Object Mode, overlay đọc trực tiếp proxy mesh để đường
+  màu trùng với từng điểm đang chỉnh. Trong Controller Edit Mode, lớp overlay phụ
+  tắt để không chồng lên wire/vertex display thật của Blender. Các lệnh hiếm như Reveal All, Hide Whole, tùy
   chọn hiển thị và Remove Controller nằm trong menu ⋮; không thêm menu nhiều tầng.
 - Remove Controller khác −: chỉ bỏ object proxy và giữ định nghĩa trên Source;
   tooltip/menu phải nói rõ. Nếu xóa object đang edit thì rời object đó an toàn,
@@ -2551,8 +2560,12 @@ and masks. Proxy sync runs for Source geometry changes and only updates changed
 coordinates. Load/undo/redo handlers invalidate projections and mapping caches.
 
 The active UIList callback immediately updates overlay highlight, including point
-controls. In Edit Mode it selects corresponding Source/proxy IDs. Edit Control enters
-controller Edit Mode; Back to Model restores the previous Source Object/Edit Mode.
+controls. In Edit Mode it selects corresponding Source/proxy IDs. The overlay now
+follows the active context: Source coordinates when the model is selected, current
+controller mesh coordinates in controller Object Mode, and no auxiliary overlay in
+Controller Edit Mode because Blender's actual selected proxy mesh is clearer.
+Edit Control enters controller Edit Mode; Back to Model restores the previous Source
+Object/Edit Mode.
 Hide/Show Controls changes controller/overlay display only, without rebuilding the
 proxy or changing canonical masks. Individual eyes retain canonical Hide/Reveal.
 
@@ -2570,7 +2583,7 @@ explicit reconciliation now keeps the row and UUID aligned.
 | Proxy sync, unchanged coordinates | 12.962 ms | 0.0334 ms |
 
 Individual eye operators averaged about 13–22 ms per operation across regression runs
-(latest installed reload: 22.402 ms), measured in three Hide/Reveal pairs per run.
+(latest installed reload: 15.277 ms), measured in three Hide/Reveal pairs per run.
 These are Python/operator measurements in this specific live session,
 not total interaction latency or FPS. Before samples included the old implementation
 and the duplicate handler state; after samples use one registered implementation.
@@ -2579,11 +2592,14 @@ Cold mapping rebuilds and changed list projections still perform actual work.
 ## Verification
 
 [Live regression](../../tests/live_sidebar_regression.py) ran through MCP in this
-session and passed 29 assertions:
+session and passed 33 assertions:
 
 - Idle graph events skip proxy sync; cached list rows stay allocated; read-only
   lookups never assign Source IDs or modify Source properties.
 - Object Mode row selection changes highlight without changing object/mode.
+- Model selection keeps Source-backed color lines; controller Object Mode switches
+  the overlay coordinate source to the proxy mesh; Controller Edit Mode suppresses
+  the duplicate auxiliary overlay.
 - Global display toggles hide/show controller, preserve masks and do not rebuild it.
 - Edit Control enters proxy Edit Mode; row selection selects effective proxy IDs;
   Back restores either prior Source Object Mode or Source Edit Mode.

@@ -10,8 +10,10 @@ Các checkbox rộng bên dưới vẫn là gate cần bằng chứng riêng, kh
 - [x] Bỏ handler/overlay trùng khi nạp lại addon đang cài.
 - [x] Chọn dòng highlight tức thì ở Object; tự chọn Source/proxy IDs trong Edit.
 - [x] Hide/Show Controls là display-only; Edit Control / Back to Model nhớ mode.
+- [x] Overlay theo ngữ cảnh: Source-backed khi chọn model, controller-backed khi
+      chọn proxy Object Mode, và tắt lớp phụ trong Controller Edit Mode.
 - [x] Sync ghi membership mới, no-op giữ revision; active row giữ đúng UUID sau rebuild.
-- [x] MCP live regression 29 assertions và Computer Use click sidebar trên file đang mở.
+- [x] MCP live regression 33 assertions và Computer Use click sidebar trên file đang mở.
 
 Bằng chứng: [báo cáo 0.2.1](../docs/testing/phase-02-sidebar-performance-report.md).
 

@@ -760,8 +760,28 @@ def _overlay_source(context: bpy.types.Context) -> bpy.types.Object | None:
     return source
 
 
+def _overlay_mode(context: bpy.types.Context) -> str:
+    """Return the coordinate source used by the viewport color overlay.
+
+    The model view is Source-backed so users can see where controls live.  A
+    controller in Object Mode is drawn from its own proxy mesh, which keeps
+    the colored line exactly on the editable control geometry.  Controller
+    Edit Mode already has Blender's selected mesh display, so drawing a
+    second Source overlay would only create a confusing duplicate.
+    """
+    source, controller = _context_source(context)
+    active = context.view_layer.objects.active
+    if source is None or controller is None or active is None:
+        return "none"
+    if active == controller:
+        return "controller_edit_hidden" if controller.mode == "EDIT" else "controller"
+    if active == source:
+        return "source"
+    return "none"
+
+
 def _draw_control_overlay() -> None:
-    """Draw Source-backed controls without modifying Source mesh data."""
+    """Draw the contextual control overlay without modifying mesh data."""
     try:
         import gpu
         from gpu_extras.batch import batch_for_shader
@@ -770,40 +790,101 @@ def _draw_control_overlay() -> None:
         scene = context.scene
         if not getattr(scene, "dan_form_overlay_enabled", True):
             return
-        source = _overlay_source(context)
-        if source is None or source.type != "MESH" or not source.get(SOURCE_UUID_KEY) or source.get(VIEWPORT_HIDDEN_KEY, False):
+        overlay_mode = _overlay_mode(context)
+        # In Controller Edit Mode the actual proxy mesh is the authoritative
+        # display.  Suppressing this callback avoids a duplicate Source wire
+        # that can appear offset while the user moves proxy vertices.
+        if overlay_mode == "controller_edit_hidden" or overlay_mode == "none":
             return
-        vertex_ids, edge_ids = _effective_proxy_elements(source)
-        if getattr(scene, "dan_form_overlay_hidden", False):
-            _, all_edge_indices = _source_id_maps(source)
-            edge_ids = sorted({int(edge_id) for c in _controls(source) for edge_id in c.get("edge_ids", []) if int(edge_id) in all_edge_indices})
-            vertex_ids = sorted({int(vertex_id) for c in _controls(source) for vertex_id in c.get("vertex_ids", [])})
-            for edge_id in edge_ids:
-                edge = source.data.edges[all_edge_indices[edge_id]]
-                vertex_ids.extend(_source_vid(source, index) for index in edge.vertices)
-            vertex_ids = sorted(set(vertex_ids))
-        vid_to_index, eid_to_index = _source_id_maps(source)
-        edge_positions = []
-        for edge_id in edge_ids:
-            edge_index = eid_to_index.get(edge_id)
-            if edge_index is None:
-                continue
-            edge = source.data.edges[edge_index]
-            edge_positions.extend(
-                (source.matrix_world @ _source_co(source, index)) for index in edge.vertices
-            )
-        selected_positions = []
+        source, controller = _context_source(context)
+        if source is None or controller is None or source.type != "MESH" or not source.get(SOURCE_UUID_KEY):
+            return
+        if overlay_mode == "source" and (
+            source.get(VIEWPORT_HIDDEN_KEY, False)
+        ):
+            return
         selected_uuid = getattr(scene, "dan_form_selected_control", "")
         selected_control = _control(source, selected_uuid)
-        if selected_control:
-            _, selected_edges = _control_effective(source, selected_control)
-            for edge_id in selected_edges:
+
+        if overlay_mode == "controller":
+            # Controller Object Mode must use the current proxy coordinates,
+            # including edits made before returning to Object Mode.  Mapping
+            # only supplies selection colors; it never supplies positions.
+            proxy_mesh = controller.data
+            proxy_vid_attr = proxy_mesh.attributes.get(PROXY_VID_ATTR)
+            proxy_eid_attr = proxy_mesh.attributes.get(PROXY_EID_ATTR)
+            if proxy_vid_attr is None or proxy_eid_attr is None:
+                return
+            vid_to_index = {int(item.value): index for index, item in enumerate(proxy_vid_attr.data)}
+            eid_to_index = {int(item.value): index for index, item in enumerate(proxy_eid_attr.data)}
+            vertex_ids = list(vid_to_index)
+            edge_positions = []
+            for edge in proxy_mesh.edges:
+                edge_positions.extend(
+                    controller.matrix_world @ proxy_mesh.vertices[index].co
+                    for index in edge.vertices
+                )
+            selected_positions = []
+            selected_vertices = set()
+            if selected_control:
+                selected_vertices, selected_edges = _control_effective(source, selected_control)
+                for edge_id in selected_edges:
+                    edge_index = eid_to_index.get(edge_id)
+                    if edge_index is not None:
+                        selected_positions.extend(
+                            controller.matrix_world @ proxy_mesh.vertices[index].co
+                            for index in proxy_mesh.edges[edge_index].vertices
+                        )
+            standalone = [controller.matrix_world @ vertex.co for vertex in proxy_mesh.vertices]
+            selected_points = [
+                controller.matrix_world @ proxy_mesh.vertices[vid_to_index[vertex_id]].co
+                for vertex_id in selected_vertices
+                if vertex_id in vid_to_index
+            ]
+        else:
+            vertex_ids, edge_ids = _effective_proxy_elements(source)
+            if getattr(scene, "dan_form_overlay_hidden", False):
+                _, all_edge_indices = _source_id_maps(source)
+                edge_ids = sorted({int(edge_id) for c in _controls(source) for edge_id in c.get("edge_ids", []) if int(edge_id) in all_edge_indices})
+                vertex_ids = sorted({int(vertex_id) for c in _controls(source) for vertex_id in c.get("vertex_ids", [])})
+                for edge_id in edge_ids:
+                    edge = source.data.edges[all_edge_indices[edge_id]]
+                    vertex_ids.extend(_source_vid(source, index) for index in edge.vertices)
+                vertex_ids = sorted(set(vertex_ids))
+            vid_to_index, eid_to_index = _source_id_maps(source)
+            edge_positions = []
+            for edge_id in edge_ids:
                 edge_index = eid_to_index.get(edge_id)
-                if edge_index is not None:
-                    selected_positions.extend(
-                        (source.matrix_world @ _source_co(source, index))
-                        for index in source.data.edges[edge_index].vertices
-                    )
+                if edge_index is None:
+                    continue
+                edge = source.data.edges[edge_index]
+                edge_positions.extend(
+                    (source.matrix_world @ _source_co(source, index)) for index in edge.vertices
+                )
+            selected_positions = []
+            if selected_control:
+                _, selected_edges = _control_effective(source, selected_control)
+                for edge_id in selected_edges:
+                    edge_index = eid_to_index.get(edge_id)
+                    if edge_index is not None:
+                        selected_positions.extend(
+                            (source.matrix_world @ _source_co(source, index))
+                            for index in source.data.edges[edge_index].vertices
+                        )
+            standalone = []
+            for vertex_id in vertex_ids:
+                index = vid_to_index.get(vertex_id)
+                if index is not None:
+                    standalone.append(source.matrix_world @ _source_co(source, index))
+            selected_points = []
+            if selected_control:
+                selected_vertices, _ = _control_effective(source, selected_control)
+                selected_points = [
+                    source.matrix_world @ _source_co(source, vid_to_index[vertex_id])
+                    for vertex_id in selected_vertices
+                    if vertex_id in vid_to_index
+                ]
+
         shader = gpu.shader.from_builtin("UNIFORM_COLOR")
         if getattr(scene, "dan_form_overlay_xray", False):
             try:
@@ -822,26 +903,18 @@ def _draw_control_overlay() -> None:
             shader.uniform_float("color", (1.0, 0.45, 0.05, 1.0))
             gpu.state.line_width_set(float(getattr(scene, "dan_form_overlay_width", 3.0)) + 1.0)
             batch.draw(shader)
-        standalone = []
-        for vertex_id in vertex_ids:
-            index = vid_to_index.get(vertex_id)
-            if index is not None:
-                standalone.append(source.matrix_world @ _source_co(source, index))
         if standalone:
             batch = batch_for_shader(shader, "POINTS", {"pos": standalone})
             shader.bind()
             shader.uniform_float("color", (0.2, 1.0, 0.7, 1.0))
             gpu.state.point_size_set(6.0)
             batch.draw(shader)
-        if selected_control:
-            selected_vertices, _ = _control_effective(source, selected_control)
-            selected_points = [source.matrix_world @ _source_co(source, vid_to_index[vertex_id]) for vertex_id in selected_vertices if vertex_id in vid_to_index]
-            if selected_points:
-                batch = batch_for_shader(shader, "POINTS", {"pos": selected_points})
-                shader.bind()
-                shader.uniform_float("color", (1.0, 0.45, 0.05, 1.0))
-                gpu.state.point_size_set(8.0)
-                batch.draw(shader)
+        if selected_points:
+            batch = batch_for_shader(shader, "POINTS", {"pos": selected_points})
+            shader.bind()
+            shader.uniform_float("color", (1.0, 0.45, 0.05, 1.0))
+            gpu.state.point_size_set(8.0)
+            batch.draw(shader)
         if getattr(scene, "dan_form_overlay_xray", False):
             try:
                 gpu.state.depth_test_set("LESS_EQUAL")

@@ -47,7 +47,10 @@ girl chibi 1
   trạng thái lỗi, giữ definitions/masks hiện có.
 - Không có khối Display/Maintenance. Edit Control / Back to Model và nút Hide/Show
   Controls nằm trên danh sách để điều hướng và đổi hiển thị viewport nhanh.
-  Overlay màu có mặc định dễ nhìn. Các lệnh hiếm như Reveal All, Hide Whole, tùy
+  Khi chọn model, overlay màu lấy Source làm mốc để người dùng biết control nằm ở
+  đâu. Khi chọn controller ở Object Mode, overlay đọc trực tiếp proxy mesh để đường
+  màu trùng với từng điểm đang chỉnh. Trong Controller Edit Mode, lớp overlay phụ
+  tắt để không chồng lên wire/vertex display thật của Blender. Các lệnh hiếm như Reveal All, Hide Whole, tùy
   chọn hiển thị và Remove Controller nằm trong menu ⋮; không thêm menu nhiều tầng.
 - Remove Controller khác −: chỉ bỏ object proxy và giữ định nghĩa trên Source;
   tooltip/menu phải nói rõ. Nếu xóa object đang edit thì rời object đó an toàn,

@@ -51,6 +51,7 @@ def run():
         coordinates = [tuple(v.co) for v in source.data.vertices]
         addon._select_only(context, source)
         addon._refresh_runtime()
+        check(addon._overlay_mode(context) == 'source', 'model selection keeps Source-backed color overlay')
         for name, function in (
             ('id_maps', lambda: addon._source_id_maps(source)),
             ('ui_list_idle', lambda: addon._sync_ui_list(scene, source)),
@@ -105,6 +106,7 @@ def run():
 
         check(bpy.ops.dan_form.focus_controller() == {'FINISHED'}, 'Edit Control navigation')
         check(context.view_layer.objects.active == controller and controller.mode == 'EDIT', 'Edit Control enters proxy Edit Mode')
+        check(addon._overlay_mode(context) == 'controller_edit_hidden', 'Controller Edit suppresses duplicate overlay')
         context.tool_settings.mesh_select_mode = (True, False, False)
         scene.dan_form_control_index = 0
         expected_vertices, expected_edges = addon._control_effective(source, controls[0])
@@ -112,6 +114,10 @@ def run():
         check(selected_vertices == expected_vertices and selected_edges == expected_edges, 'row click auto-selects proxy IDs')
         check(bpy.ops.dan_form.focus_source() == {'FINISHED'}, 'Back to Model navigation')
         check(context.view_layer.objects.active == source and source.mode == 'OBJECT', 'Back restores model Object Mode')
+        check(addon._overlay_mode(context) == 'source', 'Back to Model restores Source overlay')
+        addon._select_only(context, controller)
+        check(addon._overlay_mode(context) == 'controller', 'Controller Object Mode uses controller-backed overlay')
+        addon._select_only(context, source)
 
         bpy.ops.object.mode_set(mode='EDIT')
         scene.dan_form_control_index = target_index
