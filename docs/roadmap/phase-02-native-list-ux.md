@@ -1,9 +1,10 @@
 # Phase 2 — Sidebar gọn theo danh sách Blender
 
-**Trạng thái: UIList đã triển khai; cập nhật chọn trực tiếp, navigation và hiệu năng
-trong 0.2.1 theo phản hồi ngày 2026-09-18.**
+**Trạng thái: UIList đã triển khai; lifecycle và controller cố định topology
+trong 0.2.2 theo phản hồi ngày 2026-09-18.**
 
 Bằng chứng và giới hạn kiểm tra: [báo cáo sidebar 0.2.1](../testing/phase-02-sidebar-performance-report.md).
+Đợt bổ sung hiện tại: [báo cáo lifecycle 0.2.2](../testing/phase-02-controller-lifecycle-report.md).
 
 Kế hoạch này thay thế bố cục sidebar và cách quản lý danh sách trong
 [kế hoạch UX trước](phase-02-ux-upgrade.md). Giữ context theo active model, Source
@@ -23,8 +24,9 @@ sách nhiều controller object. Mỗi Source vẫn có một controller object 
 ## Bố cục duy nhất
 
 ```text
-DAN Form
+DANP Form
 girl chibi 1
+[Init DANP Form] [Remove DANP Form (đỏ)]   khi chọn model
 [Edit Control / Back to Model] [Hide / Show Controls]
 ┌─────────────────────────┐  [+]
 │ Đường trên           👁 │  [−]
@@ -32,7 +34,7 @@ girl chibi 1
 │ Đường dọc            ◐ │  [↑]
 │                         │  [↓]
 └─────────────────────────┘
-            [Sync]             chỉ hiện trong Edit Mode
+            [Sync]             chỉ hiện trong Source Edit Mode
 ```
 
 - Dùng UIList native của Blender, có cuộn nội bộ, khoảng 5 dòng mặc định, hỗ trợ
@@ -42,19 +44,19 @@ girl chibi 1
 - Tên Source là một nhãn gọn. Không hiện tên proxy, số effective, revision hoặc
   hộp status thành công thường trực. Lỗi dùng report Blender; hướng dẫn trống tối đa
   một dòng khi cần, ví dụ “Chọn cạnh rồi nhấn +”.
-- Mesh chưa khởi tạo chỉ có nút **Create Controller**. Khi đã khởi tạo thì thay
-  nút đó bằng danh sách; controller bị mất thì có **Rebuild Controller** trong
-  trạng thái lỗi, giữ definitions/masks hiện có.
+- Khi chọn model luôn có **Init DANP Form** và **Remove DANP Form** màu đỏ. Remove
+  khóa trước khi khởi tạo. Init dùng lại controller hiện có hoặc dựng lại khi mất,
+  giữ definitions/masks. Remove gỡ toàn bộ binding/definitions/masks/ID layers và
+  controller, giữ hình học model và dữ liệu ngoài addon; giữ mode của Source.
 - Không có khối Display/Maintenance. Edit Control / Back to Model và nút Hide/Show
   Controls nằm trên danh sách để điều hướng và đổi hiển thị viewport nhanh.
   Khi chọn model, overlay màu lấy Source làm mốc để người dùng biết control nằm ở
   đâu. Khi chọn controller ở Object Mode, overlay đọc trực tiếp proxy mesh để đường
   màu trùng với từng điểm đang chỉnh. Trong Controller Edit Mode, lớp overlay phụ
   tắt để không chồng lên wire/vertex display thật của Blender. Các lệnh hiếm như Reveal All, Hide Whole, tùy
-  chọn hiển thị và Remove Controller nằm trong menu ⋮; không thêm menu nhiều tầng.
-- Remove Controller khác −: chỉ bỏ object proxy và giữ định nghĩa trên Source;
-  tooltip/menu phải nói rõ. Nếu xóa object đang edit thì rời object đó an toàn,
-  chọn Source và hiển thị trạng thái cần dựng lại controller.
+  chọn hiển thị nằm trong menu ⋮; không thêm menu nhiều tầng.
+- Remove DANP Form khác −: Remove gỡ thiết lập addon; − chỉ bỏ một definition và
+  giữ phần overlap thuộc definition khác. Cả hai thực hiện khi chọn model.
 
 ## Hành vi các thao tác
 
@@ -62,16 +64,16 @@ girl chibi 1
 | --- | --- |
 | Click tên/dòng | Highlight đường ngay; trong Edit Mode tự chọn điểm/cạnh tương ứng, Object Mode giữ mode/object |
 | Nhấn đúp tên | Sửa tên trực tiếp tại dòng, Enter xác nhận, Escape hủy; không mở dialog UUID |
-| + trong Edit Mode | Tạo định nghĩa mới từ selection của mesh đang thao tác, chọn dòng mới |
+| + trong Source Edit Mode | Tạo định nghĩa mới từ Source selection, chọn dòng mới |
 | − | Xóa định nghĩa active; giữ phần chung, Source topology và tọa độ |
-| Sync trong Edit Mode | Thay membership của định nghĩa active bằng selection hiện tại |
+| Sync trong Source Edit Mode | Thay membership của định nghĩa active bằng Source selection |
 | ↑ / ↓ | Di chuyển định nghĩa active một dòng; giữ UUID và active item |
 | Select trong menu | Chọn lại phần tương ứng khi cần; không dùng nút Select thường trực |
 | Edit Control | Vào controller Edit Mode, chọn đường active; hiện lại controller nếu bị ẩn toàn bộ |
 | Back to Model | Trở về Source và mode Object/Edit trước khi sửa control |
 | Hide/Show Controls | Chỉ ẩn/hiện controller và overlay viewport; giữ masks và hiệu lực control |
 | Shift + Select | Thêm phần tương ứng vào selection hiện có |
-| Con mắt | DAN Form Hide/Reveal toàn định nghĩa, theo trạng thái effective hiện tại |
+| Con mắt | DANP Form Hide/Reveal toàn định nghĩa, theo trạng thái effective hiện tại |
 
 Select mặc định thay selection trên mesh active. Face selection cũ không được để
 lại khiến cả vùng bị chọn ngoài ý muốn; không sửa selection của mesh edit khác.
@@ -100,18 +102,20 @@ kề hợp lệ; sau reorder vẫn giữ cùng UUID. Có undo/redo cho tạo, x�
 
 | Active object/mode | Hiển thị và thao tác |
 | --- | --- |
-| Source chưa khởi tạo | Create Controller nếu Source đủ điều kiện; giữ object/mode sau tạo |
-| Source Object Mode | Danh sách, mắt, −, menu, ↑/↓, Edit Control, Hide/Show Controls; + bị khóa; không hiện Sync |
-| Source Edit Mode | Danh sách và toàn bộ thao tác; +/Sync đọc selection Source BMesh |
-| Controller Object Mode | Cùng danh sách của Source; như Source Object Mode |
-| Controller Edit Mode | Danh sách tự chọn và Sync, Back to Model, Hide/Show Controls; +/Sync dùng Source IDs từ selection proxy effective |
+| Source chưa khởi tạo | Init, Remove đỏ bị khóa; giữ object/mode sau tạo |
+| Source Object Mode | Init/Remove, danh sách, mắt, −, menu, ↑/↓, Edit Control, Hide/Show Controls; + bị khóa; không hiện Sync |
+| Source Edit Mode | Init/Remove, danh sách và toàn bộ thao tác; +/Sync đọc selection Source BMesh |
+| Controller Object Mode | Danh sách, mắt, menu, ↑/↓, Back to Model, Edit Control, Hide/Show; không +/−/Sync/Init/Remove |
+| Controller Edit Mode | Danh sách tự chọn, mắt, menu, ↑/↓, Back to Model, Hide/Show; không +/−/Sync; chỉ chỉnh hình học hiện có |
 | Mode khác, ví dụ Sculpt | Danh sách chỉ để đọc; khóa các thao tác ghi trạng thái để tránh ngắt workflow |
 | Empty/unrelated object | Một dòng hướng dẫn chọn model/controller, không giữ danh sách model cũ |
 | Binding lỗi/không chỉnh được | Một lý do ngắn; khóa thao tác, không đoán Source theo tên |
 
-Trong Controller Edit Mode, +/Sync chỉ gom hình học control đã có mapping, không
-tạo cạnh mới trên Source. Muốn mở rộng đường sang vùng chưa có control thì chọn
-Source và edit selection tại đó. Không bật model Edit Mode ngầm khi click dòng.
+Muốn tạo/xóa đường hoặc thay membership thì Back to Model và dùng selection Source.
+Controller không cho thêm/xóa vertex, edge hay face. Phím topology thường dùng bị
+chặn theo context; lệnh menu/tool/MCP làm đổi IDs/connectivity được khôi phục về
+topology và pose hợp lệ gần nhất, giữ Edit Mode và không ghi Source. Không bật
+model Edit Mode ngầm khi click dòng. Modeling trên mesh thường vẫn hoạt động.
 
 Các nút phụ thuộc selection/active definition: −/Sync/↑/↓ không có dòng active thì
 khóa; ↑/↓ ở đầu/cuối khóa tương ứng. Source binding phải revalidate ở execute.
@@ -135,7 +139,7 @@ visibility; display overlay không thay masks hoặc hiệu lực đường cont
 | Task | Kết quả | Test trước bàn giao |
 | --- | --- | --- |
 | NL2.1 — Backing list | Projection UIList theo Source, active UUID, rename/order | Chuyển model, tên trùng, rename cancel, reorder/save metadata, undo/redo; panel draw chỉ đọc |
-| NL2.2 — +/−/Sync | Primitive chung create/remove/replace membership | Source/controller Edit, selection rỗng, overlap một phần/toàn bộ, prune masks, no-op/lỗi không ghi dở |
+| NL2.2 — +/−/Sync | Primitive chung trên Source; controller chỉ chỉnh | Source Edit, controller rejection, selection rỗng, overlap, prune masks, no-op/lỗi không ghi dở |
 | NL2.3 — Panel native | Danh sách cuộn, cột icon, Select/Sync theo mode, menu gọn | Sidebar hẹp tên ưu tiên; 0/1/20 đường; thao tác chuột/đúp tên; không lặp nút mỗi dòng |
 | NL2.4 — Bàn giao | Overlay/highlight và regression, package, báo cáo | CUA workflow thật; MCP assertions IDs/masks/geometry/context; install/reload; commit sau test đạt |
 

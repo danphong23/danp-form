@@ -53,6 +53,6 @@ hide/remove đều giữ mapping và trùng vị trí. Record độ trễ sync/r
 bố mọi frame tức thời nếu chưa đo. Topology đổi giữ counts vẫn bị phát hiện.
 
 Gate P2 pass khi đường/masks/IDs/persistence đúng và Source không biến dạng bởi
-create/hide/reveal/rebuild. Không có deactivate riêng; ẩn DAN Form khác visibility
+create/hide/reveal/rebuild. Không có deactivate riêng; ẩn DANP Form khác visibility
 object/collection thông thường. Bàn giao demo và state assertions; hoàn tất NL2.1–NL2.4
 và Gate P2-UX trước P3.1.

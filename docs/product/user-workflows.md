@@ -11,7 +11,7 @@ enabled control vertices hold. Named control selection is optional convenience.
 
 ## Let a contour follow the mesh
 
-Use DAN Form Hide Control on a whole line or selected portion. It temporarily stops
+Use DANP Form Hide Control on a whole line or selected portion. It temporarily stops
 holding mesh and cutting patches. Recompute actual connectivity; patches may merge.
 Transform remaining enabled controls. Hidden geometry follows affected patch motion
 under proportional. Reveal samples that contour at the new Source positions.

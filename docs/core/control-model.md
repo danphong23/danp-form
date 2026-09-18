@@ -11,7 +11,7 @@ weighted deformation components. The same effective network and targets must pro
 the same result regardless of how definitions are named/grouped.
 
 One rebuildable proxy per Source exposes geometry for selection and transforms.
-Create/remove structure through DAN Form commands, not arbitrary proxy topology edits.
+Create/remove structure through DANP Form commands, not arbitrary proxy topology edits.
 
 ## Enabled control
 
@@ -23,9 +23,9 @@ Enabled edges contribute to topology cuts even when their endpoints are selected
 A selected proxy span represents its entire stored Source span: those dense vertices
 are selected geometry too. A knot-only selection does not select neighboring spans.
 
-## DAN Form Hide and Reveal
+## DANP Form Hide and Reveal
 
-One user-facing state: enabled or DAN Form-hidden. Hide releases hidden geometry from
+One user-facing state: enabled or DANP Form-hidden. Hide releases hidden geometry from
 both stationary constraints and topology cuts, without deleting Source elements or
 definitions. Reveal restores those roles at current Source positions, never old ones.
 
@@ -34,8 +34,8 @@ follow ordinary mesh deformation inside affected regions; they are not guarantee
 move, because proportional and other enabled constraints still apply.
 
 No control parenting, nested patch ownership or separate deactivate feature is needed.
-Object/collection hiding only changes display; it is not DAN Form Hide Control.
-Proxy H/Alt-H may be bound to DAN Form commands when the tool owns the context.
+Object/collection hiding only changes display; it is not DANP Form Hide Control.
+Proxy H/Alt-H may be bound to DANP Form commands when the tool owns the context.
 
 ## Canonical masks and shared endpoints
 

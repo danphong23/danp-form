@@ -47,7 +47,7 @@ Hide/reveal, definition edits, rebuild and simplify/refine are separate operatio
 zero deformation and their own undo semantics. Reject them during a transform with
 OPERATION_BUSY: finish/cancel first. Freeze selection/network/proxy representation during
 the transaction. Reject second ownership of the same Source; unexpected revision changes
-invalidate the operation. Native proxy transforms bypassing DAN Form cannot commit mesh
+invalidate the operation. Native proxy transforms bypassing DANP Form cannot commit mesh
 deformation; resync from Source before the next valid operation.
 
 ## External edits and recovery

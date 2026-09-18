@@ -1,7 +1,21 @@
 # Phase 2 bổ sung — Native list UX
 
-**Trạng thái: core UIList đã triển khai; đợt sửa sidebar 0.2.1 đã qua regression live.
+**Trạng thái: core UIList đã triển khai; lifecycle và controller cố định topology 0.2.2 đã qua regression live.
 Các checkbox rộng bên dưới vẫn là gate cần bằng chứng riêng, không tự đánh dấu hoàn tất.**
+
+## Bổ sung 0.2.2 — Lifecycle và controller chỉ chỉnh vị trí
+
+- [x] Tên sản phẩm DANP Form; giữ namespace/schema cũ để đọc file hiện có.
+- [x] Model luôn có Init và Remove DANP Form màu đỏ; Init lặp không tạo thêm proxy.
+- [x] Remove gỡ binding, definitions, masks, ID layers và controller/mesh không còn dùng;
+      giữ model, hình học, dữ liệu ngoài addon và mode Source Object/Edit.
+- [x] Controller không có Sync, +/−; tạo/Sync/xóa definitions chỉ trên model.
+- [x] Chặn shortcut topology trong Controller Edit; khôi phục thay đổi từ native
+      operators/BMesh theo IDs và connectivity, giữ pose hợp lệ gần nhất.
+- [x] MCP live: 37 checks trên fixture được dọn trong file đang mở và 33 checks trên
+      model hiện có; Computer Use xác nhận bố cục model/controller và navigation.
+
+Bằng chứng và ca NOT RUN: [báo cáo 0.2.2](../docs/testing/phase-02-controller-lifecycle-report.md).
 
 ## Bổ sung 0.2.1 — Sidebar phản hồi nhanh
 
@@ -33,7 +47,7 @@ Bằng chứng: [báo cáo 0.2.1](../docs/testing/phase-02-sidebar-performance-r
 
 ## NL2.2 — Thao tác +/−/Sync
 
-- [ ] + nhận Source selection hoặc mapped proxy selection trong Edit Mode.
+- [ ] + nhận Source selection trong Source Edit Mode; controller từ chối tạo definition.
 - [ ] − xóa definition active, giữ phần chung và chọn dòng kế tiếp hợp lệ.
 - [ ] Sync replace membership active từ selection, giữ UUID/name/order.
 - [ ] Prune masks theo union còn định nghĩa; không auto Reveal; no-op không đổi revision.
@@ -46,7 +60,7 @@ Bằng chứng: [báo cáo 0.2.1](../docs/testing/phase-02-sidebar-performance-r
 - [ ] UIList cuộn; dòng chỉ tên/mắt; cột +/−/menu/↑/↓; đúp tên sửa inline.
 - [ ] Click dòng chọn active/highlight và selection ở Edit không ngầm Reveal; kiểm tra thêm Shift selection.
 - [ ] Con mắt On/Partial/Hidden và tooltip overlap theo kế hoạch.
-- [ ] Matrix object/mode đúng; init/rebuild là empty/error state, không panel phụ thường trực.
+- [ ] Matrix object/mode đúng; model có Init/Remove, controller chỉ sửa; không panel phụ thường trực.
 - [ ] Không còn row boxes lặp nhiều nút, tên proxy/status kỹ thuật hay Display/Maintenance.
 - [ ] Test sidebar hẹp, 0/1/20 đường, click/rename/menu/list scroll. Commit sau test đạt.
 

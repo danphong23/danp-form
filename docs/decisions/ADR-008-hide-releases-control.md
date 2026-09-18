@@ -4,14 +4,14 @@
 
 **Decision:** enabled unselected Source control vertices are stationary. Selected
 node/span/strip/loop geometry moves; a selected target wins at shared junctions.
-DAN Form Hide removes constraint and cut roles for hidden geometry. Reveal samples
+DANP Form Hide removes constraint and cut roles for hidden geometry. Reveal samples
 current Source coordinates, not pre-hide positions. Whole and partial hiding share
 canonical Source element masks defined in core/control-model.md.
 
 **Reason:** select which contours hold and which follow the mesh using selection and
 hide/reveal, without parenting, nested patches or a separate deactivate feature.
 
-**Supersedes:** display-only DAN Form hiding, separate deactivate UI, automatic moving
+**Supersedes:** display-only DANP Form hiding, separate deactivate UI, automatic moving
 targets on unselected dense vertices after sparse-knot edits, and weighting by logical
 control memberships. Ordinary object/collection display hiding remains separate.
 

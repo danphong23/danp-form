@@ -1,9 +1,9 @@
 schema_version = "1.0.0"
 id = "dan_form"
-version = "0.2.1"
-name = "DAN Form"
+version = "0.2.2"
+name = "DANP Form"
 tagline = "Source-backed control shell for template mesh editing"
-maintainer = "DAN Form"
+maintainer = "DANP Form"
 type = "add-on"
 blender_version_min = "5.1.0"
 license = ["SPDX:GPL-3.0-or-later"]

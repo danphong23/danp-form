@@ -32,7 +32,7 @@ edges; they may branch. Do not assign one exclusive vertex chain to each control
 vertex or infer horizontal/vertical/anatomical directions from control names.
 
 Patch visualization visibility is display-only. All patches remain available to
-scope/solve regardless of overlay toggles; DAN Form control Hide changes actual
+scope/solve regardless of overlay toggles; DANP Form control Hide changes actual
 partition as described below.
 
 Use edges of member faces to build each patch graph, not shortcuts through other patches

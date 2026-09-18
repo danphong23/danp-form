@@ -1,4 +1,4 @@
-"""DAN Form Phase 1/2: Source binding, persistent controls, and exact proxy sync."""
+"""DANP Form Phase 1/2: Source binding, persistent controls, and exact proxy sync."""
 
 from __future__ import annotations
 
@@ -38,14 +38,16 @@ _MAPPING_CACHE = {}
 _UI_SIGNATURES = {}
 _ACTIVE_CONTROL_UUIDS = {}
 _RETURN_MODES = {}
+_PROXY_SNAPSHOTS = {}
+_TOPOLOGY_KEYMAPS = []
 VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
 
 bl_info = {
-    "name": "DAN Form",
-    "author": "DAN Form",
-    "version": (0, 2, 1),
+    "name": "DANP Form",
+    "author": "DANP Form",
+    "version": (0, 2, 2),
     "blender": (5, 1, 0),
-    "location": "View3D > Sidebar > DAN Form",
+    "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
     "description": "Source-backed controller shell for template mesh editing",
 }
@@ -463,6 +465,18 @@ def _control_effective(source: bpy.types.Object, control: dict) -> tuple[set[int
 
 
 def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
+    global _SYNC_GUARD
+    previous_guard = _SYNC_GUARD
+    _SYNC_GUARD = True
+    try:
+        _rebuild_proxy_impl(source, controller)
+        _PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
+        _guard_proxy_topology(source, controller)
+    finally:
+        _SYNC_GUARD = previous_guard
+
+
+def _rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object) -> None:
     _validate_source_topology(source)
     vertex_ids, edge_ids = _effective_proxy_elements(source)
     vid_to_index, eid_to_index = _source_id_maps(source)
@@ -542,6 +556,7 @@ def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
                     changed = True
         if changed:
             bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+            _guard_proxy_topology(source, controller)
         return
     for index, item in enumerate(proxy_attr.data):
         source_index = source_vids.get(int(item.value))
@@ -553,6 +568,89 @@ def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
                 changed = True
     if changed:
         controller.data.update()
+        _guard_proxy_topology(source, controller)
+
+
+def _proxy_state(controller):
+    """Read ID connectivity and current coordinates; indices are never identity."""
+    owned = controller.mode != "EDIT"
+    bm = bmesh.new() if owned else bmesh.from_edit_mesh(controller.data)
+    try:
+        if owned:
+            bm.from_mesh(controller.data)
+        vl = bm.verts.layers.int.get(PROXY_VID_ATTR)
+        el = bm.edges.layers.int.get(PROXY_EID_ATTR)
+        if vl is None or el is None or bm.faces:
+            return None
+        vertices = [(int(v[vl]), tuple(v.co), v.select, v.hide) for v in bm.verts]
+        edges = [(int(e[el]), tuple(sorted(int(v[vl]) for v in e.verts)), e.select, e.hide) for e in bm.edges]
+        return vertices, edges
+    finally:
+        if owned:
+            bm.free()
+
+
+def _guard_proxy_topology(source, controller) -> bool:
+    """Reject native topology edits while preserving the last valid control pose.
+
+    Only Source definitions/masks may rebuild proxy topology. Coordinate-only
+    controller edits update a runtime recovery snapshot, never Source geometry.
+    """
+    key = controller.as_pointer()
+    token = (controller.data.as_pointer(), controller.get(PROXY_GENERATION_KEY),
+             source.get(CONTROLS_KEY), source.get(HIDDEN_VIDS_KEY), source.get(HIDDEN_EIDS_KEY))
+    snapshot = _PROXY_SNAPSHOTS.get(key)
+    if snapshot is None or snapshot[0] != token:
+        _validate_source_topology(source)
+        vids, eids = _effective_proxy_elements(source)
+        vmap, emap = _source_id_maps(source)
+        expected_edges = {
+            eid: tuple(sorted(_source_vid(source, i) for i in source.data.edges[emap[eid]].vertices))
+            for eid in eids
+        }
+        vertices = [(vid, tuple(_source_co(source, vmap[vid])), False, False) for vid in vids]
+        edges = [(eid, expected_edges[eid], False, False) for eid in eids]
+        snapshot = (token, set(vids), expected_edges, (vertices, edges))
+    state = _proxy_state(controller)
+    if state is not None:
+        vertices, edges = state
+        valid = (len(vertices) == len(snapshot[1]) and len(edges) == len(snapshot[2])
+                 and {v[0] for v in vertices} == snapshot[1]
+                 and {e[0]: e[1] for e in edges} == snapshot[2])
+        if valid:
+            _PROXY_SNAPSHOTS[key] = (*snapshot[:3], state)
+            return False
+    # A menu, tool or MCP call bypassed the shortcut guard. Restore in-place;
+    # no mode switch or Source write is allowed inside the depsgraph callback.
+    owned = controller.mode != "EDIT"
+    bm = bmesh.new() if owned else bmesh.from_edit_mesh(controller.data)
+    try:
+        bm.clear()
+        vl = bm.verts.layers.int.get(PROXY_VID_ATTR)
+        if vl is None:
+            vl = bm.verts.layers.int.new(PROXY_VID_ATTR)
+        el = bm.edges.layers.int.get(PROXY_EID_ATTR)
+        if el is None:
+            el = bm.edges.layers.int.new(PROXY_EID_ATTR)
+        verts = {}
+        for vid, co, selected, hidden in snapshot[3][0]:
+            vert = bm.verts.new(co)
+            vert[vl], vert.select, vert.hide = vid, selected, hidden
+            verts[vid] = vert
+        for eid, endpoints, selected, hidden in snapshot[3][1]:
+            edge = bm.edges.new(tuple(verts[vid] for vid in endpoints))
+            edge[el], edge.select, edge.hide = eid, selected, hidden
+        if owned:
+            bm.to_mesh(controller.data)
+            controller.data.update()
+        else:
+            bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=True)
+    finally:
+        if owned:
+            bm.free()
+    _PROXY_SNAPSHOTS[key] = snapshot
+    bpy.context.scene.dan_form_status = "Controller chỉ chỉnh vị trí; tạo/xóa đường trên model"
+    return True
 
 
 def _update_revision(source: bpy.types.Object) -> None:
@@ -720,12 +818,17 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
     try:
         changed_geometry = {update.id.original.as_pointer() for update in depsgraph.updates if update.is_updated_geometry}
         for source, controller in _source_controller_pairs():
-            if source.as_pointer() not in changed_geometry and source.data.as_pointer() not in changed_geometry:
+            source_changed = source.as_pointer() in changed_geometry or source.data.as_pointer() in changed_geometry
+            controller_changed = controller.as_pointer() in changed_geometry or controller.data.as_pointer() in changed_geometry
+            if not source_changed and not controller_changed:
                 continue
-            _MAPPING_CACHE.pop(source.as_pointer(), None)
             try:
-                _validate_source_topology(source)
-                _sync_proxy(source, controller)
+                if source_changed:
+                    _MAPPING_CACHE.pop(source.as_pointer(), None)
+                    _validate_source_topology(source)
+                _guard_proxy_topology(source, controller)
+                if source_changed:
+                    _sync_proxy(source, controller)
             except (KeyError, ValueError):
                 # A stale topology is reported by the next explicit command;
                 # the depsgraph callback must never escape into Blender.
@@ -742,7 +845,10 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
 def _refresh_runtime(_unused=None) -> None:
     _MAPPING_CACHE.clear()
     _UI_SIGNATURES.clear()
+    _PROXY_SNAPSHOTS.clear()
     try:
+        for source, controller in _source_controller_pairs():
+            _guard_proxy_topology(source, controller)
         _sync_context_ui_list(bpy.context)
     except (AttributeError, RuntimeError, ValueError):
         pass
@@ -942,14 +1048,14 @@ def _unregister_overlay() -> None:
 
 class DANFORM_OT_initialize(bpy.types.Operator):
     bl_idname = "dan_form.initialize"
-    bl_label = "Initialize DAN Form"
-    bl_description = "Bind the selected mesh as a DAN Form Source and create its controller"
+    bl_label = "Initialize DANP Form"
+    bl_description = "Bind the selected mesh as a DANP Form Source and create its controller"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
         active = context.view_layer.objects.active
-        return active is not None and active.type == "MESH" and active.get(CONTROLLER_KEY) is None
+        return _is_valid_source(active) and active.get(CONTROLLER_KEY) is None and active.mode in {"OBJECT", "EDIT"}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
@@ -957,25 +1063,28 @@ class DANFORM_OT_initialize(bpy.types.Operator):
         try:
             if not _is_valid_source(source):
                 raise ValueError("SOURCE_NOT_EDITABLE")
-            _source_uuid(source)
-            _ensure_source_ids(source)
             controller = _find_controller(source)
             if controller is None:
-                mesh = bpy.data.meshes.new(f"DANFORM_CTRL_{source.name}")
+                _source_uuid(source)
+                _ensure_source_ids(source)
+                mesh = bpy.data.meshes.new(f"DANPFORM_CTRL_{source.name}")
                 mesh.from_pydata([], [], [])
                 mesh.update()
-                controller = bpy.data.objects.new(f"DANFORM_CTRL_{source.name}", mesh)
+                controller = bpy.data.objects.new(f"DANPFORM_CTRL_{source.name}", mesh)
                 _controller_collection(source, scene).objects.link(controller)
                 controller[CONTROLLER_KEY] = source[ SOURCE_UUID_KEY ]
                 controller[SCHEMA_KEY] = SCHEMA_VERSION
                 controller["dan_form_source_name"] = source.name
                 controller.display_type = "WIRE"
                 controller.hide_render = True
-            _rebuild_proxy(source, controller)
+                _rebuild_proxy(source, controller)
+            else:
+                _validate_source_topology(source)
+                _guard_proxy_topology(source, controller)
             source["dan_form_controller_name"] = controller.name
             _set_scene_context(context, source, controller)
             scene.dan_form_status = f"Ready: {source.name} / {controller.name}"
-            self.report({"INFO"}, "DAN Form controller ready")
+            self.report({"INFO"}, "DANP Form controller ready")
             return {"FINISHED"}
         except ValueError as exc:
             scene.dan_form_status = f"Error: {exc}"
@@ -1088,20 +1197,23 @@ class DANFORM_OT_sync_control(bpy.types.Operator):
     bl_description = "Replace the active control membership from the current edit selection"
     bl_options = {"REGISTER", "UNDO"}
 
+    @classmethod
+    def poll(cls, context):
+        source, _ = _context_source(context)
+        active = context.view_layer.objects.active
+        return source is not None and active == source and source.mode == "EDIT" and _active_control(context, source) is not None
+
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
         controls = _controls(source) if source is not None else []
         active_control = _active_control(context, source) if source is not None else None
         control = next((item for item in controls if active_control is not None and item.get("control_uuid") == active_control.get("control_uuid")), None)
         active = context.view_layer.objects.active
-        if source is None or control is None or active not in {source, controller} or active.mode != "EDIT":
-            self.report({"ERROR"}, "EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
+        if source is None or control is None or active != source or source.mode != "EDIT":
+            self.report({"ERROR"}, "SOURCE_EDIT_MODE_REQUIRED")
             return {"CANCELLED"}
         try:
-            if active == source:
-                vertex_ids, edge_ids = _source_selection(source)
-            else:
-                vertex_ids, edge_ids = _proxy_selection(controller)
+            vertex_ids, edge_ids = _source_selection(source)
             if not vertex_ids and not edge_ids:
                 self.report({"ERROR"}, "EMPTY_SELECTION")
                 return {"CANCELLED"}
@@ -1164,15 +1276,16 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        source, _ = _context_source(context)
         layout.operator("dan_form.select_control", text="Select Active", icon="RESTRICT_SELECT_OFF")
-        layout.operator("dan_form.sync_control", text="Sync Membership", icon="FILE_REFRESH")
+        if source is not None and context.view_layer.objects.active == source and source.mode == "EDIT":
+            layout.operator("dan_form.sync_control", text="Sync Membership", icon="FILE_REFRESH")
         layout.separator()
         layout.operator("dan_form.reveal", text="Reveal All", icon="HIDE_OFF")
         layout.operator("dan_form.hide_selected", text="Hide Selected", icon="HIDE_ON")
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
         layout.prop(context.scene, "dan_form_overlay_hidden", text="Show Hidden Controls")
-        layout.operator("dan_form.remove_controller", text="Remove Controller", icon="TRASH")
 
 
 class DANFORM_OT_create_control(bpy.types.Operator):
@@ -1183,9 +1296,9 @@ class DANFORM_OT_create_control(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        source, controller = _context_source(context)
+        source, _ = _context_source(context)
         active = context.view_layer.objects.active
-        return source is not None and active in {source, controller} and active.mode == "EDIT"
+        return source is not None and active == source and source.mode == "EDIT" and bool(source.get(SOURCE_UUID_KEY))
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
@@ -1194,10 +1307,8 @@ class DANFORM_OT_create_control(bpy.types.Operator):
             active = context.view_layer.objects.active
             if active == source:
                 vertex_ids, edge_ids = _source_selection(source)
-            elif active == controller:
-                vertex_ids, edge_ids = _proxy_selection(controller)
             else:
-                raise ValueError("EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
+                raise ValueError("SOURCE_EDIT_MODE_REQUIRED")
             if not vertex_ids and not edge_ids:
                 raise ValueError("EMPTY_SELECTION")
             controls = _controls(source)
@@ -1332,6 +1443,11 @@ class DANFORM_OT_delete_control(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
     control_uuid: StringProperty(default="")
 
+    @classmethod
+    def poll(cls, context):
+        source, _ = _context_source(context)
+        return source is not None and context.view_layer.objects.active == source and source.mode in {"OBJECT", "EDIT"} and bool(_controls(source))
+
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
         if source is None:
@@ -1417,7 +1533,7 @@ class DANFORM_OT_reveal(bpy.types.Operator):
 class DANFORM_OT_remove_controller(bpy.types.Operator):
     bl_idname = "dan_form.remove_controller"
     bl_label = "Remove Controller"
-    bl_description = "Remove only the DAN Form controller object; keep Source definitions"
+    bl_description = "Remove only the DANP Form controller object; keep Source definitions"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -1432,11 +1548,112 @@ class DANFORM_OT_remove_controller(bpy.types.Operator):
             scene.dan_form_controller = None
             scene.dan_form_status = "No controller"
             return {"CANCELLED"}
+        if controller.mode == "EDIT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+            _select_only(context, source)
+        mesh = controller.data
+        _PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
         bpy.data.objects.remove(controller, do_unlink=True)
+        if mesh.users == 0:
+            bpy.data.meshes.remove(mesh)
         _set_scene_context(context, source, None)
         scene.dan_form_status = f"Source ready: {source.name}" if source else "No controller"
         self.report({"INFO"}, "Controller removed; Source definitions preserved")
         return {"FINISHED"}
+
+
+class DANFORM_OT_remove(bpy.types.Operator):
+    bl_idname = "dan_form.remove"
+    bl_label = "Remove DANP Form"
+    bl_description = "Gỡ controller và toàn bộ thiết lập DANP Form; giữ nguyên hình học model"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        source, _ = _context_source(context)
+        return source is not None and context.view_layer.objects.active == source and source.mode in {"OBJECT", "EDIT"} and bool(source.get(SOURCE_UUID_KEY)) and _is_valid_source(source)
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if not self.poll(context):
+            return {"CANCELLED"}
+        was_edit = source.mode == "EDIT"
+        source_uuid = source.get(SOURCE_UUID_KEY)
+        if was_edit:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        try:
+            if controller is not None:
+                mesh = controller.data
+                _PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
+                bpy.data.objects.remove(controller, do_unlink=True)
+                if mesh.users == 0:
+                    bpy.data.meshes.remove(mesh)
+            for name in (VID_ATTR, EID_ATTR):
+                attr = source.data.attributes.get(name)
+                if attr is not None:
+                    source.data.attributes.remove(attr)
+            for key in (SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
+                        HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
+                        NETWORK_REVISION_KEY, VIEWPORT_HIDDEN_KEY, "dan_form_controller_name"):
+                if key in source:
+                    del source[key]
+            _MAPPING_CACHE.pop(source.as_pointer(), None)
+            _ACTIVE_CONTROL_UUIDS.pop(source_uuid, None)
+            _RETURN_MODES.pop(source_uuid, None)
+            for scene in bpy.data.scenes:
+                if scene.dan_form_source == source:
+                    scene.dan_form_source = None
+                    scene.dan_form_controller = None
+                if scene.dan_form_ui_source_uuid == source_uuid:
+                    _UI_SIGNATURES.pop(scene.as_pointer(), None)
+                    _sync_ui_list(scene, None)
+            _sync_context_ui_list(context)
+            context.scene.dan_form_status = "Đã gỡ DANP Form"
+            _tag_viewport_redraw(context)
+            self.report({"INFO"}, "Đã gỡ DANP Form; model giữ nguyên")
+            return {"FINISHED"}
+        finally:
+            if was_edit:
+                bpy.ops.object.mode_set(mode="EDIT")
+
+
+class DANFORM_OT_topology_locked(bpy.types.Operator):
+    bl_idname = "dan_form.topology_locked"
+    bl_label = "Controller Topology Locked"
+    bl_description = "Controller chỉ chỉnh vị trí; tạo/xóa đường control trên model"
+    bl_options = {"INTERNAL"}
+
+    @classmethod
+    def poll(cls, context):
+        source, controller = _context_source(context)
+        return source is not None and controller is not None and context.view_layer.objects.active == controller and controller.mode == "EDIT"
+
+    def execute(self, context):
+        self.report({"INFO"}, self.bl_description)
+        return {"FINISHED"}
+
+
+def _register_topology_keymaps():
+    config = bpy.context.window_manager.keyconfigs.addon
+    if config is None:
+        return
+    km = config.keymaps.new(name="Mesh", space_type="EMPTY")
+    shortcuts = [
+        ("X", {}), ("DEL", {}), ("E", {}), ("F", {}), ("K", {}),
+        ("J", {}), ("M", {}), ("V", {}), ("I", {}), ("P", {}),
+        ("D", {"shift": True}), ("R", {"ctrl": True}),
+        ("B", {"ctrl": True}), ("B", {"ctrl": True, "shift": True}),
+        ("V", {"alt": True}), ("M", {"alt": True}),
+    ]
+    for key, modifiers in shortcuts:
+        item = km.keymap_items.new("dan_form.topology_locked", key, "PRESS", head=True, **modifiers)
+        _TOPOLOGY_KEYMAPS.append((km, item))
+
+
+def _unregister_topology_keymaps():
+    for km, item in _TOPOLOGY_KEYMAPS:
+        km.keymap_items.remove(item)
+    _TOPOLOGY_KEYMAPS.clear()
 
 
 class DANFORM_OT_toggle_viewport_controls(bpy.types.Operator):
@@ -1527,11 +1744,11 @@ class DANFORM_OT_focus_controller(bpy.types.Operator):
 
 
 class DANFORM_PT_sidebar(bpy.types.Panel):
-    bl_label = "DAN Form"
+    bl_label = "DANP Form"
     bl_idname = "DANFORM_PT_sidebar"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "DAN Form"
+    bl_category = "DANP Form"
     bl_ui_units_x = 46
 
     def draw(self, context: bpy.types.Context) -> None:
@@ -1540,13 +1757,19 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         source, controller = _context_source(context)
         active = context.view_layer.objects.active
         if source is None:
-            layout.label(text="Chọn một mesh DAN Form hoặc controller", icon="INFO")
+            layout.label(text="Chọn một mesh DANP Form hoặc controller", icon="INFO")
             return
+        if active == source:
+            lifecycle = layout.row(align=True)
+            lifecycle.enabled = source.mode in {"OBJECT", "EDIT"}
+            lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
+            remove = lifecycle.row(align=True)
+            remove.alert = True
+            remove.operator(DANFORM_OT_remove.bl_idname, text="Remove DANP Form", icon="TRASH")
         if source.get(SOURCE_UUID_KEY) is None:
-            layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
             return
         if controller is None:
-            layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
+            layout.label(text="Nhấn Init để dựng lại controller", icon="INFO")
             return
         header = layout.row()
         header.label(text=source.name, icon="MESH_DATA")
@@ -1579,8 +1802,9 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             maxrows=5,
         )
         buttons = list_row.column(align=True)
-        buttons.operator(DANFORM_OT_create_control.bl_idname, text="", icon="ADD")
-        buttons.operator(DANFORM_OT_delete_control.bl_idname, text="", icon="REMOVE")
+        if active == source:
+            buttons.operator(DANFORM_OT_create_control.bl_idname, text="", icon="ADD")
+            buttons.operator(DANFORM_OT_delete_control.bl_idname, text="", icon="REMOVE")
         buttons.separator()
         buttons.menu(DANFORM_MT_control_menu.bl_idname, text="", icon="DOWNARROW_HLT")
         buttons.separator()
@@ -1588,7 +1812,7 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         move_up.direction = -1
         move_down = buttons.operator(DANFORM_OT_move_control.bl_idname, text="", icon="TRIA_DOWN")
         move_down.direction = 1
-        edit_context = active in {source, controller} and active.mode == "EDIT"
+        edit_context = active == source and source.mode == "EDIT"
         if edit_context:
             actions = layout.row(align=True)
             actions.operator(DANFORM_OT_sync_control.bl_idname, text="Sync", icon="FILE_REFRESH")
@@ -1611,6 +1835,8 @@ CLASSES = (
     DANFORM_OT_hide_selected,
     DANFORM_OT_reveal,
     DANFORM_OT_remove_controller,
+    DANFORM_OT_remove,
+    DANFORM_OT_topology_locked,
     DANFORM_OT_toggle_viewport_controls,
     DANFORM_OT_focus_source,
     DANFORM_OT_focus_controller,
@@ -1623,12 +1849,12 @@ def register() -> None:
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     bpy.types.Scene.dan_form_source = PointerProperty(
-        name="DAN Form Source",
+        name="DANP Form Source",
         type=bpy.types.Object,
         poll=lambda _self, obj: obj.type == "MESH",
     )
-    bpy.types.Scene.dan_form_controller = PointerProperty(name="DAN Form Controller", type=bpy.types.Object)
-    bpy.types.Scene.dan_form_status = StringProperty(name="DAN Form Status", default="Select a mesh Source")
+    bpy.types.Scene.dan_form_controller = PointerProperty(name="DANP Form Controller", type=bpy.types.Object)
+    bpy.types.Scene.dan_form_status = StringProperty(name="DANP Form Status", default="Select a mesh Source")
     bpy.types.Scene.dan_form_selected_control = StringProperty(name="Selected Control", default="")
     bpy.types.Scene.dan_form_control_items = CollectionProperty(type=DANFORM_PG_ControlItem)
     bpy.types.Scene.dan_form_control_index = IntProperty(name="Active Control", default=0, min=0, update=_ui_control_index_update)
@@ -1644,9 +1870,11 @@ def register() -> None:
             handlers.append(_refresh_runtime)
     _refresh_runtime()
     _register_overlay()
+    _register_topology_keymaps()
 
 
 def unregister() -> None:
+    _unregister_topology_keymaps()
     _unregister_overlay()
     if _depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_depsgraph_update_post)
@@ -1657,6 +1885,7 @@ def unregister() -> None:
     _UI_SIGNATURES.clear()
     _ACTIVE_CONTROL_UUIDS.clear()
     _RETURN_MODES.clear()
+    _PROXY_SNAPSHOTS.clear()
     for prop in (
         "dan_form_overlay_width",
         "dan_form_overlay_xray",

@@ -29,7 +29,7 @@ Một resolver dùng chung cho panel và operator xác định Source từ **act
 | --- | --- |
 | Mesh chưa khởi tạo | Tên mesh và nút Initialize; chưa hiện quản lý control |
 | Source đã khởi tạo | Danh sách và trạng thái của chính Source đó |
-| Controller DAN Form | Resolve Source qua identity binding và parent; cùng danh sách như Source |
+| Controller DANP Form | Resolve Source qua identity binding và parent; cùng danh sách như Source |
 | Không chọn / object khác | Hướng dẫn ngắn chọn mesh hoặc controller; không giữ thao tác trên model cũ |
 | Mapping thiếu, UUID trùng hoặc parent sai | Báo lỗi binding và hướng phục hồi; không đoán Source theo tên |
 
@@ -56,7 +56,7 @@ Luồng chính: chọn Source → Edit Mode → chọn điểm/cạnh/dải/loop
   định nghĩa đã ghi một nửa hoặc metadata sai; phục hồi trạng thái nhất quán.
 - Một lần tạo là một bước undo. Overlap một phần hoặc toàn bộ được phép: mỗi dòng
   có UUID riêng nhưng union proxy chỉ chứa một bản mỗi Source vertex/edge.
-- Tạo đường trên vùng đang DAN Form-hidden giữ nguyên masks, không tự Reveal.
+- Tạo đường trên vùng đang DANP Form-hidden giữ nguyên masks, không tự Reveal.
 - Hide/Reveal/xóa trong Edit Mode cũng giữ object/mode khi object đó còn tồn tại.
   Khi rebuild proxy đang edit, khôi phục selection bằng Source IDs của phần còn
   hiệu lực, không dùng proxy indices cũ.
@@ -118,7 +118,7 @@ vào Source chỉ để hiển thị. Các đường overlap không vẽ nhiều
   mesh không nhấp nháy. Điểm độc lập có marker rõ.
 - Đọc tọa độ BMesh khi Source Edit Mode; Object Mode đọc base mesh. Transform
   Source được áp dụng đúng một lần; màu/highlight không làm sai parenting proxy.
-- Show Control Overlay chỉ bật/tắt hiển thị; **khác DAN Form Hide/Reveal**. X-Ray
+- Show Control Overlay chỉ bật/tắt hiển thị; **khác DANP Form Hide/Reveal**. X-Ray
   là tùy chọn hiển thị khi cần nhìn qua bề mặt.
 - Có thể bật Show Hidden Controls để thấy phần hidden bằng kiểu đường/màu phụ,
   mặc định tắt. Hiển thị này không khôi phục ràng buộc hay cho chọn handle ẩn.
@@ -133,7 +133,7 @@ vào Source chỉ để hiển thị. Các đường overlap không vẽ nhiều
 ## 5. Bố cục sidebar đề xuất
 
 ```text
-DAN Form
+DANP Form
 Model: girl chibi 1                 [Edit Source] [View Controller]
 
 Controls

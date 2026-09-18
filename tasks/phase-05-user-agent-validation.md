@@ -25,7 +25,7 @@ Trước kiểm tra Blender đang mở/MCP/Computer Use đọc hướng dẫn te
   lỗi hình dạng và bước tái hiện. Viền view là đường do người dùng tạo bình thường.
 - **P5.3 — Agent qua MCP:** agent đọc state/control/patch queries, tạo definitions
   và set numeric targets bằng facade chung. Có thể MCP gọi Python/operator facade
-  qua capability hiện có; không sửa raw Source coords để giả lập DAN Form.
+  qua capability hiện có; không sửa raw Source coords để giả lập DANP Form.
   Agent xem ảnh/reference và quyết định target, không yêu cầu core tự phân tích ảnh.
 - **P5.4 — Parity:** từ cùng fixture/P0 chạy human numeric targets và equivalent
   agent targets, cùng pivot/space/profile/radius. So tọa độ, selected/fixed/outside,
@@ -43,7 +43,7 @@ Trước kiểm tra Blender đang mở/MCP/Computer Use đọc hướng dẫn te
 ## Điều kiện hoàn thành
 
 Gate F pass trên equivalent numerical inputs, workflow người dùng và external
-agent đều tạo control/chỉnh Source qua DAN Form thành công. Fit reference có review
+agent đều tạo control/chỉnh Source qua DANP Form thành công. Fit reference có review
 của người dùng hoặc tiêu chí được ghi trước; ảnh đẹp không thay checks constraints.
 Không còn lỗi ngăn core workflow và mọi gate bắt buộc có evidence. Production chỉ
 được tuyên bố sau quality/lifecycle/performance review trong acceptance gates.

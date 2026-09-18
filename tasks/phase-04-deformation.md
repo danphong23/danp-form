@@ -36,7 +36,7 @@ trong patch liên quan, confirm/cancel/undo ổn định. Gates P4, B, C, D.
   ADR/báo cáo evidence khi có đủ bằng chứng, không sửa quy tắc fixed để che lỗi.
 - **P4.5 — Blender Edit Mode:** tích hợp modal G/R/S và radius/profile UI; đọc BMesh
   đúng mode, solve buffer rồi validate trước write. Dùng keymap/tool routing DAN
-  Form có phạm vi controller và cho thấy khi thao tác DAN Form; không giả định
+  Form có phạm vi controller và cho thấy khi thao tác DANP Form; không giả định
   operator transform native tự cung cấp transaction cần thiết. Prototype lựa
   chọn routing, đảm bảo thao tác mong đợi trên controller và không bắt nhầm Source.
 - **P4.6 — Preview/lifecycle:** Source preview → proxy sync, cancel/confirm/undo/

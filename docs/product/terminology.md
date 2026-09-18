@@ -10,7 +10,7 @@
 - **Proxy Knot** — an editable proxy vertex bound to an actual source control vertex.
 - **Proxy Span** — a proxy edge that represents an ordered run of one or more source control edges between two proxy knots.
 - **Enabled Control Network** — effective Source control edges/vertices after applying canonical hide masks; called active in older drafts.
-- **DAN Form-hidden Control Geometry** — stored Source-backed definitions temporarily released from constraints/cuts, allowed to follow mesh deformation.
+- **DANP Form-hidden Control Geometry** — stored Source-backed definitions temporarily released from constraints/cuts, allowed to follow mesh deformation.
 - **Reveal** — resample current Source positions and restore effective roles; not reset or refine.
 - **Patch** — connected component of source faces after adjacency across effective enabled control edges is removed.
 - **Operation Rest (`P0`)** — snapshot of current Source coordinates at operation start.

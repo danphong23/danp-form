@@ -2,7 +2,7 @@
 
 **Status: Audit**
 
-The previous DAN Form documentation contained several strong architectural decisions but over-specified the numerical solver before the simplest product behavior had been validated.
+The previous DANP Form documentation contained several strong architectural decisions but over-specified the numerical solver before the simplest product behavior had been validated.
 
 ## Keep
 

@@ -1,5 +1,13 @@
 # Design Changelog
 
+## 2026-09-18 — DANP Form 0.2.2 lifecycle and controller protection
+
+- Corrected product/sidebar naming to DANP Form; retained extension, operator and data IDs for existing files.
+- Added persistent model Init and red Remove DANP Form buttons; removal clears owned setup without deleting or reshaping the model.
+- Removed Sync and definition creation/deletion from controller contexts; those actions use the model selection.
+- Added scoped topology shortcut guards and ID/connectivity recovery for native menu or MCP geometry changes, preserving the last valid controller pose.
+- Passed 37 lifecycle/protection checks and 33 sidebar checks in the existing open Blender file, with Computer Use visual verification; see the [report](docs/testing/phase-02-controller-lifecycle-report.md).
+
 ## 2026-09-18 — Phase 2 UX implementation
 
 - Resolved sidebar context from the active Source or its bound controller, including multiple models.
@@ -30,14 +38,14 @@
 ## 2026-09-18 — Enabled/hidden control behavior agreement
 
 - Added ADR-008 and concrete leg examples for selected loops, stationary longitudinal lines and hidden contours following mesh.
-- Replaced separate deactivation/display-only DAN Form hiding with canonical whole/partial Hide/Reveal masks.
+- Replaced separate deactivation/display-only DANP Form hiding with canonical whole/partial Hide/Reveal masks.
 - Made enabled unselected Source vertices hard stationary, including omitted sparse vertices; removed automatic sparse-knot neighbor movement.
 - Specified shared junction priority, current-position reveal, persistence/cache/undo behavior and grouping independence.
 - Reclassified interpolation as a replaceable candidate, removing fixed midpoint/affine promises; added G12–G16 and synchronized phase gates.
 
 ## 2026-09-18 — Core simplification redesign
 
-- Reframed DAN Form around patch-rest shape plus sparse control motion.
+- Reframed DANP Form around patch-rest shape plus sparse control motion.
 - Removed harmonic/ARAP/SVD/PCG and staged shape-preservation pipelines from core requirements.
 - Replaced the old normative solver with a simple, testable displacement-blend prototype baseline.
 - Defined partial control selection and sparse-control target expansion explicitly.

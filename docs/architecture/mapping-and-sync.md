@@ -37,7 +37,7 @@ Before transform, hide/reveal, simplify/refine, agent target query, or explicit 
 
 After commit, resync proxy from the newly committed Source.
 
-## Coordinate changes outside DAN Form
+## Coordinate changes outside DANP Form
 
 Safe when topology remains valid. Visible proxy coordinates must refresh from Source
 after external coordinate edits, including Source Edit Mode; implement a lightweight

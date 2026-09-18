@@ -6,7 +6,7 @@
 
 Prove or falsify this narrow hypothesis:
 
-> `current patch shape + simple topology-aware blended control displacement + one proportional attenuation` is predictable enough for DAN Form's intended modeling workflow.
+> `current patch shape + simple topology-aware blended control displacement + one proportional attenuation` is predictable enough for DANP Form's intended modeling workflow.
 
 Do not add an advanced preservation solver until this baseline is measured.
 

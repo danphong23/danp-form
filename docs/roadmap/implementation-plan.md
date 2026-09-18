@@ -1,4 +1,4 @@
-# Kế hoạch phát triển DAN Form
+# Kế hoạch phát triển DANP Form
 
 **Trạng thái: 5 phase đã thống nhất; đã có mã/bản cài Phase 1–2; bổ sung kế hoạch
 nâng cấp UX Phase 2 trước Phase 3. Gate chỉ pass khi có bằng chứng test tương ứng.**
@@ -33,7 +33,7 @@ và commit sau khi hoạt động. Báo cáo UX trước không xác nhận task
 2. **Object controller là con của Source:** di chuyển/xoay/scale object Source kéo
    controller theo, không nhân transform hai lần. Đây là quan hệ object Blender,
    không phải quan hệ cha/con giữa các đường control.
-3. **Đồng bộ có hướng rõ ràng:** ngoài thao tác DAN Form, Source cập nhật controller.
+3. **Đồng bộ có hướng rõ ràng:** ngoài thao tác DANP Form, Source cập nhật controller.
    Trong thao tác phase 4, controller cung cấp target; core cập nhật Source rồi
    đồng bộ controller từ Source. Không để hai object tự ghi qua lại.
 4. **Bật là ràng buộc, ẩn là giải phóng:** mọi vertex control đang bật không được

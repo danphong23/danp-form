@@ -18,7 +18,7 @@ to proxy resync. Controller is not independent geometric truth. View-aligned wir
 controls remain 3D Source-backed vertices/edges, not independent 2D geometry.
 
 Patch display toggles are UX only. Actual partition changes come from effective
-control edges and topology, including DAN Form Hide/Reveal. A selected control
+control edges and topology, including DANP Form Hide/Reveal. A selected control
 vertex influences graph-connected vertices in incident patches subject to fixed
 constraints/proportional; no unique unbranched vertex chain is prescribed.
 

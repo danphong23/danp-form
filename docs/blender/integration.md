@@ -2,23 +2,23 @@
 
 **Status: Implementation guidance; no production code yet**
 
-DAN Form can be implemented as a normal Blender Extension using Python APIs for mesh access, BMesh, PropertyGroups/attributes, modal operators, overlays, and keymaps.
+DANP Form can be implemented as a normal Blender Extension using Python APIs for mesh access, BMesh, PropertyGroups/attributes, modal operators, overlays, and keymaps.
 
 ## Mode policy
 
 - Create controls from Source Edit Mode.
-- Manipulate controls through the Control Proxy or a dedicated DAN Form tool in the 3D View.
+- Manipulate controls through the Control Proxy or a dedicated DANP Form tool in the 3D View.
 - Source remains visible as the actual result.
 
 Controller is a child object of Source, using the same local geometric frame. Move,
 rotate or scale Source object carries controller exactly once. This is object
 parenting, not nested controls. Phase 2 provides Source-to-controller coordinate
-display refresh; reverse interaction is added in phase 4 through DAN Form targets
+display refresh; reverse interaction is added in phase 4 through DANP Form targets
 and transaction writeback, not uncontrolled two-way sync.
 
 Phase 3 patch visualization is an overlay. Toggling it must not hide/exclude Source
 geometry from core or change network masks/partition. Phase 4 must route controller
-Edit Mode G/R/S through owned DAN Form operations; native Blender transforms alone
+Edit Mode G/R/S through owned DANP Form operations; native Blender transforms alone
 are not assumed to provide immutable-rest preview/cancel/undo semantics.
 
 ## Mesh access

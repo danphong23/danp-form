@@ -16,7 +16,7 @@
 - Register Source → persistent IDs survive save/reload.
 - Make Control from Source selection → Source-owned definition and Proxy agree.
 - Delete Proxy → rebuild yields equivalent bindings and does not alter Source coordinates.
-- Coordinate-only Source edit outside DAN Form → visible Proxy refresh plus revalidation/resync at the next operation.
+- Coordinate-only Source edit outside DANP Form → visible Proxy refresh plus revalidation/resync at the next operation.
 - Destructive topology change → stale mapping detected; deformation blocked.
 - Transform preview → every mouse/numeric update uses immutable `P0`.
 - Normal cancel with unchanged identity/topology → exact operation-start Source/Proxy restored.

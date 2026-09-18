@@ -1,4 +1,4 @@
-# DAN Form — Instructions for Coding Agents
+# DANP Form — Instructions for Coding Agents
 
 This specification separates **required product behavior** from **technical candidates**. Do not turn a candidate numerical method into a permanent architecture decision without benchmark evidence.
 
@@ -6,13 +6,13 @@ This specification separates **required product behavior** from **technical cand
 
 - Source Mesh is the geometric source of truth.
 - Controls are source-backed input handles; the proxy is rebuildable.
-- Enabled (not DAN Form-hidden) control edges derive patches from actual topology connectivity.
+- Enabled (not DANP Form-hidden) control edges derive patches from actual topology connectivity.
 - Operation Rest is the current Source state captured at operation start.
 - Every preview in one operation is computed from the same immutable Operation Rest.
 - Unchanged targets must produce an unchanged Source.
 - Enabled unselected Source control vertices are hard stationary constraints, including omitted dense vertices in sparse mode.
 - Shared selected junctions move; conflicting selected targets are rejected.
-- DAN Form Hide releases cuts and constraints for whole or partial geometry; Reveal samples current Source positions. Read ADR-008 and core/control-model.md.
+- DANP Form Hide releases cuts and constraints for whole or partial geometry; Reveal samples current Source positions. Read ADR-008 and core/control-model.md.
 - New deformation is confined to current affected patches; cleanup of older previews stays within the captured incident-patch scope. Targets returning to P0 or radius shrinking must clear residual preview edits.
 - Whole edge-backed Hide uses edge intent so other enabled lines retain shared junctions. Explicit node Hide releases all incident control edges. The canonical mask rules live in core/control-model.md.
 - Proportional is applied once, at patch propagation, unless a future ADR explicitly changes that rule.
@@ -43,10 +43,16 @@ phase 5 through the same primitives. Do not resurrect the replaced phase 0–8 t
 
 ## Canonical project names
 
-- Product: `DAN Form`
+- Product: `DANP Form`
 - Repository: `dan-form`
 - Python namespace / extension ID when implementation starts: `dan_form`
 - Blender operators: `dan_form.*`
+
+Product display name is DANP Form. Existing repository paths, extension ID,
+operator IDs and stored `dan_form_*` keys stay unchanged for compatibility.
+Control creation, membership Sync and definition removal belong to Source;
+controller Edit Mode only adjusts existing mapped geometry. Native topology
+edits on the proxy must be rejected without changing Source.
 
 Build an installable ZIP with `scripts/package-extension.ps1`; the extension package
 has `__init__.py` at its root even though the repository source lives in `dan_form/`.

@@ -47,6 +47,6 @@ translate their geometry into canonical hidden masks and validate overlaps; do n
 a second runtime activation system. No released-code compatibility is implied yet.
 
 Network revision changes on definition/mask edits; proxy generation changes on rebuild
-or representation edits, not previews. Source revision tracks DAN Form commits, not
+or representation edits, not previews. Source revision tracks DANP Form commits, not
 external edits: always validate topology and resample at boundaries. Undo/load clears
 caches even when revisions repeat. No-change commands do not advance revisions.

@@ -9,7 +9,7 @@ reference evidence
       ↓
 control target positions / transforms
       ↓
-normal DAN Form target expansion
+normal DANP Form target expansion
       ↓
 normal patch interpolation
       ↓

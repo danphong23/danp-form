@@ -14,7 +14,7 @@ mở sidebar được, bind Source và tạo controller con. Gate P1; chưa bi�
 ## Work packages
 
 - **P1.1 — Extension shell:** xác nhận Blender mục tiêu; tạo namespace `dan_form`,
-  manifest/package, register/unregister classes và sidebar DAN Form. Cài, disable,
+  manifest/package, register/unregister classes và sidebar DANP Form. Cài, disable,
   enable lại không nhân đôi handler/keymap/class. Thông báo phiên bản/feature không
   hỗ trợ bằng lỗi rõ ràng.
 - **P1.2 — Bind Source:** chọn mesh hợp lệ; tạo Source UUID và metadata version.

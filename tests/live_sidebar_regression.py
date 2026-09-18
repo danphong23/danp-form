@@ -14,7 +14,7 @@ def run():
     context = bpy.context
     source, controller = addon._context_source(context)
     if source is None or controller is None or not addon._controls(source):
-        raise RuntimeError('Select an existing DAN Form model/controller before the live regression')
+        raise RuntimeError('Select an existing DANP Form model/controller before the live regression')
     active = context.view_layer.objects.active
     if active.mode not in {'OBJECT', 'EDIT'}:
         raise RuntimeError('Unsupported mode; do not interrupt the user workflow')
@@ -32,6 +32,7 @@ def run():
     original_status = scene.dan_form_status
     source_selection = None
     proxy_selection = None
+    proxy_coordinates = None
     coordinates = None
     report = {'file': bpy.data.filepath, 'dirty_before': bpy.data.is_dirty, 'checks': [], 'timings_ms': {}}
 
@@ -48,6 +49,9 @@ def run():
             bpy.ops.object.mode_set(mode='OBJECT')
         source_selection = ([v.select for v in source.data.vertices], [e.select for e in source.data.edges], [f.select for f in source.data.polygons])
         proxy_selection = ([v.select for v in controller.data.vertices], [e.select for e in controller.data.edges])
+        proxy_coordinates = {item.value: tuple(vertex.co) for item, vertex in
+                             zip(controller.data.attributes[addon.PROXY_VID_ATTR].data,
+                                 controller.data.vertices)}
         coordinates = [tuple(v.co) for v in source.data.vertices]
         addon._select_only(context, source)
         addon._refresh_runtime()
@@ -128,14 +132,10 @@ def run():
         check(source.mode == 'EDIT', 'Back restores previous model Edit Mode')
 
         bpy.ops.dan_form.focus_controller()
-        check(bpy.ops.dan_form.create_control() == {'FINISHED'}, 'create from mapped controller selection')
-        duplicate = addon._controls(source)[-1]['control_uuid']
-        single_proxy_vid = addon._effective_proxy_elements(source)[0][0]
-        addon._select_proxy_ids(controller, {single_proxy_vid}, set())
-        check(bpy.ops.dan_form.sync_control() == {'FINISHED'}, 'Sync from mapped controller selection')
-        updated_proxy = addon._control(source, duplicate)
-        check(updated_proxy['vertex_ids'] == [single_proxy_vid] and updated_proxy['edge_ids'] == [], 'controller Sync persists Source IDs')
-        check(bpy.ops.dan_form.delete_control(control_uuid=duplicate) == {'FINISHED'}, 'delete in controller Edit Mode')
+        check(not bpy.ops.dan_form.create_control.poll(), 'controller rejects definition creation')
+        check(not bpy.ops.dan_form.sync_control.poll(), 'controller rejects membership Sync')
+        check(not bpy.ops.dan_form.delete_control.poll(), 'controller rejects definition deletion')
+        check(addon._controls(source) == controls, 'controller restrictions preserve Source definitions')
         bpy.ops.dan_form.focus_source()
 
         # Regression: Sync must persist the changed list, not serialize a fresh unchanged list.
@@ -195,6 +195,11 @@ def run():
         addon._rebuild_proxy(source, controller)
         if proxy_generation is not None:
             controller[addon.PROXY_GENERATION_KEY] = proxy_generation
+        if proxy_coordinates is not None:
+            for item, vertex in zip(controller.data.attributes[addon.PROXY_VID_ATTR].data,
+                                    controller.data.vertices):
+                vertex.co = proxy_coordinates[item.value]
+            controller.data.update()
         if source_selection is not None:
             for elements, values in zip((source.data.vertices, source.data.edges, source.data.polygons), source_selection):
                 for element, value in zip(elements, values):

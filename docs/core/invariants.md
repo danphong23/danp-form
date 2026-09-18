@@ -17,7 +17,7 @@
 13. **Reference fitting is downstream of target generation only.** It never gets its own mesh-writing solver.
 14. **Normal cancel is exact.** With unchanged identity/topology, cancel restores Source and Proxy to operation-start state. Topology/deletion errors follow explicit recovery limits, never stale index writes.
 15. **Commit is cumulative modeling.** The committed result becomes the next operation's rest shape.
-16. **Hide releases, Reveal adopts.** DAN Form-hidden geometry neither cuts nor constrains; Reveal samples the current Source without restoring old positions.
+16. **Hide releases, Reveal adopts.** DANP Form-hidden geometry neither cuts nor constrains; Reveal samples the current Source without restoring old positions.
 17. **Partial state is geometry-backed.** Whole/partial hide masks are canonical Source IDs, not per-logical-membership state.
 18. **Grouping is not geometry.** Identical effective network, targets and settings yield equivalent results regardless of names/groups.
 19. **Preview can return to rest.** Returning targets to P0 or shrinking influence clears earlier preview displacement instead of leaving residual deformation.

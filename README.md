@@ -1,6 +1,6 @@
-# DAN Form
+# DANP Form
 
-DAN Form is a Blender add-on design for reshaping an existing template mesh through a sparse network of source-backed control lines.
+DANP Form is a Blender add-on design for reshaping an existing template mesh through a sparse network of source-backed control lines.
 
 The product idea is intentionally small:
 
@@ -16,7 +16,7 @@ interpolate displacement over adjacent patches
 write the result to the real Source Mesh
 ```
 
-The **current patch shape at operation start is the geometric baseline**. DAN Form does not reconstruct a patch from sparse handles and does not continuously pull the model toward the original template. Proportional settings control how control motion spreads into an affected patch.
+The **current patch shape at operation start is the geometric baseline**. DANP Form does not reconstruct a patch from sparse handles and does not continuously pull the model toward the original template. Proportional settings control how control motion spreads into an affected patch.
 
 Enabled unselected control geometry holds its position. Hide a whole line or portion
 to release its constraints and patch cuts; reveal it on the newly deformed Source.
@@ -27,6 +27,10 @@ add-on. Development follows the accepted five-phase roadmap: bootstrap;
 controls/sync; patch visualization; Edit Mode deformation/proportional; human and
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).
+
+Version 0.2.2 displays DANP Form, offers model Init/Remove and keeps controller
+topology fixed. Controller-to-Source deformation is still a Phase 4 task.
+Existing `dan_form` extension/operator/data IDs remain compatible.
 
 ## Start here
 

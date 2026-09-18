@@ -1,6 +1,6 @@
-# DAN Form
+# DANP Form
 
-DAN Form là add-on Blender giúp người dùng hoặc AI chỉnh một model template bằng mạng đường control thưa nằm trên topology thật của Source Mesh.
+DANP Form là add-on Blender giúp người dùng hoặc AI chỉnh một model template bằng mạng đường control thưa nằm trên topology thật của Source Mesh.
 
 ```text
 Source Mesh + control
@@ -25,7 +25,9 @@ lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao n
 theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
 hay deactivate riêng.
 
-Bộ này là specification đã thiết kế lại, chưa có production code. Lộ trình đã chốt:
+Bộ này gồm specification và addon prototype Phase 1/2. Bản 0.2.2 dùng tên DANP
+Form; model có Init/Remove, controller chỉ sửa vị trí các điểm đã có. Biến dạng
+Source từ controller thuộc Phase 4, chưa triển khai. Lộ trình đã chốt:
 
 1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
 2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.
