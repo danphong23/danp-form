@@ -68,7 +68,7 @@ the proxy legitimately; those costs are distinct from idle redraw.
 
 ## Verification
 
-[Cache/highlight regression](../../tests/live_edit_performance.py) passed 34 checks
+[Cache/highlight regression](../../tests/live_edit_performance.py) passed 38 checks
 using a removable fixture in this same scene. Actual geometry events verified
 Source BMesh positions, proxy sync and GPU invalidation; idle calls retained buffer
 identity and never called the position builder. Coverage includes explicit point
@@ -82,8 +82,9 @@ checks, including native topology edits/recovery and full removal. The existing
 [sidebar regression](../../tests/live_sidebar_regression.py) checks, with Source
 definitions/masks/coordinates and controller pose/selection restored. Another 34
 [segment/visibility checks](../../tests/live_control_segments.py) passed on removable
-crossing-lines and closed-loop fixtures. Final total: 139 checks, covering span stops,
-additive selection, edge/node Hide intent, partial eyes, selective reveal, scoped keys
+crossing-lines and closed-loop fixtures. Final total: 143 checks, covering span stops,
+additive selection, edge/node Hide intent, partial eyes, selective reveal, live
+Controller Edit hide/reveal highlight updates, scoped keys
 and Hide/Show All even on an empty controller in Edit Mode.
 The user's Source and Cube topology, coordinates and transforms remained
 unchanged; all original definitions survived.

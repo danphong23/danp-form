@@ -6,7 +6,7 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "7997bae722fa9b413459a959aebe06029fa01f61d6bf431800405f09fa382149",
+    "sha256": "0a7f1618037370b870b87a38cabb3bc1df7bf7163964ea9783c3182cb62988f9",
     "bytes": 6059
   },
   {
@@ -171,8 +171,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "f52a775dd5db2361e786a9754ee040e39821a1ca6a33c562e24a04c6816f6efc",
-    "bytes": 164939
+    "sha256": "a82f0e35b6d7b0e203accaa9ceac5b7f49c3edf377a0499780ac78f32e507a28",
+    "bytes": 164991
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -251,8 +251,8 @@
   },
   {
     "path": "docs/testing/phase-02-edit-performance-report.md",
-    "sha256": "7550153d350b7532b4d8bdbcd0b7a1c356cee69e226eb90f00928fb61e129135",
-    "bytes": 8197
+    "sha256": "4c315ad33e0bceb9938010d7aea48b5513da57407cbbddd8238acc2e55210c65",
+    "bytes": 8249
   },
   {
     "path": "docs/testing/phase-02-sidebar-performance-report.md",
@@ -311,7 +311,7 @@
   },
   {
     "path": "tasks/phase-02-native-list-ux.md",
-    "sha256": "1a49a4b3d518a0ce0a8c5d050931e1e455fa62ad5669a497e82c37e530888ffd",
+    "sha256": "fa404640f126799d6f55e2c6bb81983b402d589079dba23bba2b19883df7aa01",
     "bytes": 7068
   },
   {

@@ -11,8 +11,8 @@ Các checkbox rộng bên dưới vẫn là gate cần bằng chứng riêng, kh
 - [x] Giữ GPU buffers ở idle; invalidate theo geometry, context, masks, highlight,
       transforms, runtime refresh; Controller Edit vẽ cyan từ BMesh sống.
 - [x] Chỉ thêm chấm cho explicit point handles, không chồng lên mọi edge endpoint.
-- [x] MCP: 34 cache/highlight + 37 lifecycle + 34 sidebar + 34 segment/visibility
-      checks; tổng 139, fixture được dọn.
+- [x] MCP: 38 cache/highlight + 37 lifecycle + 34 sidebar + 34 segment/visibility
+      checks; tổng 143, fixture được dọn.
 - [x] Ctrl+Alt+Click chọn span giữa giao điểm; Shift cộng selection; menu/F3/MCP
       dùng active/single edge hoặc canonical edge ID. Kiểm tra cả projection pick.
 - [x] H edge mode chỉ ẩn cạnh, giữ giao điểm của đường còn bật; vertex mode ẩn

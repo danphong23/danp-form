@@ -153,6 +153,7 @@ def run():
         check(refreshed_edit_batches is not edit_batches, 'controller Edit coordinate event invalidates buffers')
         expected_live = controller.matrix_world @ live_vertex.co
         check(any((point - expected_live).length < 1e-7 for point in refreshed_edit_geometry['edges']), 'controller Edit highlight reads live BMesh coordinates')
+        ctx.tool_settings.mesh_select_mode = (False, True, False)
         for edge in bm.edges:
             edge.select = False
         bm.edges[0].select = True
@@ -160,6 +161,22 @@ def run():
         check(not geometry('controller_edit')['selected_edges'], 'native selection is not painted over by overlay')
         addon._draw_control_overlay()
         check(True, 'controller Edit draw path completes with live overlay')
+        for edge in bm.edges:
+            edge.select = False
+        bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+        visible_before_hide = len(geometry('controller_edit')['edges'])
+        bm = bmesh.from_edit_mesh(controller.data)
+        bm.edges[0].select = True
+        bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+        check(bpy.ops.dan_form.hide_selected() == {'FINISHED'}, 'controller Edit Hide updates canonical mask')
+        hidden_controller_geometry = geometry('controller_edit')
+        check(len(hidden_controller_geometry['edges']) < visible_before_hide, f"Controller Edit highlight removes hidden edges ({visible_before_hide}->{len(hidden_controller_geometry['edges'])}, masks={len(addon._hidden(model, addon.HIDDEN_EIDS_KEY))}/{len(addon._hidden(model, addon.HIDDEN_VIDS_KEY))})")
+        check(bpy.ops.dan_form.reveal() == {'FINISHED'}, 'controller Edit Reveal restores current Source positions')
+        restored_controller_geometry = geometry('controller_edit')
+        restored_bm = bmesh.from_edit_mesh(controller.data)
+        restored_layer = restored_bm.edges.layers.int.get(addon.PROXY_EID_ATTR)
+        restored_selected = sum(1 for edge in restored_bm.edges if edge.select and restored_layer is not None)
+        check(len(restored_controller_geometry['edges']) + 2 * restored_selected == visible_before_hide, f"Controller Edit highlight restores revealed edges ({visible_before_hide}->{len(restored_controller_geometry['edges'])}+{restored_selected} native)")
         old_mapping = addon._MAPPING_CACHE.get(model.as_pointer())
         addon._refresh_runtime()
         check(not addon._OVERLAY_CACHE and addon._MAPPING_CACHE.get(model.as_pointer()) is not old_mapping, 'runtime refresh drops overlay and stale topology mapping')
