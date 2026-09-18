@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sys
 import uuid
-from pathlib import Path
 
 import bmesh
 import bpy
-from bpy.props import PointerProperty, StringProperty
+from bpy.props import BoolProperty, FloatProperty, PointerProperty, StringProperty
 from mathutils import Matrix
 
 
@@ -31,6 +29,7 @@ NEXT_EID_KEY = "dan_form_next_eid"
 TOPOLOGY_KEY = "dan_form_topology_fingerprint"
 NETWORK_REVISION_KEY = "dan_form_control_network_revision"
 PROXY_GENERATION_KEY = "dan_form_proxy_generation"
+OVERLAY_HANDLE = None
 _SYNC_GUARD = False
 
 bl_info = {
@@ -64,6 +63,12 @@ def _json_set(obj: bpy.types.ID, key: str, value) -> None:
 def _controls(source: bpy.types.Object) -> list[dict]:
     value = _json_get(source, CONTROLS_KEY, [])
     return value if isinstance(value, list) else []
+
+
+def _control(source: bpy.types.Object | None, control_uuid: str) -> dict | None:
+    if source is None:
+        return None
+    return next((item for item in _controls(source) if item.get("control_uuid") == control_uuid), None)
 
 
 def _hidden(source: bpy.types.Object, key: str) -> set[int]:
@@ -155,12 +160,34 @@ def _ensure_source_ids(source: bpy.types.Object) -> None:
 
 
 def _source_id_maps(source: bpy.types.Object) -> tuple[dict[int, int], dict[int, int]]:
-    _ensure_source_ids(source)
-    vid_attr = source.data.attributes[VID_ATTR]
-    eid_attr = source.data.attributes[EID_ATTR]
-    vids = {int(item.value): index for index, item in enumerate(vid_attr.data)}
-    eids = {int(item.value): index for index, item in enumerate(eid_attr.data)}
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        vid_layer = bm.verts.layers.int.get(VID_ATTR)
+        eid_layer = bm.edges.layers.int.get(EID_ATTR)
+        if vid_layer is None or eid_layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        vids = {int(vert[vid_layer]): vert.index for vert in bm.verts}
+        eids = {int(edge[eid_layer]): edge.index for edge in bm.edges}
+    else:
+        _ensure_source_ids(source)
+        vid_attr = source.data.attributes[VID_ATTR]
+        eid_attr = source.data.attributes[EID_ATTR]
+        vids = {int(item.value): index for index, item in enumerate(vid_attr.data)}
+        eids = {int(item.value): index for index, item in enumerate(eid_attr.data)}
     return vids, eids
+
+
+def _source_vid(source: bpy.types.Object, vertex_index: int) -> int:
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        bm.verts.ensure_lookup_table()
+        layer = bm.verts.layers.int.get(VID_ATTR)
+        if layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        return int(bm.verts[vertex_index][layer])
+    return int(source.data.attributes[VID_ATTR].data[vertex_index].value)
 
 
 def _find_controller(source: bpy.types.Object) -> bpy.types.Object | None:
@@ -168,9 +195,54 @@ def _find_controller(source: bpy.types.Object) -> bpy.types.Object | None:
     if not source_uuid:
         return None
     for obj in bpy.data.objects:
-        if obj.get(CONTROLLER_KEY) == source_uuid:
+        if obj.get(CONTROLLER_KEY) == source_uuid and obj.type == "MESH":
             return obj
     return None
+
+
+def _source_for_controller(controller: bpy.types.Object | None) -> bpy.types.Object | None:
+    if controller is None or controller.get(CONTROLLER_KEY) is None:
+        return None
+    source_uuid = controller.get(CONTROLLER_KEY)
+    parent = controller.parent
+    for source in bpy.data.objects:
+        if (
+            source.type == "MESH"
+            and source.get(SOURCE_UUID_KEY) == source_uuid
+            and (parent is None or parent == source)
+        ):
+            return source
+    return None
+
+
+def _context_source(context: bpy.types.Context) -> tuple[bpy.types.Object | None, bpy.types.Object | None]:
+    """Resolve the active model; never reuse a stale scene pointer."""
+    active = context.view_layer.objects.active
+    if active is None:
+        return None, None
+    if active.type == "MESH" and active.get(CONTROLLER_KEY) is None:
+        return active, _find_controller(active)
+    source = _source_for_controller(active)
+    if source is not None:
+        return source, active
+    return None, None
+
+
+def _set_scene_context(context: bpy.types.Context, source: bpy.types.Object | None, controller: bpy.types.Object | None) -> None:
+    scene = context.scene
+    scene.dan_form_source = source
+    scene.dan_form_controller = controller
+
+
+def _source_controller_pairs() -> list[tuple[bpy.types.Object, bpy.types.Object]]:
+    pairs = []
+    for source in bpy.data.objects:
+        if source.type != "MESH" or not source.get(SOURCE_UUID_KEY):
+            continue
+        controller = _find_controller(source)
+        if controller is not None:
+            pairs.append((source, controller))
+    return pairs
 
 
 def _controller_collection(source: bpy.types.Object, scene: bpy.types.Scene) -> bpy.types.Collection:
@@ -198,30 +270,75 @@ def _effective_proxy_elements(source: bpy.types.Object) -> tuple[list[int], list
             if edge_index is None or edge_id in hidden_eids:
                 continue
             edge = source.data.edges[edge_index]
-            endpoint_ids = {
-                int(source.data.attributes[VID_ATTR].data[vertex_index].value)
-                for vertex_index in edge.vertices
-            }
+            endpoint_ids = {_source_vid(source, vertex_index) for vertex_index in edge.vertices}
             if endpoint_ids & hidden_vids:
                 continue
             visible_edges.add(edge_id)
             visible_vertices.update(endpoint_ids)
-        # Vertex-only definitions are standalone points. For an edge-backed
-        # definition, endpoint vertices are supported by the effective edges;
-        # when those edges are hidden the endpoints must be released too.
-        if not control.get("edge_ids"):
-            for vertex_id in control.get("vertex_ids", []):
-                vertex_id = int(vertex_id)
-                if vertex_id not in hidden_vids and vertex_id in vid_to_index:
-                    visible_vertices.add(vertex_id)
+        # Explicit point membership remains meaningful in mixed controls. For an
+        # edge-only definition, endpoints are supplied by the effective edges.
+        endpoint_ids = set()
+        for edge_id in control.get("edge_ids", []):
+            edge_index = eid_to_index.get(int(edge_id))
+            if edge_index is not None:
+                endpoint_ids.update(_source_vid(source, vertex_index) for vertex_index in source.data.edges[edge_index].vertices)
+        for vertex_id in control.get("vertex_ids", []):
+            vertex_id = int(vertex_id)
+            if vertex_id not in hidden_vids and vertex_id in vid_to_index and (
+                not control.get("edge_ids") or vertex_id not in endpoint_ids
+            ):
+                visible_vertices.add(vertex_id)
     return sorted(visible_vertices), sorted(visible_edges)
+
+
+def _control_intent(source: bpy.types.Object, control: dict) -> tuple[set[int], set[int]]:
+    """Return edge and explicit-node intent for whole-definition actions."""
+    _, edge_indices = _source_id_maps(source)
+    endpoint_ids: set[int] = set()
+    for edge_id in control.get("edge_ids", []):
+        edge_index = edge_indices.get(int(edge_id))
+        if edge_index is None:
+            continue
+        endpoint_ids.update(_source_vid(source, vertex_index) for vertex_index in source.data.edges[edge_index].vertices)
+    edge_ids = {int(edge_id) for edge_id in control.get("edge_ids", []) if int(edge_id) in edge_indices}
+    node_ids = {int(vertex_id) for vertex_id in control.get("vertex_ids", [])}
+    if edge_ids:
+        node_ids.difference_update(endpoint_ids)
+    return edge_ids, node_ids
+
+
+def _control_effective(source: bpy.types.Object, control: dict) -> tuple[set[int], set[int]]:
+    hidden_vids = _hidden(source, HIDDEN_VIDS_KEY)
+    hidden_eids = _hidden(source, HIDDEN_EIDS_KEY)
+    _, edge_indices = _source_id_maps(source)
+    effective_edges: set[int] = set()
+    effective_vertices: set[int] = set()
+    for edge_id in control.get("edge_ids", []):
+        edge_id = int(edge_id)
+        edge_index = edge_indices.get(edge_id)
+        if edge_index is None or edge_id in hidden_eids:
+            continue
+        endpoints = {_source_vid(source, index) for index in source.data.edges[edge_index].vertices}
+        if endpoints & hidden_vids:
+            continue
+        effective_edges.add(edge_id)
+        effective_vertices.update(endpoints)
+    _, explicit_nodes = _control_intent(source, control)
+    effective_vertices.update(explicit_nodes - hidden_vids)
+    return effective_vertices, effective_edges
 
 
 def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
     vertex_ids, edge_ids = _effective_proxy_elements(source)
     vid_to_index, eid_to_index = _source_id_maps(source)
-    source_vid_attr = source.data.attributes[VID_ATTR]
     proxy_mesh = controller.data
+    old_active = bpy.context.view_layer.objects.active
+    old_mode = old_active.mode if old_active is not None else "OBJECT"
+    old_selected = [obj for obj in bpy.context.selected_objects]
+    if controller.mode == "EDIT":
+        # Blender cannot rebuild a Mesh datablock while its edit BMesh owns it.
+        # Temporarily leave only the controller edit context, then restore it.
+        bpy.ops.object.mode_set(mode="OBJECT")
     proxy_mesh.clear_geometry()
     proxy_vertices = [tuple(source.data.vertices[vid_to_index[vid]].co) for vid in vertex_ids]
     proxy_vertex_index = {vid: index for index, vid in enumerate(vertex_ids)}
@@ -229,12 +346,16 @@ def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> No
     kept_edge_ids = []
     for edge_id in edge_ids:
         edge = source.data.edges[eid_to_index[edge_id]]
-        endpoint_ids = [int(source_vid_attr.data[index].value) for index in edge.vertices]
+        endpoint_ids = [_source_vid(source, index) for index in edge.vertices]
         if all(endpoint in proxy_vertex_index for endpoint in endpoint_ids):
             proxy_edges.append(tuple(proxy_vertex_index[endpoint] for endpoint in endpoint_ids))
             kept_edge_ids.append(edge_id)
     proxy_mesh.from_pydata(proxy_vertices, proxy_edges, [])
     proxy_mesh.update()
+    for attr_name in (PROXY_VID_ATTR, PROXY_EID_ATTR):
+        old_attr = proxy_mesh.attributes.get(attr_name)
+        if old_attr is not None:
+            proxy_mesh.attributes.remove(old_attr)
     proxy_vid_attr = proxy_mesh.attributes.new(name=PROXY_VID_ATTR, type="INT", domain="POINT")
     for index, vertex_id in enumerate(vertex_ids):
         proxy_vid_attr.data[index].value = vertex_id
@@ -245,9 +366,23 @@ def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> No
     controller.matrix_parent_inverse = Matrix.Identity(4)
     controller.matrix_basis = Matrix.Identity(4)
     controller.display_type = "WIRE"
+    controller.color = (0.05, 0.75, 1.0, 1.0)
+    controller.show_wire = True
+    controller.show_all_edges = True
     controller.hide_render = True
     controller[PROXY_GENERATION_KEY] = int(controller.get(PROXY_GENERATION_KEY, 0)) + 1
     proxy_mesh.update()
+    if old_active is not None and old_active != controller and old_active.name in bpy.data.objects:
+        for obj in bpy.context.selected_objects:
+            obj.select_set(False)
+        for obj in old_selected:
+            if obj.name in bpy.data.objects:
+                obj.select_set(True)
+        bpy.context.view_layer.objects.active = old_active
+    if old_active == controller and old_mode == "EDIT" and controller.name in bpy.data.objects:
+        bpy.context.view_layer.objects.active = controller
+        controller.select_set(True)
+        bpy.ops.object.mode_set(mode="EDIT")
 
 
 def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
@@ -271,7 +406,6 @@ def _update_revision(source: bpy.types.Object) -> None:
 def _source_selection(source: bpy.types.Object) -> tuple[set[int], set[int]]:
     if source.mode != "EDIT" or bpy.context.view_layer.objects.active != source:
         raise ValueError("SOURCE_EDIT_MODE_REQUIRED")
-    _ensure_source_ids(source)
     bm = bmesh.from_edit_mesh(source.data)
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
@@ -309,6 +443,50 @@ def _proxy_selection(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
     return selected_vids, selected_eids
 
 
+def _select_source_ids(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[int], add: bool = False) -> None:
+    if source.mode != "EDIT":
+        raise ValueError("SOURCE_EDIT_MODE_REQUIRED")
+    bm = bmesh.from_edit_mesh(source.data)
+    vid_layer = bm.verts.layers.int.get(VID_ATTR)
+    eid_layer = bm.edges.layers.int.get(EID_ATTR)
+    if vid_layer is None or eid_layer is None:
+        raise ValueError("SOURCE_ID_LAYERS_MISSING")
+    if not add:
+        for vert in bm.verts:
+            vert.select = False
+        for edge in bm.edges:
+            edge.select = False
+    for vert in bm.verts:
+        if int(vert[vid_layer]) in vertex_ids:
+            vert.select = True
+    for edge in bm.edges:
+        if int(edge[eid_layer]) in edge_ids:
+            edge.select = True
+    bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
+
+
+def _select_proxy_ids(controller: bpy.types.Object, vertex_ids: set[int], edge_ids: set[int], add: bool = False) -> None:
+    if controller.mode != "EDIT":
+        raise ValueError("CONTROLLER_EDIT_MODE_REQUIRED")
+    bm = bmesh.from_edit_mesh(controller.data)
+    vid_layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
+    eid_layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+    if vid_layer is None or eid_layer is None:
+        raise ValueError("PROXY_MAPPING_MISSING")
+    if not add:
+        for vert in bm.verts:
+            vert.select = False
+        for edge in bm.edges:
+            edge.select = False
+    for vert in bm.verts:
+        if int(vert[vid_layer]) in vertex_ids:
+            vert.select = True
+    for edge in bm.edges:
+        if int(edge[eid_layer]) in edge_ids:
+            edge.select = True
+    bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
+
+
 def _mutate_masks(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[int], reveal: bool) -> bool:
     hidden_vids = _hidden(source, HIDDEN_VIDS_KEY)
     hidden_eids = _hidden(source, HIDDEN_EIDS_KEY)
@@ -320,12 +498,11 @@ def _mutate_masks(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[
         hidden_vids.difference_update(vertex_ids)
         hidden_eids.difference_update(edge_ids)
         _, edge_indices = _source_id_maps(source)
-        source_vid_attr = source.data.attributes[VID_ATTR]
         for edge_id in edge_ids:
             edge_index = edge_indices.get(edge_id)
             if edge_index is not None:
                 hidden_vids.difference_update(
-                    int(source_vid_attr.data[vertex_index].value)
+                    _source_vid(source, vertex_index)
                     for vertex_index in source.data.edges[edge_index].vertices
                 )
     else:
@@ -339,10 +516,37 @@ def _mutate_masks(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[
     return changed
 
 
+def _mutate_control_visibility(source: bpy.types.Object, control: dict, reveal: bool) -> bool:
+    edge_ids, node_ids = _control_intent(source, control)
+    if reveal:
+        return _mutate_masks(source, node_ids, edge_ids, reveal=True)
+    return _mutate_masks(source, node_ids, edge_ids, reveal=False)
+
+
+def _prune_masks_after_remove(source: bpy.types.Object) -> None:
+    defined_edges: set[int] = set()
+    defined_nodes: set[int] = set()
+    for control in _controls(source):
+        edges, nodes = _control_intent(source, control)
+        defined_edges.update(edges)
+        defined_nodes.update(nodes)
+    _, edge_indices = _source_id_maps(source)
+    for control in _controls(source):
+        for edge_id in control.get("edge_ids", []):
+            index = edge_indices.get(int(edge_id))
+            if index is not None:
+                defined_nodes.update(
+                    _source_vid(source, vertex_index)
+                    for vertex_index in source.data.edges[index].vertices
+                )
+    hidden_vids = _hidden(source, HIDDEN_VIDS_KEY) & defined_nodes
+    hidden_eids = _hidden(source, HIDDEN_EIDS_KEY) & defined_edges
+    _json_set(source, HIDDEN_VIDS_KEY, sorted(hidden_vids))
+    _json_set(source, HIDDEN_EIDS_KEY, sorted(hidden_eids))
+
+
 def _sync_scene(scene: bpy.types.Scene) -> None:
-    source = scene.dan_form_source
-    controller = scene.dan_form_controller
-    if source is not None and controller is not None:
+    for source, controller in _source_controller_pairs():
         try:
             _sync_proxy(source, controller)
         except (KeyError, ValueError):
@@ -353,11 +557,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
     global _SYNC_GUARD
     if _SYNC_GUARD:
         return
-    for current_scene in bpy.data.scenes:
-        source = getattr(current_scene, "dan_form_source", None)
-        controller = getattr(current_scene, "dan_form_controller", None)
-        if source is None or controller is None:
-            continue
+    for source, controller in _source_controller_pairs():
         _SYNC_GUARD = True
         try:
             try:
@@ -370,6 +570,109 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             _SYNC_GUARD = False
 
 
+def _overlay_source(context: bpy.types.Context) -> bpy.types.Object | None:
+    source, _ = _context_source(context)
+    return source
+
+
+def _draw_control_overlay() -> None:
+    """Draw Source-backed controls without modifying Source mesh data."""
+    try:
+        import gpu
+        from gpu_extras.batch import batch_for_shader
+
+        context = bpy.context
+        scene = context.scene
+        if not getattr(scene, "dan_form_overlay_enabled", True):
+            return
+        source = _overlay_source(context)
+        if source is None or source.type != "MESH":
+            return
+        vertex_ids, edge_ids = _effective_proxy_elements(source)
+        if getattr(scene, "dan_form_overlay_hidden", False):
+            _, all_edge_indices = _source_id_maps(source)
+            edge_ids = sorted({int(edge_id) for c in _controls(source) for edge_id in c.get("edge_ids", []) if int(edge_id) in all_edge_indices})
+            vertex_ids = sorted({int(vertex_id) for c in _controls(source) for vertex_id in c.get("vertex_ids", [])})
+            for edge_id in edge_ids:
+                edge = source.data.edges[all_edge_indices[edge_id]]
+                vertex_ids.extend(_source_vid(source, index) for index in edge.vertices)
+            vertex_ids = sorted(set(vertex_ids))
+        vid_to_index, eid_to_index = _source_id_maps(source)
+        edge_positions = []
+        for edge_id in edge_ids:
+            edge_index = eid_to_index.get(edge_id)
+            if edge_index is None:
+                continue
+            edge = source.data.edges[edge_index]
+            edge_positions.extend(
+                (source.matrix_world @ source.data.vertices[index].co) for index in edge.vertices
+            )
+        selected_positions = []
+        selected_uuid = getattr(scene, "dan_form_selected_control", "")
+        selected_control = _control(source, selected_uuid)
+        if selected_control:
+            _, selected_edges = _control_effective(source, selected_control)
+            for edge_id in selected_edges:
+                edge_index = eid_to_index.get(edge_id)
+                if edge_index is not None:
+                    selected_positions.extend(
+                        (source.matrix_world @ source.data.vertices[index].co)
+                        for index in source.data.edges[edge_index].vertices
+                    )
+        shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+        if getattr(scene, "dan_form_overlay_xray", False):
+            try:
+                gpu.state.depth_test_set("NONE")
+            except Exception:
+                pass
+        if edge_positions:
+            batch = batch_for_shader(shader, "LINES", {"pos": edge_positions})
+            shader.bind()
+            shader.uniform_float("color", (0.05, 0.75, 1.0, 0.95))
+            gpu.state.line_width_set(float(getattr(scene, "dan_form_overlay_width", 3.0)))
+            batch.draw(shader)
+        if selected_positions:
+            batch = batch_for_shader(shader, "LINES", {"pos": selected_positions})
+            shader.bind()
+            shader.uniform_float("color", (1.0, 0.45, 0.05, 1.0))
+            gpu.state.line_width_set(float(getattr(scene, "dan_form_overlay_width", 3.0)) + 1.0)
+            batch.draw(shader)
+        standalone = []
+        for vertex_id in vertex_ids:
+            index = vid_to_index.get(vertex_id)
+            if index is not None:
+                standalone.append(source.matrix_world @ source.data.vertices[index].co)
+        if standalone:
+            batch = batch_for_shader(shader, "POINTS", {"pos": standalone})
+            shader.bind()
+            shader.uniform_float("color", (0.2, 1.0, 0.7, 1.0))
+            gpu.state.point_size_set(6.0)
+            batch.draw(shader)
+        if getattr(scene, "dan_form_overlay_xray", False):
+            try:
+                gpu.state.depth_test_set("LESS_EQUAL")
+            except Exception:
+                pass
+    except Exception:
+        # Drawing must never break Blender's viewport; the next redraw retries.
+        return
+
+
+def _register_overlay() -> None:
+    global OVERLAY_HANDLE
+    if OVERLAY_HANDLE is None:
+        OVERLAY_HANDLE = bpy.types.SpaceView3D.draw_handler_add(
+            _draw_control_overlay, (), "WINDOW", "POST_VIEW"
+        )
+
+
+def _unregister_overlay() -> None:
+    global OVERLAY_HANDLE
+    if OVERLAY_HANDLE is not None:
+        bpy.types.SpaceView3D.draw_handler_remove(OVERLAY_HANDLE, "WINDOW")
+        OVERLAY_HANDLE = None
+
+
 class DANFORM_OT_initialize(bpy.types.Operator):
     bl_idname = "dan_form.initialize"
     bl_label = "Initialize DAN Form"
@@ -378,12 +681,12 @@ class DANFORM_OT_initialize(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        source = context.scene.dan_form_source
-        return source is not None and source.type == "MESH"
+        active = context.view_layer.objects.active
+        return active is not None and active.type == "MESH" and active.get(CONTROLLER_KEY) is None
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
-        source = scene.dan_form_source
+        source = context.view_layer.objects.active
         try:
             if not _is_valid_source(source):
                 raise ValueError("SOURCE_NOT_EDITABLE")
@@ -403,9 +706,8 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 controller.hide_render = True
             _rebuild_proxy(source, controller)
             source["dan_form_controller_name"] = controller.name
-            scene.dan_form_controller = controller
+            _set_scene_context(context, source, controller)
             scene.dan_form_status = f"Ready: {source.name} / {controller.name}"
-            _select_only(context, controller)
             self.report({"INFO"}, "DAN Form controller ready")
             return {"FINISHED"}
         except ValueError as exc:
@@ -421,13 +723,13 @@ class DANFORM_OT_sync(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        source = context.scene.dan_form_source
-        controller = context.scene.dan_form_controller
+        source, controller = _context_source(context)
         try:
             if not _is_valid_source(source) or controller is None:
                 raise ValueError("SOURCE_OR_CONTROLLER_MISSING")
             _ensure_source_ids(source)
             _sync_proxy(source, controller)
+            _set_scene_context(context, source, controller)
             context.scene.dan_form_status = f"Synced: {controller.name}"
             return {"FINISHED"}
         except ValueError as exc:
@@ -443,21 +745,16 @@ class DANFORM_OT_create_control(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        source = context.scene.dan_form_source
-        return source is not None and context.view_layer.objects.active == source and source.mode == "EDIT"
+        source, _ = _context_source(context)
+        return source is not None and source == context.view_layer.objects.active and source.mode == "EDIT"
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        source = context.scene.dan_form_source
+        source, controller = _context_source(context)
         scene = context.scene
         try:
             _ensure_source_ids(source)
             vertex_ids, edge_ids = _source_selection(source)
             controls = _controls(source)
-            identity = (sorted(vertex_ids), sorted(edge_ids))
-            if any((sorted(item.get("vertex_ids", [])), sorted(item.get("edge_ids", []))) == identity for item in controls):
-                raise ValueError("CONTROL_ALREADY_EXISTS")
-            if source.mode == "EDIT":
-                bpy.ops.object.mode_set(mode="OBJECT")
             controls.append({
                 "control_uuid": uuid.uuid4().hex,
                 "name": f"Control {len(controls) + 1}",
@@ -466,19 +763,140 @@ class DANFORM_OT_create_control(bpy.types.Operator):
             })
             _json_set(source, CONTROLS_KEY, controls)
             _update_revision(source)
-            controller = _find_controller(source)
+            controller = controller or _find_controller(source)
             if controller is None:
                 raise ValueError("CONTROLLER_MISSING")
             _rebuild_proxy(source, controller)
             _sync_proxy(source, controller)
-            scene.dan_form_controller = controller
+            _set_scene_context(context, source, controller)
+            scene.dan_form_selected_control = controls[-1]["control_uuid"]
             scene.dan_form_status = f"Created {controls[-1]['name']} ({len(vertex_ids)}V/{len(edge_ids)}E)"
-            _select_only(context, controller)
             self.report({"INFO"}, scene.dan_form_status)
             return {"FINISHED"}
         except ValueError as exc:
             self.report({"ERROR"}, str(exc))
             return {"CANCELLED"}
+
+
+class DANFORM_OT_rename_control(bpy.types.Operator):
+    bl_idname = "dan_form.rename_control"
+    bl_label = "Rename Control"
+    bl_description = "Rename a control definition without changing its geometry"
+    bl_options = {"REGISTER", "UNDO"}
+    control_uuid: StringProperty(default="")
+    new_name: StringProperty(name="Name", default="")
+
+    def invoke(self, context, event):
+        source, _ = _context_source(context)
+        control = _control(source, self.control_uuid)
+        self.new_name = control.get("name", "") if control else ""
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        controls = _controls(source)
+        control = next((item for item in controls if item.get("control_uuid") == self.control_uuid), None)
+        if source is None or control is None or not self.new_name.strip():
+            return {"CANCELLED"}
+        control["name"] = self.new_name.strip()
+        _json_set(source, CONTROLS_KEY, controls)
+        _set_scene_context(context, source, controller)
+        context.scene.dan_form_selected_control = self.control_uuid
+        context.scene.dan_form_status = f"Renamed: {control['name']}"
+        return {"FINISHED"}
+
+
+class DANFORM_OT_select_control(bpy.types.Operator):
+    bl_idname = "dan_form.select_control"
+    bl_label = "Select Control"
+    bl_description = "Select this definition in the current Source or controller edit context"
+    bl_options = {"REGISTER", "UNDO"}
+    control_uuid: StringProperty(default="")
+    add_to_selection: BoolProperty(name="Add to Selection", default=False)
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        control = _control(source, self.control_uuid)
+        if source is None or control is None:
+            return {"CANCELLED"}
+        active = context.view_layer.objects.active
+        try:
+            vertex_ids = {int(value) for value in control.get("vertex_ids", [])}
+            edge_ids = {int(value) for value in control.get("edge_ids", [])}
+            context.scene.dan_form_selected_control = self.control_uuid
+            if active == source and source.mode == "EDIT":
+                _select_source_ids(source, vertex_ids, edge_ids, self.add_to_selection)
+            elif active == controller and controller.mode == "EDIT":
+                effective_vertices, effective_edges = _control_effective(source, control)
+                _select_proxy_ids(controller, effective_vertices, effective_edges, self.add_to_selection)
+            elif active == source and source.mode == "OBJECT":
+                _select_only(context, source)
+                bpy.ops.object.mode_set(mode="EDIT")
+                _select_source_ids(source, vertex_ids, edge_ids, self.add_to_selection)
+            else:
+                raise ValueError("EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
+            context.scene.dan_form_status = f"Selected {control.get('name', 'Control')}"
+            return {"FINISHED"}
+        except ValueError as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_set_control_visibility(bpy.types.Operator):
+    bl_idname = "dan_form.set_control_visibility"
+    bl_label = "Hide/Reveal Control"
+    bl_description = "Hide or reveal one definition using canonical Source masks"
+    bl_options = {"REGISTER", "UNDO"}
+    control_uuid: StringProperty(default="")
+    reveal: BoolProperty(default=False)
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        control = _control(source, self.control_uuid)
+        if source is None or control is None:
+            return {"CANCELLED"}
+        active = context.view_layer.objects.active
+        was_controller_edit = active == controller and controller.mode == "EDIT"
+        try:
+            changed = _mutate_control_visibility(source, control, self.reveal)
+            if changed:
+                _rebuild_proxy(source, controller)
+            _set_scene_context(context, source, controller)
+            context.scene.dan_form_selected_control = self.control_uuid
+            context.scene.dan_form_status = ("Revealed " if self.reveal else "Hidden ") + control.get("name", "Control")
+            if was_controller_edit and controller.name in bpy.data.objects:
+                effective_vertices, effective_edges = _control_effective(source, control)
+                _select_proxy_ids(controller, effective_vertices, effective_edges)
+            return {"FINISHED"}
+        except (ValueError, RuntimeError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_delete_control(bpy.types.Operator):
+    bl_idname = "dan_form.delete_control"
+    bl_label = "Delete Control"
+    bl_description = "Remove only this definition and preserve shared Source geometry"
+    bl_options = {"REGISTER", "UNDO"}
+    control_uuid: StringProperty(default="")
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        if source is None:
+            return {"CANCELLED"}
+        controls = _controls(source)
+        remaining = [item for item in controls if item.get("control_uuid") != self.control_uuid]
+        if len(remaining) == len(controls):
+            return {"CANCELLED"}
+        _json_set(source, CONTROLS_KEY, remaining)
+        _prune_masks_after_remove(source)
+        _update_revision(source)
+        if controller is not None:
+            _rebuild_proxy(source, controller)
+        _set_scene_context(context, source, controller)
+        context.scene.dan_form_selected_control = ""
+        context.scene.dan_form_status = "Control deleted"
+        return {"FINISHED"}
 
 
 class DANFORM_OT_hide_selected(bpy.types.Operator):
@@ -489,23 +907,22 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        controller = context.scene.dan_form_controller
+        _, controller = _context_source(context)
         return controller is not None and context.view_layer.objects.active == controller and controller.mode == "EDIT"
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        source = context.scene.dan_form_source
-        controller = context.scene.dan_form_controller
+        source, controller = _context_source(context)
         try:
             vertex_ids, edge_ids = _proxy_selection(controller)
-            if controller.mode == "EDIT":
-                bpy.ops.object.mode_set(mode="OBJECT")
             changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=False)
             if changed:
                 _rebuild_proxy(source, controller)
                 context.scene.dan_form_status = f"Hidden {len(vertex_ids)}V/{len(edge_ids)}E"
             else:
                 context.scene.dan_form_status = "No visibility change"
-            _select_only(context, controller)
+            _set_scene_context(context, source, controller)
+            if controller.mode == "EDIT":
+                _select_proxy_ids(controller, vertex_ids - _hidden(source, HIDDEN_VIDS_KEY), edge_ids - _hidden(source, HIDDEN_EIDS_KEY))
             return {"FINISHED"}
         except ValueError as exc:
             self.report({"ERROR"}, str(exc))
@@ -520,19 +937,16 @@ class DANFORM_OT_reveal(bpy.types.Operator):
     ids_json: StringProperty(name="IDs JSON", default="")
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        source = context.scene.dan_form_source
-        controller = context.scene.dan_form_controller
+        source, controller = _context_source(context)
         try:
             payload = json.loads(self.ids_json) if self.ids_json else {}
             vertex_ids = {int(item) for item in payload.get("vertex_ids", [])}
             edge_ids = {int(item) for item in payload.get("edge_ids", [])}
             changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=True)
-            if controller is not None and controller.mode == "EDIT":
-                bpy.ops.object.mode_set(mode="OBJECT")
             if changed:
                 _rebuild_proxy(source, controller)
             context.scene.dan_form_status = "Revealed all" if not vertex_ids and not edge_ids else "Revealed selection"
-            _select_only(context, controller)
+            _set_scene_context(context, source, controller)
             return {"FINISHED"}
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             self.report({"ERROR"}, f"INVALID_REVEAL_IDS: {exc}")
@@ -547,21 +961,64 @@ class DANFORM_OT_remove_controller(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        return context.scene.dan_form_controller is not None
+        source, controller = _context_source(context)
+        return source is not None and controller is not None
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
-        controller = scene.dan_form_controller
-        source = scene.dan_form_source
+        source, controller = _context_source(context)
         if controller is None or controller.name not in bpy.data.objects:
             scene.dan_form_controller = None
             scene.dan_form_status = "No controller"
             return {"CANCELLED"}
         bpy.data.objects.remove(controller, do_unlink=True)
-        scene.dan_form_controller = None
+        _set_scene_context(context, source, None)
         scene.dan_form_status = f"Source ready: {source.name}" if source else "No controller"
         self.report({"INFO"}, "Controller removed; Source definitions preserved")
         return {"FINISHED"}
+
+
+class DANFORM_OT_focus_source(bpy.types.Operator):
+    bl_idname = "dan_form.focus_source"
+    bl_label = "Edit Source"
+    bl_description = "Activate the Source mesh and enter Edit Mode"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        if source is None:
+            return {"CANCELLED"}
+        try:
+            if context.view_layer.objects.active != source:
+                _select_only(context, source)
+            if source.mode != "EDIT":
+                bpy.ops.object.mode_set(mode="EDIT")
+            _set_scene_context(context, source, controller)
+            return {"FINISHED"}
+        except RuntimeError as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_focus_controller(bpy.types.Operator):
+    bl_idname = "dan_form.focus_controller"
+    bl_label = "View Controller"
+    bl_description = "Activate the Source-backed controller"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        if source is None or controller is None:
+            return {"CANCELLED"}
+        try:
+            if source.mode == "EDIT":
+                bpy.ops.object.mode_set(mode="OBJECT")
+            _select_only(context, controller)
+            _set_scene_context(context, source, controller)
+            return {"FINISHED"}
+        except RuntimeError as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
 
 
 class DANFORM_PT_sidebar(bpy.types.Panel):
@@ -570,42 +1027,95 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "DAN Form"
+    bl_ui_units_x = 46
 
     def draw(self, context: bpy.types.Context) -> None:
         layout = self.layout
         scene = context.scene
-        source = scene.dan_form_source
-        controls = _controls(source) if source else []
-        layout.prop(scene, "dan_form_source", text="Source")
-        layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
-        layout.operator(DANFORM_OT_sync.bl_idname, icon="FILE_REFRESH")
-        row = layout.row()
-        row.enabled = source is not None and source == context.view_layer.objects.active and source.mode == "EDIT"
-        row.operator(DANFORM_OT_create_control.bl_idname, icon="MESH_DATA")
-        row = layout.row()
-        row.enabled = scene.dan_form_controller is not None and scene.dan_form_controller == context.view_layer.objects.active and scene.dan_form_controller.mode == "EDIT"
-        row.operator(DANFORM_OT_hide_selected.bl_idname, icon="HIDE_ON")
-        row = layout.row()
-        row.enabled = scene.dan_form_controller is not None
+        source, controller = _context_source(context)
+        active = context.view_layer.objects.active
+        if source is None:
+            layout.label(text="Chọn một mesh DAN Form hoặc controller", icon="INFO")
+            return
+        controls = _controls(source)
+        header = layout.box()
+        header.label(text=f"Model: {source.name}", icon="MESH_DATA")
+        if controller is not None:
+            header.label(text=f"Controller: {controller.name}", icon="CURVE_DATA")
+        nav = header.row(align=True)
+        nav.operator(DANFORM_OT_focus_source.bl_idname, icon="EDITMODE_HLT", text="Edit Source")
+        nav.operator(DANFORM_OT_focus_controller.bl_idname, icon="MESH_DATA", text="View Controller")
+        if source.get(SOURCE_UUID_KEY) is None:
+            layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
+            return
+        if controller is None:
+            layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
+            return
+        row = layout.row(align=True)
+        row.enabled = active == source and source.mode == "EDIT"
+        row.operator(DANFORM_OT_create_control.bl_idname, icon="ADD", text="Make Control")
+        row.operator(DANFORM_OT_hide_selected.bl_idname, icon="HIDE_ON", text="Hide Selected")
+        row = layout.row(align=True)
         row.operator(DANFORM_OT_reveal.bl_idname, icon="HIDE_OFF", text="Reveal All")
-        row = layout.row()
-        row.enabled = scene.dan_form_controller is not None
-        row.operator(DANFORM_OT_remove_controller.bl_idname, icon="TRASH")
         layout.separator()
-        layout.label(text=scene.dan_form_status or "Select a mesh Source")
-        layout.label(text=f"Controls: {len(controls)}")
-        if scene.dan_form_controller is not None:
-            layout.label(text=f"Proxy: {scene.dan_form_controller.name}")
-            layout.label(text="Phase 2: Source-backed wires")
+        layout.label(text=f"Controls ({len(controls)})", icon="LINENUMBERS_ON")
+        if not controls:
+            layout.label(text="Chọn điểm/cạnh trên Source rồi Make Control", icon="INFO")
+        for item in controls:
+            try:
+                effective_vertices, effective_edges = _control_effective(source, item)
+                total_edges = len(item.get("edge_ids", []))
+                total_vertices = len(item.get("vertex_ids", []))
+                effective_total = len(effective_edges) + len(effective_vertices)
+                total = total_edges + total_vertices
+                state = "On" if effective_total == total else ("Hidden" if effective_total == 0 else "Partial")
+                box = layout.box()
+                row = box.row(align=True)
+                row.label(text=state)
+                row.label(text=item.get("name", "Control"))
+                row.label(text=f"{effective_total}/{total} effective")
+                select_op = row.operator(DANFORM_OT_select_control.bl_idname, text="Select")
+                select_op.control_uuid = item["control_uuid"]
+                rename_op = row.operator(DANFORM_OT_rename_control.bl_idname, text="Rename")
+                rename_op.control_uuid = item["control_uuid"]
+                delete_op = row.operator(DANFORM_OT_delete_control.bl_idname, text="Delete")
+                delete_op.control_uuid = item["control_uuid"]
+                actions = box.row(align=True)
+                visibility_op = actions.operator(
+                    DANFORM_OT_set_control_visibility.bl_idname,
+                    text="Hide" if state != "Hidden" else "Reveal",
+                )
+                visibility_op.control_uuid = item["control_uuid"]
+                visibility_op.reveal = state == "Hidden"
+            except Exception as exc:
+                layout.label(text=f"Control UI error: {type(exc).__name__}: {str(exc)[:32]}")
+        display = layout.box()
+        display.label(text="Display", icon="SHADING_WIRE")
+        display.prop(scene, "dan_form_overlay_enabled", text="Control overlay")
+        display.prop(scene, "dan_form_overlay_hidden", text="Show hidden controls")
+        display.prop(scene, "dan_form_overlay_xray", text="X-Ray")
+        display.prop(scene, "dan_form_overlay_width", text="Line width")
+        maintenance = layout.box()
+        maintenance.label(text="Maintenance", icon="TOOL_SETTINGS")
+        maintenance.operator(DANFORM_OT_sync.bl_idname, icon="FILE_REFRESH")
+        maintenance.operator(DANFORM_OT_remove_controller.bl_idname, icon="TRASH")
+        if scene.dan_form_status:
+            layout.label(text=scene.dan_form_status, icon="INFO")
 
 
 CLASSES = (
     DANFORM_OT_initialize,
     DANFORM_OT_sync,
     DANFORM_OT_create_control,
+    DANFORM_OT_rename_control,
+    DANFORM_OT_select_control,
+    DANFORM_OT_set_control_visibility,
+    DANFORM_OT_delete_control,
     DANFORM_OT_hide_selected,
     DANFORM_OT_reveal,
     DANFORM_OT_remove_controller,
+    DANFORM_OT_focus_source,
+    DANFORM_OT_focus_controller,
     DANFORM_PT_sidebar,
 )
 
@@ -620,14 +1130,30 @@ def register() -> None:
     )
     bpy.types.Scene.dan_form_controller = PointerProperty(name="DAN Form Controller", type=bpy.types.Object)
     bpy.types.Scene.dan_form_status = StringProperty(name="DAN Form Status", default="Select a mesh Source")
+    bpy.types.Scene.dan_form_selected_control = StringProperty(name="Selected Control", default="")
+    bpy.types.Scene.dan_form_overlay_enabled = BoolProperty(name="Control Overlay", default=True)
+    bpy.types.Scene.dan_form_overlay_hidden = BoolProperty(name="Show Hidden Controls", default=False)
+    bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False)
+    bpy.types.Scene.dan_form_overlay_width = FloatProperty(name="Line Width", default=3.0, min=1.0, max=8.0)
     if _depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(_depsgraph_update_post)
+    _register_overlay()
 
 
 def unregister() -> None:
+    _unregister_overlay()
     if _depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_depsgraph_update_post)
-    for prop in ("dan_form_status", "dan_form_controller", "dan_form_source"):
+    for prop in (
+        "dan_form_overlay_width",
+        "dan_form_overlay_xray",
+        "dan_form_overlay_hidden",
+        "dan_form_overlay_enabled",
+        "dan_form_selected_control",
+        "dan_form_status",
+        "dan_form_controller",
+        "dan_form_source",
+    ):
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
     for cls in reversed(CLASSES):

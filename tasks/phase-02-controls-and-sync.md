@@ -3,6 +3,10 @@
 **Đầu vào:** Gate P1 pass. **Đầu ra:** chọn vertex/edge Source tạo control exact;
 đường trùng Source và Hide/Reveal hoạt động. Gate P2; chưa nội suy biến dạng.
 
+Trước khi chuyển Phase 3, hoàn thành thêm [Phase 2 UX upgrade](phase-02-ux-upgrade.md)
+và Gate P2-UX. Task nền này vẫn là yêu cầu mapping/masks/lifecycle; bản triển khai
+có UI không có nghĩa toàn bộ gate đã pass.
+
 ## Đọc bắt buộc
 
 [Control model](../docs/core/control-model.md),
@@ -50,4 +54,5 @@ bố mọi frame tức thời nếu chưa đo. Topology đổi giữ counts vẫ
 
 Gate P2 pass khi đường/masks/IDs/persistence đúng và Source không biến dạng bởi
 create/hide/reveal/rebuild. Không có deactivate riêng; ẩn DAN Form khác visibility
-object/collection thông thường. Bàn giao demo và state assertions, bước sau P3.1.
+object/collection thông thường. Bàn giao demo và state assertions; hoàn tất UX2.1–UX2.5
+và Gate P2-UX trước P3.1.

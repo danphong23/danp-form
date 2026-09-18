@@ -9,6 +9,10 @@ Hoàn thành gate của phase hiện tại trước khi chuyển phase tiếp th
 4. [Phase 4 — Biến dạng và proportional](phase-04-deformation.md).
 5. [Phase 5 — Test người dùng và agent](phase-05-user-agent-validation.md).
 
+Trước Phase 3, thực hiện [đợt nâng cấp UX thuộc Phase 2](phase-02-ux-upgrade.md):
+sidebar theo active model, giữ Edit Mode, danh sách control và overlay đường trên
+Source. Đây là task bổ sung của Phase 2; cần Gate P2 và P2-UX pass.
+
 Đọc [hợp đồng phát triển](../docs/roadmap/development-contract.md) và
 [acceptance gates](../docs/testing/acceptance-gates.md) khi bắt đầu. Mỗi task chỉ rõ
 đầu vào, work package, test và điều kiện bàn giao. Không tự chốt công thức nội suy

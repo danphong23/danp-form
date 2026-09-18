@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "07af3d85b00f39b94dc53c297ffccd040c63e2d2cad33a366d3066378f41c238",
-    "bytes": 2967
+    "sha256": "b1f943c051dbe2be44ce01ac245353567d6abd8ff6e1109d3205fde6ea0271d4",
+    "bytes": 3727
   },
   {
     "path": "CONTRIBUTING.md",
@@ -56,8 +56,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "09852ae502423e7060d77b4355960c7aeffc25bea191b9b63136ec09d1d9e91f",
-    "bytes": 1917
+    "sha256": "18c3471df02161fbb829709aa85f3b30414bdab7ddef803eb64ac94c57fef8ba",
+    "bytes": 3335
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -166,8 +166,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "41323601c674f2b7f2de990347894d889d94817854d630b3f8582945c60fb989",
-    "bytes": 105999
+    "sha256": "82f89b03589e274f003394063fe1fa3c680dd4dc4976d1433cd3a606b382d12b",
+    "bytes": 124221
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -191,8 +191,8 @@
   },
   {
     "path": "docs/README.md",
-    "sha256": "b494ab3d7340167bf3214973cc7697460aad7a4970a82aeb7bd933d81b4e556f",
-    "bytes": 2083
+    "sha256": "faac59a694d7d39aeef1e4430b57cebdcfc976684e6147848159668c989fdd49",
+    "bytes": 2250
   },
   {
     "path": "docs/research/technical-options.md",
@@ -206,13 +206,18 @@
   },
   {
     "path": "docs/roadmap/implementation-plan.md",
-    "sha256": "41ebecda493395ab36e1e6330d830a0379ec967518534ef6907e72100a1ceb6b",
-    "bytes": 6089
+    "sha256": "9c278c5b19952a057d52146b11aec77820d8ca6d81a4b66932ec09c547e6b329",
+    "bytes": 6690
+  },
+  {
+    "path": "docs/roadmap/phase-02-ux-upgrade.md",
+    "sha256": "7d46861a602916b410508b8736a5e342981edd04b9db58df8b66958fac132ea3",
+    "bytes": 12629
   },
   {
     "path": "docs/testing/acceptance-gates.md",
-    "sha256": "2c1a5d3d1b7dded78bfc13be84bc5645238a017180b33244746cea8f6ed6a1d5",
-    "bytes": 4021
+    "sha256": "33318054ec29d21ea5ae34bc6a67dfc33f5f66d0cd8555fba3a05b6bfc2c9fda",
+    "bytes": 4782
   },
   {
     "path": "docs/testing/blender-integration-cases.md",
@@ -228,6 +233,11 @@
     "path": "docs/testing/geometry-cases.md",
     "sha256": "0ce7df7f15e05d03c9b40a6292e10af90530bf5c9af01ce57d8d9ea29125d2fe",
     "bytes": 6074
+  },
+  {
+    "path": "docs/testing/phase-02-ux-live-report.md",
+    "sha256": "e443ef927ade35c753fe38e8fcb2bd22645ee36f89e63e244df07f90f55ede8d",
+    "bytes": 2522
   },
   {
     "path": "docs/testing/previous-design-review.md",
@@ -251,8 +261,8 @@
   },
   {
     "path": "README.md",
-    "sha256": "8b084671cda9d4254b54ca3453b3587cb324c55f5ad6e037f975c17ac5f53a3f",
-    "bytes": 2255
+    "sha256": "10d5ad805d7d5ba5d3ec36f1ad43ffe639155ff4804888e3de92f8dfbeb55ab7",
+    "bytes": 2253
   },
   {
     "path": "SECURITY.md",
@@ -266,13 +276,18 @@
   },
   {
     "path": "tasks/phase-02-controls-and-sync.md",
-    "sha256": "5604563805ae3445c6bf47a77ca2fa9ac4bd5fff6089c48cb2aedacdb3de3a7b",
-    "bytes": 3599
+    "sha256": "87fcf04bc3196a86cd54af9d37376fe27f90b2a77cea184d507ad39670f15d82",
+    "bytes": 3882
+  },
+  {
+    "path": "tasks/phase-02-ux-upgrade.md",
+    "sha256": "c908f57a66382094e0b53d473a2a64b7ffbbd200760811eea6ac6eaa52403624",
+    "bytes": 4185
   },
   {
     "path": "tasks/phase-03-patch-visualization.md",
-    "sha256": "d0cc83889a950548be012824c15cffeededd0c1146ba3dc4863ebd7e814e372d",
-    "bytes": 2415
+    "sha256": "90183474a0123527fbcbbdde6ab29b353dad05951dae741a3968fc4647201bd7",
+    "bytes": 2425
   },
   {
     "path": "tasks/phase-04-deformation.md",
@@ -286,7 +301,7 @@
   },
   {
     "path": "tasks/README.md",
-    "sha256": "67b0b1676b18e518f49ec62bfab7f2784af29b9d387aad5747258ddb741692e6",
-    "bytes": 1000
+    "sha256": "24d633cf19ef599b69bf19684d869af91ab00fae40152fb2df4cc6f1e7fa379c",
+    "bytes": 1267
   }
 ]

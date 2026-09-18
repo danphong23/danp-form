@@ -1,6 +1,7 @@
 # Kế hoạch phát triển DAN Form
 
-**Trạng thái: 5 phase đã thống nhất; chưa triển khai add-on.**
+**Trạng thái: 5 phase đã thống nhất; đã có mã/bản cài Phase 1–2; bổ sung kế hoạch
+nâng cấp UX Phase 2 trước Phase 3. Gate chỉ pass khi có bằng chứng test tương ứng.**
 
 Mục tiêu là chỉnh model template qua các đường control nằm trên mesh thật. Các đường
 đang bật chia patch và giữ phần không chọn đứng yên. Khi điều chỉnh control được chọn,
@@ -12,13 +13,16 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 | Phase | Kết quả có thể thử trong Blender | Task | Điều kiện hoàn thành |
 | --- | --- | --- | --- |
 | 1 — Khởi tạo | Cài extension, mở sidebar, chọn Source, tạo controller con của Source | [Bootstrap](../../tasks/phase-01-bootstrap.md) | Gate P1 |
-| 2 — Control và đồng bộ | Tạo đường từ vertex/edge Source, controller trùng mesh, Hide/Reveal toàn phần hoặc một đoạn | [Controls](../../tasks/phase-02-controls-and-sync.md) | Gate P2 |
+| 2 — Control và đồng bộ | Tạo đường từ vertex/edge Source, controller trùng mesh, Hide/Reveal; sidebar theo model, giữ Edit Mode, danh sách và màu đường | [Controls](../../tasks/phase-02-controls-and-sync.md), [UX upgrade](../../tasks/phase-02-ux-upgrade.md) | Gate P2 và P2-UX |
 | 3 — Hiển thị patch | Thấy các patch thật và bật/tắt lớp hiển thị để kiểm tra vùng | [Patch UX](../../tasks/phase-03-patch-visualization.md) | Gate P3 |
 | 4 — Biến dạng | Edit Mode controller: chọn điểm/dải/cạnh/loop, G/R/S với proportional, commit/cancel/undo | [Deformation](../../tasks/phase-04-deformation.md) | Gate P4 và B/C/D |
 | 5 — Kiểm chứng thực tế | Người dùng và agent qua MCP tạo control, chỉnh model fit ảnh front/side, so sánh kết quả | [User and agent validation](../../tasks/phase-05-user-agent-validation.md) | Gate P5 và F |
 
 Mỗi phase cung cấp một bản thử được, ghi rõ tính năng đã hoạt động và giới hạn còn
 lại. Không đánh dấu phase hoàn thành chỉ vì đã có giao diện hoặc tài liệu.
+
+Đợt tiếp theo là [nâng cấp UX Phase 2](phase-02-ux-upgrade.md), chưa chuyển Phase 3.
+Kế hoạch chia thành UX2.1–UX2.5, mỗi task có test và commit sau khi hoạt động.
 
 ## Những quy tắc đã chốt
 
@@ -61,8 +65,10 @@ phase sau chỉ làm khi task hiện tại sử dụng được, tránh scaffold
 1. Đọc task và các tài liệu bắt buộc, xác nhận các gate trước đã có bằng chứng.
 2. Triển khai theo work package trong task; giữ mỗi thay đổi có thể kiểm tra riêng.
 3. Chạy fixture thuần hình học cho quy tắc liên quan, rồi kiểm tra tích hợp Blender.
-4. Với test phiên Blender đang mở, tuân theo hướng dẫn test ở workspace; dùng file
-   test riêng, không chạy script dựng cảnh lên file của người dùng để thử kết nối.
+4. Test tích hợp/UI trên tiến trình và file Blender đang mở theo yêu cầu người dùng
+   và hướng dẫn workspace. Dùng fixture tạm có phạm vi rõ; không chạy script dựng/
+   xóa scene để thử kết nối. Test save/reopen cần bản sao an toàn và bảo toàn phiên
+   đang làm việc; không lưu đè file dirty, không mở Blender riêng.
 5. Bàn giao mã, bản cài, kết quả test, ảnh/video phù hợp, lỗi còn lại và hướng dẫn
    thử. Gate thất bại phải có reproduction; sửa rồi kiểm tra lại phần bị ảnh hưởng.
 

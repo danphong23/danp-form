@@ -951,6 +951,30 @@ Transform: proportional → confirm/cancel
 Release contour: DAN Form Hide Selected → other edits → Reveal
 ```
 
+## Sidebar and control management — Phase 2 UX upgrade
+
+Sidebar context follows the active Source or its bound controller. An unrelated
+object or empty selection must not leave commands targeting the previous Source.
+Identity binding, not display names, resolves the Source. Drawing the panel is read-only.
+
+Make Control keeps Source active in Edit Mode with its selection intact. Definitions
+may overlap partly or completely; each list entry has its own UUID/name while the
+proxy deduplicates Source geometry. List selection, rename and removal are UX actions;
+removal deletes only membership and unused proxy elements, never Source topology.
+
+List states On/Partial/Hidden are derived from canonical effective geometry, not
+per-definition activation flags. Whole-line Hide uses edge intent plus standalone
+point intent; shared masks may change other overlapping entries. Display tooltips
+explain this. Selection never implicitly reveals hidden geometry.
+
+A colored Source control overlay makes edges/points readable without altering Source
+materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
+from DAN Form Hide/Reveal. Main controls precede collapsed Display and Maintenance.
+See the [UX plan](../roadmap/phase-02-ux-upgrade.md) for layout, context-specific Select
+actions and tests required before Phase 3. Phase 2 does not enable deformation G/R/S.
+
+## Selection and deformation
+
 Vertex mode selects nodes; edge mode selects full represented Source spans. Mixed
 selection is a union; span endpoints are selected, not implicit stationary nodes.
 Loop selection excludes hidden portions. Enabled unselected geometry holds its position.
@@ -1549,6 +1573,7 @@ that tests have already run. Detailed steps are in [tasks](../../tasks/README.md
 | --- | --- |
 | P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one child controller; Source transforms follow once; initialization preserves geometry; undo/save/load/unregister |
 | P2 — Controls/sync | Persistent IDs and topology validation; exact Source/proxy mapping; Source edits visibly refresh proxy; canonical whole/partial masks and overlaps; rebuild/save/load/undo without geometry changes |
+| P2-UX — Phase 2 upgrade | Active-model sidebar; repeated Make Control stays Source Edit Mode; definition list/select/rename; derived On/Partial/Hidden; overlap-safe delete; clear Source control overlay; live multi-model/context/lifecycle regression |
 | P3 — Patch UX | Face-connectivity fixtures, incident-patch lookup and invalidation; overlay follows Source; Show Patches changes display only, not masks/partition/geometry |
 | P4 — Deformation | Gates B/C/D; point/strip/edge/loop Edit Mode G/R/S; proportional comparisons; immutable-rest preview reset; fixed constraints; cancel/undo; numeric facade and full-path measurements |
 | P5 — User/agent | Gate F through actual MCP; user and agent create controls and fit reference via shared primitives; workflow quality review; robustness/regressions; documented installation and limits |
@@ -1556,6 +1581,13 @@ that tests have already run. Detailed steps are in [tasks](../../tasks/README.md
 Phase 1–3 do not require interpolation. Phase 2 tests mask/definition state from
 G18/G21; their deformation assertions follow in phase 4. Gate E is optional after
 the five-phase core, not a phase-5 prerequisite.
+
+P2-UX supplements P2 and must pass before P3; it is not a sixth main phase. Execute
+[UX2.1–UX2.5](../../tasks/phase-02-ux-upgrade.md) on the open Blender session/file for
+integration/UI tests. Record mode/selection, Source geometry and Source IDs as well
+as screenshots. Assert partial/full overlap, mixed point/edge intent, no implicit
+Reveal, wrong-context rejection, undo/redo and handler cleanup. Missing lifecycle
+evidence remains NOT RUN; documentation validation cannot pass these runtime gates.
 
 ## Gate B — Exact-control geometry
 G1/G2/G3/G6/G9/G10/G12/G13/G14/G15/G16 pass their geometry/constraint assertions.
@@ -1697,6 +1729,9 @@ For development, begin with the [five-phase roadmap](roadmap/implementation-plan
 [phase tasks](../tasks/README.md). ADR-009 records the accepted sequence, Source-child
 controller, patch display semantics and reference-based phase-5 validation.
 
+Current next work is the [Phase 2 UX upgrade](roadmap/phase-02-ux-upgrade.md), with
+[task checklists](../tasks/phase-02-ux-upgrade.md) and Gate P2-UX before Phase 3.
+
 1. `product/product-definition.md`
 2. `product/terminology.md`
 3. `core/invariants.md`
@@ -1752,7 +1787,8 @@ None is selected by product definition alone. The prototype matrix in `../testin
 
 # Kế hoạch phát triển DAN Form
 
-**Trạng thái: 5 phase đã thống nhất; chưa triển khai add-on.**
+**Trạng thái: 5 phase đã thống nhất; đã có mã/bản cài Phase 1–2; bổ sung kế hoạch
+nâng cấp UX Phase 2 trước Phase 3. Gate chỉ pass khi có bằng chứng test tương ứng.**
 
 Mục tiêu là chỉnh model template qua các đường control nằm trên mesh thật. Các đường
 đang bật chia patch và giữ phần không chọn đứng yên. Khi điều chỉnh control được chọn,
@@ -1764,13 +1800,16 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 | Phase | Kết quả có thể thử trong Blender | Task | Điều kiện hoàn thành |
 | --- | --- | --- | --- |
 | 1 — Khởi tạo | Cài extension, mở sidebar, chọn Source, tạo controller con của Source | [Bootstrap](../../tasks/phase-01-bootstrap.md) | Gate P1 |
-| 2 — Control và đồng bộ | Tạo đường từ vertex/edge Source, controller trùng mesh, Hide/Reveal toàn phần hoặc một đoạn | [Controls](../../tasks/phase-02-controls-and-sync.md) | Gate P2 |
+| 2 — Control và đồng bộ | Tạo đường từ vertex/edge Source, controller trùng mesh, Hide/Reveal; sidebar theo model, giữ Edit Mode, danh sách và màu đường | [Controls](../../tasks/phase-02-controls-and-sync.md), [UX upgrade](../../tasks/phase-02-ux-upgrade.md) | Gate P2 và P2-UX |
 | 3 — Hiển thị patch | Thấy các patch thật và bật/tắt lớp hiển thị để kiểm tra vùng | [Patch UX](../../tasks/phase-03-patch-visualization.md) | Gate P3 |
 | 4 — Biến dạng | Edit Mode controller: chọn điểm/dải/cạnh/loop, G/R/S với proportional, commit/cancel/undo | [Deformation](../../tasks/phase-04-deformation.md) | Gate P4 và B/C/D |
 | 5 — Kiểm chứng thực tế | Người dùng và agent qua MCP tạo control, chỉnh model fit ảnh front/side, so sánh kết quả | [User and agent validation](../../tasks/phase-05-user-agent-validation.md) | Gate P5 và F |
 
 Mỗi phase cung cấp một bản thử được, ghi rõ tính năng đã hoạt động và giới hạn còn
 lại. Không đánh dấu phase hoàn thành chỉ vì đã có giao diện hoặc tài liệu.
+
+Đợt tiếp theo là [nâng cấp UX Phase 2](phase-02-ux-upgrade.md), chưa chuyển Phase 3.
+Kế hoạch chia thành UX2.1–UX2.5, mỗi task có test và commit sau khi hoạt động.
 
 ## Những quy tắc đã chốt
 
@@ -1813,8 +1852,10 @@ phase sau chỉ làm khi task hiện tại sử dụng được, tránh scaffold
 1. Đọc task và các tài liệu bắt buộc, xác nhận các gate trước đã có bằng chứng.
 2. Triển khai theo work package trong task; giữ mỗi thay đổi có thể kiểm tra riêng.
 3. Chạy fixture thuần hình học cho quy tắc liên quan, rồi kiểm tra tích hợp Blender.
-4. Với test phiên Blender đang mở, tuân theo hướng dẫn test ở workspace; dùng file
-   test riêng, không chạy script dựng cảnh lên file của người dùng để thử kết nối.
+4. Test tích hợp/UI trên tiến trình và file Blender đang mở theo yêu cầu người dùng
+   và hướng dẫn workspace. Dùng fixture tạm có phạm vi rõ; không chạy script dựng/
+   xóa scene để thử kết nối. Test save/reopen cần bản sao an toàn và bảo toàn phiên
+   đang làm việc; không lưu đè file dirty, không mở Blender riêng.
 5. Bàn giao mã, bản cài, kết quả test, ảnh/video phù hợp, lỗi còn lại và hướng dẫn
    thử. Gate thất bại phải có reproduction; sửa rồi kiểm tra lại phần bị ảnh hưởng.
 
@@ -2054,3 +2095,234 @@ chưa sửa và tính năng chưa triển khai. Chưa chạy test phải ghi NOT
 Phase 4/5 đo full preview median/P95, confirm và memory cùng kích thước Source,
 affected verts, control samples; numerical-only tách riêng. Quyết định chất lượng
 và mức hiệu năng phát hành phải có bằng chứng, không suy ra từ độ đầy đủ tài liệu.
+
+---
+
+<!-- source: docs/roadmap/phase-02-ux-upgrade.md -->
+
+# Phase 2 — Nâng cấp UX trước Phase 3
+
+**Trạng thái: kế hoạch triển khai, 2026-09-18; chưa triển khai/test đợt nâng cấp.**
+
+Đây là phần bổ sung của Phase 2, không tạo thêm phase chính. Hoàn thành Gate P2
+và P2-UX trước khi chuyển sang hiển thị patch. Yêu cầu của người dùng là sidebar
+theo model đang chọn, tạo đường liên tục trong Edit Mode, thấy đường rõ trên Source
+và quản lý các đường bằng danh sách. Chi tiết bố cục dưới đây là đề xuất triển khai.
+
+## Hiện trạng đã kiểm tra trong mã
+
+Trong `dan_form/__init__.py`, panel và operator dùng `scene.dan_form_source` được
+chọn thủ công. Make Control gọi chuyển Object Mode rồi chọn controller. Sidebar chỉ
+hiện số control; chưa có danh sách, chọn nguyên định nghĩa, đổi tên hay xóa từng
+định nghĩa. Controller dùng wire mặc định, chưa có lớp vẽ màu trên Source.
+
+Định nghĩa đã có UUID và Source vertex/edge IDs; masks đang lưu chung trên Source.
+Có thể dùng nền dữ liệu này, nhưng phải hoàn thiện thao tác Edit Mode, union overlap,
+sync nhiều model và lifecycle trước khi coi nâng cấp UX là hoàn tất. Kiểm tra mã
+không chứng minh các gate runtime đã pass.
+
+## 1. Sidebar theo đối tượng đang thao tác
+
+Một resolver dùng chung cho panel và operator xác định Source từ **active object**:
+
+| Active object | Sidebar |
+| --- | --- |
+| Mesh chưa khởi tạo | Tên mesh và nút Initialize; chưa hiện quản lý control |
+| Source đã khởi tạo | Danh sách và trạng thái của chính Source đó |
+| Controller DAN Form | Resolve Source qua identity binding và parent; cùng danh sách như Source |
+| Không chọn / object khác | Hướng dẫn ngắn chọn mesh hoặc controller; không giữ thao tác trên model cũ |
+| Mapping thiếu, UUID trùng hoặc parent sai | Báo lỗi binding và hướng phục hồi; không đoán Source theo tên |
+
+Nhiều object được chọn thì active object quyết định context. Trong multi-object Edit
+Mode chỉ đọc selection của Source active; không sửa các mesh khác. Source không đủ
+điều kiện chỉnh sửa có lý do cụ thể và nút thao tác bị khóa.
+
+Không dùng dropdown Source làm luồng chính. Scene pointers cũ chỉ có thể là cache
+tương thích, không phải nguồn quyết định context. Panel draw không tạo IDs, ghi
+metadata hay rebuild. Các lệnh revalidate binding trước khi ghi; không dùng context
+đã cache từ model trước. Sync phải theo dõi các Source có controller, kể cả khi người
+dùng vừa chuyển sang model khác.
+
+## 2. Tạo đường mà không ngắt thao tác modeling
+
+Luồng chính: chọn Source → Edit Mode → chọn điểm/cạnh/dải/loop → **Make Control** →
+đường được tô rõ và danh sách thêm một dòng → tiếp tục chọn đường kế tiếp ngay.
+
+- Kết thúc thành công vẫn là Source active, Edit Mode, giữ selection và selection
+  mode; không chọn controller thay người dùng. Lỗi cũng không làm mất context.
+- Đọc IDs, topology và tọa độ từ BMesh đang edit; không ép Object Mode chỉ để đọc
+  `mesh.data`. Cập nhật proxy khác object qua adapter an toàn.
+- Validate toàn bộ trước khi ghi định nghĩa/masks. Lỗi rebuild không được để lại
+  định nghĩa đã ghi một nửa hoặc metadata sai; phục hồi trạng thái nhất quán.
+- Một lần tạo là một bước undo. Overlap một phần hoặc toàn bộ được phép: mỗi dòng
+  có UUID riêng nhưng union proxy chỉ chứa một bản mỗi Source vertex/edge.
+- Tạo đường trên vùng đang DAN Form-hidden giữ nguyên masks, không tự Reveal.
+- Hide/Reveal/xóa trong Edit Mode cũng giữ object/mode khi object đó còn tồn tại.
+  Khi rebuild proxy đang edit, khôi phục selection bằng Source IDs của phần còn
+  hiệu lực, không dùng proxy indices cũ.
+
+## 3. Danh sách control là công cụ quản lý selection
+
+Mỗi dòng đại diện một định nghĩa người dùng tạo: tên có thể đổi, trạng thái,
+**Select**, **Hide/Reveal**, **Delete**. Định danh lệnh là Source UUID + control UUID,
+không phải tên hoặc vị trí dòng. Đổi tên chỉ đổi nhãn, không đổi network revision
+hay masks. Tên mặc định không bị tái sử dụng gây nhầm sau khi xóa.
+
+Click dòng chỉ chọn dòng quản lý, không ngầm đổi mode hay bật đường. Nút Select:
+
+| Context | Hành vi Select |
+| --- | --- |
+| Source Edit Mode | Chọn đúng vertex/edge của định nghĩa trên Source, giữ Edit Mode |
+| Controller Edit Mode | Chọn phần effective tương ứng trên proxy, giữ Edit Mode |
+| Object Mode | Nút ghi rõ Edit Source & Select; vào Source Edit Mode và chọn định nghĩa |
+
+Select mặc định thay selection trong mesh đang thao tác; tùy chọn Add to Selection
+cho phép gom nhiều dòng. Không cần thêm hệ thống group hay multi-owner control.
+Định nghĩa hidden vẫn chọn được trên Source để kiểm tra; trên proxy chỉ chọn phần
+effective. Nếu phần đó rỗng, báo đường đang ẩn, không tự Reveal.
+
+**Trạng thái dòng là kết quả hình học, không phải cờ on/off độc lập:**
+
+- On: toàn bộ hình học định nghĩa đang effective.
+- Partial: chỉ một phần đang effective.
+- Hidden: không còn phần effective của định nghĩa.
+
+Hiện số cạnh/điểm đang bật so với tổng khi cần giải thích Partial. Với Partial, hành
+động chính là Reveal Whole; menu dòng vẫn có Hide Whole. Không dùng checkbox nhị
+phân khiến người dùng hiểu nhầm mỗi dòng sở hữu trạng thái riêng.
+
+Hide Whole dùng edge intent cho các thành phần có cạnh, node intent cho các thành
+phần điểm độc lập. Một định nghĩa vừa có cạnh vừa có điểm rời phải giữ cả hai ý
+định, không bỏ điểm rời chỉ vì danh sách edge không rỗng. Hide Selected cũng phân
+biệt node intent với endpoint flags khi chọn cạnh. Reveal tuân canonical masks.
+
+Ví dụ A chứa cạnh 1–2, 2–3; B chứa 2–3, 3–4:
+
+- Hide A làm cạnh 2–3 ẩn chung; B hiển thị Partial nếu 3–4 còn bật. Vertex 3 còn
+  được cạnh 3–4 hỗ trợ. Tooltip nói rõ thao tác ảnh hưởng phần trùng của dòng khác.
+- Xóa A giữ cạnh 2–3, 3–4 của B; giữ masks trên phần còn định nghĩa. Chỉ xóa hình
+  học proxy không còn được định nghĩa nào dùng, và prune masks tương ứng.
+- Xóa B cuối cùng làm proxy rỗng; Source vẫn giữ nguyên mọi vertex, edge, face và
+  tọa độ. Controller rỗng vẫn có thể nhận đường mới.
+
+Delete từng dòng có undo; không cần hộp xác nhận cho từng lần xóa. Remove Controller
+là thao tác khác, đặt trong Maintenance và ghi rõ định nghĩa Source vẫn được giữ.
+
+## 4. Đường màu rõ trên Source
+
+Ưu tiên lớp overlay vẽ union control trên Source, dùng màu tương phản dễ nhìn; dòng
+đang chọn có highlight riêng. Không sơn vertex colors, thay material hoặc thêm edge
+vào Source chỉ để hiển thị. Các đường overlap không vẽ nhiều lần chồng màu.
+
+- Mặc định vẽ đường effective với độ dày dễ đọc, xử lý độ sâu để đường trên mặt
+  mesh không nhấp nháy. Điểm độc lập có marker rõ.
+- Đọc tọa độ BMesh khi Source Edit Mode; Object Mode đọc base mesh. Transform
+  Source được áp dụng đúng một lần; màu/highlight không làm sai parenting proxy.
+- Show Control Overlay chỉ bật/tắt hiển thị; **khác DAN Form Hide/Reveal**. X-Ray
+  là tùy chọn hiển thị khi cần nhìn qua bề mặt.
+- Có thể bật Show Hidden Controls để thấy phần hidden bằng kiểu đường/màu phụ,
+  mặc định tắt. Hiển thị này không khôi phục ràng buộc hay cho chọn handle ẩn.
+- Chỉ overlay cho context Source hiện tại. Cache đánh dấu dirty theo coordinates,
+  topology, masks và selection; không rebuild network mỗi lần panel draw.
+- Draw handlers/cache được dọn khi unregister, load và thay context; reload không
+  tạo overlay kép. Nếu unsupported modifier làm base mesh khác hình nhìn thấy,
+  thông báo giới hạn, không hứa bám evaluated surface khi chưa có mapping.
+
+Đây là màu **đường control**, không phải màu các patch của Phase 3.
+
+## 5. Bố cục sidebar đề xuất
+
+```text
+DAN Form
+Model: girl chibi 1                 [Edit Source] [View Controller]
+
+Controls
+[Make Control from Selection]
+State      Name                    Select   Hide/Reveal   Delete
+On         Control 1                 ↗          …           ×
+Partial    Control 2                 ↗          …           ×
+Hidden     Control 3                 ↗          …           ×
+[Hide Selected] [Reveal All]
+Thông báo ngắn / hướng dẫn theo context
+
+▸ Display       overlay, X-Ray, show hidden, màu/độ dày
+▸ Maintenance   validate/sync/rebuild, remove controller
+```
+
+Mesh mới chỉ hiện Initialize và giải thích bước kế tiếp. Nút không dùng được có
+tooltip chỉ cách tiếp tục: ví dụ Make Control yêu cầu chọn điểm/cạnh của Source
+trong Edit Mode. Không hiện thuật ngữ solver, JSON IDs, schema hay generation trong
+luồng chính. View Controller ở Phase 2 giải thích mới hỗ trợ xem/chọn, chưa có biến
+dạng G/R/S lên Source. Thông báo thành công/lỗi phải thuộc Source hiện tại.
+
+## Thứ tự triển khai và kiểm chứng
+
+| Task | Kết quả | Test cần pass trước commit |
+| --- | --- | --- |
+| UX2.1 — Resolve context | Panel/operators/sync dùng binding nhất quán cho nhiều model | Chuyển Source A/controller A/Source B/controller B; mesh mới; empty; binding lỗi; không ghi nhầm model |
+| UX2.2 — Edit Mode adapter | Make liên tục, structural actions giữ context, validation trước ghi | Tạo nhiều đường không thoát Edit; giữ selection; lỗi không ghi dở; Object/Edit sync; mixed point/edge |
+| UX2.3 — Definition list | List, rename/select, Hide/Reveal, delete overlap-safe | Overlap một phần/toàn bộ; Partial; shared node; delete cuối; undo/redo; masks không tự bật |
+| UX2.4 — Source overlay | Control/point dễ nhìn, highlight, display toggles | Front/side/perspective; live Source edits; translation/rotation/nonuniform scale; overlap không vẽ kép; hide khác display |
+| UX2.5 — Hoàn thiện và regression | Sidebar gọn, bản cài và báo cáo P2/P2-UX | Chuỗi thao tác người dùng; install/reload; proxy rebuild; lifecycle; không rò handler; các gate P2 còn thiếu |
+
+Tách phần resolver, Edit Mode adapter, definition actions và overlay khi cần; không
+đổ thêm toàn bộ vào panel hoặc depsgraph handler. UI và lệnh gọi chung primitive
+Source-backed để MCP sau này không cần đường logic riêng.
+
+Các ca union/masks dùng assertions hành vi, không chỉ kiểm tra có tên hàm. Test
+tích hợp/UI chạy **trên tiến trình Blender và file đang mở**, qua MCP hoặc Computer
+Use theo hướng dẫn workspace; không mở tiến trình Blender riêng. Trước test đọc
+scene hiện tại, dùng fixture tạm có phạm vi rõ và phục hồi sau test, không chạy
+script dựng/xóa scene. Ghi Source coordinates/topology, mode/selection trước/sau.
+Save/reopen chỉ kiểm tra bằng bản sao an toàn trong cùng tiến trình, sau khi có
+cách bảo toàn phiên đang làm việc; không tự lưu đè file dirty. Nếu chưa thực hiện
+được thì ghi NOT RUN và gate chưa pass.
+
+Mỗi task bàn giao expected/actual, PASS/FAIL/NOT RUN, ảnh UI thích hợp và commit sau
+khi các test liên quan pass. Task cuối đồng bộ phiên bản manifest/package, cài bản
+ZIP và kiểm tra lại workflow. Không coi báo cáo Phase 2 trước đây là bằng chứng
+tự động cho các ca mới hoặc các ca lifecycle chưa chạy.
+
+Chi tiết task: [Phase 2 UX upgrade](../../tasks/phase-02-ux-upgrade.md).
+Điều kiện sang Phase 3: [Gate P2-UX](../testing/acceptance-gates.md).
+
+---
+
+<!-- source: docs/testing/phase-02-ux-live-report.md -->
+
+# Phase 2 UX live test report
+
+**Date:** 2026-09-18
+**Blender:** 5.2.1 LTS
+**File:** `C:\Users\abc\.AI\Code\danp-animation\Project\2. toon\girl_chibi_1.blend`
+**Workspace:** Layout
+**Initial/final dirty state:** `true` / `true`
+**Saved by test:** No
+
+The extension ZIP was installed and enabled in the running Blender process. The
+existing Source was `girl chibi 1`, initially in Edit Mode with its existing control
+definitions. No scene builder, background Blender process, or file save was used.
+
+## Results
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Install/reload and overlay handler | PASS | MCP returned `FINISHED`, extension enabled, handler removed/re-added exactly once |
+| Initialize/rebuild from Source Edit Mode | PASS | Source stayed active in `EDIT_MESH`; controller remained parented to Source |
+| Make Control without leaving Edit Mode | PASS | Two new definitions created from the same selected edge; active object and mode stayed Source/Edit |
+| Full overlap allowed | PASS | Both new definitions shared the same Source edge membership |
+| Select from list | PASS | Computer Use click selected the expected Source vertex/edge IDs; mode stayed Edit |
+| Hide/Reveal overlap | PASS | Computer Use made A `Hidden` and overlapping B `Partial`; MCP saw only the shared edge mask, then Reveal restored both |
+| Rename | PASS | Computer Use dialog changed a control name; MCP confirmed the persisted name; original name restored afterwards |
+| Definition delete | PASS | MCP deleted one duplicate definition and confirmed the other membership survived; Source topology was untouched |
+| Active-model resolver | PASS | Temporary second mesh was initialized and edited, then removed; returning to the original active mesh resolved its own controller and list |
+| Colored display | PASS | Controller color was cyan; Source overlay toggle changed display state without removing the draw handler or changing Source geometry |
+
+The temporary second Source and controller were removed, and the original Source
+definitions, masks, active object, mode and selection were restored. The file was
+already dirty before testing, so the dirty flag cannot be attributed to this run.
+
+Save/reopen, undo across a real application restart, and full topology-corruption
+recovery were not run because the open file contained pre-existing unsaved work and
+the workspace instructions prohibit replacing or saving over it for a UX test. Those
+remain lifecycle evidence for Gate P2; they do not invalidate the UX checks above.

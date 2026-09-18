@@ -1,6 +1,6 @@
 # Phase 3 — Patch graph và hiển thị patch
 
-**Đầu vào:** Gate P2 pass. **Đầu ra:** patch đúng topology, lớp hiển thị bật/tắt để
+**Đầu vào:** Gate P2 và P2-UX pass. **Đầu ra:** patch đúng topology, lớp hiển thị bật/tắt để
 người dùng kiểm tra. Gate P3; không tắt/bật phép biến dạng của patch.
 
 ## Đọc bắt buộc

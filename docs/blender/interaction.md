@@ -9,6 +9,30 @@ Transform: proportional → confirm/cancel
 Release contour: DAN Form Hide Selected → other edits → Reveal
 ```
 
+## Sidebar and control management — Phase 2 UX upgrade
+
+Sidebar context follows the active Source or its bound controller. An unrelated
+object or empty selection must not leave commands targeting the previous Source.
+Identity binding, not display names, resolves the Source. Drawing the panel is read-only.
+
+Make Control keeps Source active in Edit Mode with its selection intact. Definitions
+may overlap partly or completely; each list entry has its own UUID/name while the
+proxy deduplicates Source geometry. List selection, rename and removal are UX actions;
+removal deletes only membership and unused proxy elements, never Source topology.
+
+List states On/Partial/Hidden are derived from canonical effective geometry, not
+per-definition activation flags. Whole-line Hide uses edge intent plus standalone
+point intent; shared masks may change other overlapping entries. Display tooltips
+explain this. Selection never implicitly reveals hidden geometry.
+
+A colored Source control overlay makes edges/points readable without altering Source
+materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
+from DAN Form Hide/Reveal. Main controls precede collapsed Display and Maintenance.
+See the [UX plan](../roadmap/phase-02-ux-upgrade.md) for layout, context-specific Select
+actions and tests required before Phase 3. Phase 2 does not enable deformation G/R/S.
+
+## Selection and deformation
+
 Vertex mode selects nodes; edge mode selects full represented Source spans. Mixed
 selection is a union; span endpoints are selected, not implicit stationary nodes.
 Loop selection excludes hidden portions. Enabled unselected geometry holds its position.

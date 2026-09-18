@@ -22,8 +22,8 @@ Enabled unselected control geometry holds its position. Hide a whole line or por
 to release its constraints and patch cuts; reveal it on the newly deformed Source.
 See docs/product/leg-control-examples.md and ADR-008 for junction/partial-hide behavior.
 
-This repository contains the redesigned specification only, without production
-add-on code. Development follows the accepted five-phase roadmap: bootstrap;
+This repository contains the redesigned specification and the Phase 1/2 prototype
+add-on. Development follows the accepted five-phase roadmap: bootstrap;
 controls/sync; patch visualization; Edit Mode deformation/proportional; human and
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).

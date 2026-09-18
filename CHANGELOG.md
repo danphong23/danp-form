@@ -1,5 +1,14 @@
 # Design Changelog
 
+## 2026-09-18 — Phase 2 UX implementation
+
+- Resolved sidebar context from the active Source or its bound controller, including multiple models.
+- Kept Make Control and structural control actions in the user's Source/controller Edit Mode context.
+- Added overlap-safe control list actions: select, rename, derived On/Partial/Hidden state, Hide/Reveal and definition-only delete.
+- Added a colored Source-backed overlay and readable controller wire color with display-only toggles.
+- Fixed persistent ID reads in Edit Mode by using BMesh layers, and aligned the package manifest with the 0.2.0 implementation.
+- Verified the live workflow through MCP and Computer Use on the open Blender file; see the [live report](docs/testing/phase-02-ux-live-report.md).
+
 ## 2026-09-18 — Accepted five-phase development plan
 
 - Replaced phase 0–8 tasks with bootstrap, controls/sync, patch visualization, deformation/proportional and user/agent MCP validation.

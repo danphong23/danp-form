@@ -15,6 +15,7 @@ that tests have already run. Detailed steps are in [tasks](../../tasks/README.md
 | --- | --- |
 | P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one child controller; Source transforms follow once; initialization preserves geometry; undo/save/load/unregister |
 | P2 — Controls/sync | Persistent IDs and topology validation; exact Source/proxy mapping; Source edits visibly refresh proxy; canonical whole/partial masks and overlaps; rebuild/save/load/undo without geometry changes |
+| P2-UX — Phase 2 upgrade | Active-model sidebar; repeated Make Control stays Source Edit Mode; definition list/select/rename; derived On/Partial/Hidden; overlap-safe delete; clear Source control overlay; live multi-model/context/lifecycle regression |
 | P3 — Patch UX | Face-connectivity fixtures, incident-patch lookup and invalidation; overlay follows Source; Show Patches changes display only, not masks/partition/geometry |
 | P4 — Deformation | Gates B/C/D; point/strip/edge/loop Edit Mode G/R/S; proportional comparisons; immutable-rest preview reset; fixed constraints; cancel/undo; numeric facade and full-path measurements |
 | P5 — User/agent | Gate F through actual MCP; user and agent create controls and fit reference via shared primitives; workflow quality review; robustness/regressions; documented installation and limits |
@@ -22,6 +23,13 @@ that tests have already run. Detailed steps are in [tasks](../../tasks/README.md
 Phase 1–3 do not require interpolation. Phase 2 tests mask/definition state from
 G18/G21; their deformation assertions follow in phase 4. Gate E is optional after
 the five-phase core, not a phase-5 prerequisite.
+
+P2-UX supplements P2 and must pass before P3; it is not a sixth main phase. Execute
+[UX2.1–UX2.5](../../tasks/phase-02-ux-upgrade.md) on the open Blender session/file for
+integration/UI tests. Record mode/selection, Source geometry and Source IDs as well
+as screenshots. Assert partial/full overlap, mixed point/edge intent, no implicit
+Reveal, wrong-context rejection, undo/redo and handler cleanup. Missing lifecycle
+evidence remains NOT RUN; documentation validation cannot pass these runtime gates.
 
 ## Gate B — Exact-control geometry
 G1/G2/G3/G6/G9/G10/G12/G13/G14/G15/G16 pass their geometry/constraint assertions.

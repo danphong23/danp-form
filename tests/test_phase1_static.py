@@ -36,5 +36,16 @@ def test_phase2_contract_symbols() -> None:
         "DANFORM_OT_reveal",
         "_depsgraph_update_post",
         "STALE_MAPPING",
+        "_context_source",
+        "DANFORM_OT_rename_control",
+        "DANFORM_OT_select_control",
+        "DANFORM_OT_delete_control",
+        "_draw_control_overlay",
+        "dan_form_overlay_enabled",
     ):
         assert symbol in source
+
+
+def test_phase2_ux_documents_exist() -> None:
+    assert (ROOT / "docs" / "roadmap" / "phase-02-ux-upgrade.md").is_file()
+    assert (ROOT / "tasks" / "phase-02-ux-upgrade.md").is_file()

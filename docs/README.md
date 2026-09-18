@@ -14,6 +14,9 @@ For development, begin with the [five-phase roadmap](roadmap/implementation-plan
 [phase tasks](../tasks/README.md). ADR-009 records the accepted sequence, Source-child
 controller, patch display semantics and reference-based phase-5 validation.
 
+Current next work is the [Phase 2 UX upgrade](roadmap/phase-02-ux-upgrade.md), with
+[task checklists](../tasks/phase-02-ux-upgrade.md) and Gate P2-UX before Phase 3.
+
 1. `product/product-definition.md`
 2. `product/terminology.md`
 3. `core/invariants.md`
