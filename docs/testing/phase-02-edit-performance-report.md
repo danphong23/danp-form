@@ -53,6 +53,14 @@ medians of 10 calls on the same 37-definition model, then 15 on the final model.
 | Overlay position collection | not isolated before | 0.5565 ms before point-marker refinement | 2.7920 ms |
 | Cached GPU buffer access | rebuilt each redraw, not separately timed | 0.0122 ms | 0.0132 ms |
 
+The final live character was also measured in Controller Edit with 50 definitions,
+824 controller vertices and 924 controller edges. The invalidated live-BMesh
+position collection had a 4.706 ms median; cached GPU batch access was 0.0119 ms.
+The active definition had 22 native-selected edges, so 902 edges were cyan in the
+custom batch and those 22 remained visible through Blender's native selection color;
+the full 924-edge proxy remained covered. Controller Edit intentionally uses native
+vertex display instead of auxiliary point dots.
+
 The final character proxy has 824 vertices and 924 edges. A separate sidebar
 regression measured idle mapping/list at 0.0016/0.0039 ms and eye operators at
 42.317 ms per operation across the final three Hide/Reveal pairs. Eye actions still rebuild
