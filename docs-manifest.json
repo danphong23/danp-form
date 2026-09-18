@@ -171,8 +171,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "99d19a609cf3aa682739786b1d59a8e4e75c3cf929771d55c55a4f5d2181af90",
-    "bytes": 182353
+    "sha256": "1ae3a087d71de241565825de2b9744581fd9db67e38c6ed9821c0f18c804b502",
+    "bytes": 183909
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -276,8 +276,8 @@
   },
   {
     "path": "docs/testing/phase-04-deformation-report.md",
-    "sha256": "4c06a3276f11cc1dfa067d374f7ac3958f2f288fcfd398aa8787e06b28b521b1",
-    "bytes": 4443
+    "sha256": "e09fd5dd922a812009bb0938e692171d52b55dfd1b43dfef688cb8c14e73c5fb",
+    "bytes": 5999
   },
   {
     "path": "docs/testing/previous-design-review.md",

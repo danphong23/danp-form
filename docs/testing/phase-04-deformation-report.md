@@ -59,6 +59,29 @@ MCP kết nối đúng phiên. File đã dirty từ trước; không lưu đè.
   scene hiển thị trạng thái `Reference fit complete: front and side checked`.
   File vẫn dirty và không được lưu đè.
 
+## Hiệu chỉnh lại sau kiểm tra người dùng
+
+Báo cáo trước đã kết luận quá sớm vì chỉ kiểm tra trạng thái transaction và dùng
+viewport perspective, trong đó mesh đặc che phần lớn ảnh. Kiểm tra lại trên cùng
+file đã chuyển sang Front/Right Orthographic, đặt Source thành wireframe và tăng
+độ rõ ảnh để so silhouette trực tiếp.
+
+- Front: thu đầu theo nhóm `Head.*` và outline đầu/tai; chỉnh lại bề rộng nhóm
+  cổ, ngực, eo, hông; kéo dài và mở bề rộng hai chân; chỉnh nhẹ hai tay và bàn
+  tay. Các phép này đi qua `dan_form.deform`, lần lượt tác động 389, 357, 72,
+  365 và 828 vertex theo scope transaction.
+- Side: ẩn ảnh front, hiện ảnh side, thu chiều sâu đầu; mở chiều sâu chân và
+  bàn chân; phần hông được nới theo profile side. Các phép vẫn dùng control
+  tương ứng và giữ controller đồng bộ với Source.
+- Ảnh overlay cuối cho thấy viền đầu, hai tay, thân, hông, chân và bàn chân đã
+  nằm cùng vùng silhouette tham chiếu ở cả hai hướng. Trạng thái scene cuối là
+  `Reference fit applied: front and side silhouette checked`; Source vẫn ở
+  wireframe để người dùng tiếp tục quan sát, controller đang được chọn, toàn bộ
+  924 control edge hiện.
+
+Đây là fit thủ công có kiểm soát theo các nhóm control và landmark ảnh, chưa phải
+solver tự động suy ra toàn bộ target từ pixel ảnh.
+
 ## Giới hạn còn lại
 
 Fit hiện nhận các mốc/target từ facade số; chưa tự đọc toàn bộ silhouette ảnh thành
