@@ -3167,13 +3167,23 @@ MCP kết nối đúng phiên. File đã dirty từ trước; không lưu đè.
   vertex; preview Smooth radius 4 làm đổi 56 vertex.
 - Target control đạt đúng vị trí (`max error < 1e-6`). Cancel khôi phục chính xác
   toàn bộ Source (`restored_exact = true`).
-- Fit front bằng `Front.Outline.All` và ảnh `REF_BASE_FRONT` (896×1200). Chiều
-  rộng ảnh quy đổi là 3.173333; control viền sau fit đạt 3.1733334, sai số dưới
-  1e-6. 494 vertex control nhận target; 1,348 vertex trong scope được cập nhật
-  theo patch. Trạng thái cuối là `Front reference fit applied`.
+- Fit front không chỉ scale một chiều: dùng ảnh `REF_BASE_FRONT` (896×1200),
+  chuyển viewport sang Front Orthographic và chỉnh theo silhouette nhìn thấy.
+  - `Front.Outline.All`: khớp khung ngang ảnh, 494 vertex nhận target chính xác;
+    1,348 vertex trong scope được nội suy.
+  - 16 control vai, khuỷu, cẳng tay, cổ tay và bàn tay: đưa đường tay lên đúng
+    mốc ngang trong ảnh với delta world Z khoảng 0.58; 370 vertex nhận target,
+    869 vertex trong patch scope thay đổi.
+  - 19 control thân, hông, đùi, gối, bắp chân, cổ chân và bàn chân: mở rộng
+    silhouette ngang theo ảnh với hệ số 1.12; 248 vertex nhận target,
+    611 vertex trong patch scope thay đổi.
+  Cả ba nhóm đều có `max_target_error = 0` trong Source local space. Screenshot
+  Front Orthographic sau thao tác cho thấy tay, thân và chân chồng lên silhouette
+  ảnh; trạng thái cuối là `Front reference silhouette fit applied`.
 
 ## Giới hạn còn lại
 
-Fit hiện nhận target từ facade số; chưa tự đọc silhouette ảnh. Modal chuột G/R/S
+Fit hiện nhận các mốc/target từ facade số; chưa tự đọc toàn bộ silhouette ảnh thành
+target tự động. Modal chuột G/R/S
 đầy đủ và rotation/scale pivot UI sẽ được hoàn thiện sau khi baseline này được
 review trên các fixture limb hai loop và các trường hợp junction/ẩn-reveal.
