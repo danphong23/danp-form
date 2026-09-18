@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import uuid
 from types import SimpleNamespace
 
@@ -11,7 +12,7 @@ import bmesh
 import bpy
 from bpy.app.handlers import persistent
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
-from mathutils import Matrix
+from mathutils import Euler, Matrix, Vector
 
 
 ADDON_ID = "dan_form"
@@ -51,11 +52,12 @@ _XRAY_SHOW_IN_FRONT = {}
 _PICK_PREVIEW = {}
 _PICK_SESSION = 0
 VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
+_DANP_TRANSACTIONS = {}
 
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 3, 1),
+    "version": (0, 4, 0),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -909,6 +911,161 @@ def _proxy_selection(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
     if not selected_vids and not selected_eids:
         raise ValueError("NO_PROXY_SELECTION")
     return selected_vids, selected_eids
+
+
+def _source_positions(source: bpy.types.Object) -> dict[int, Vector]:
+    """Return the current Source coordinates keyed by persistent vertex ID."""
+    vids, _ = _source_id_maps(source)
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        bm.verts.ensure_lookup_table()
+        layer = bm.verts.layers.int.get(VID_ATTR)
+        return {int(v[layer]): v.co.copy() for v in bm.verts} if layer else {}
+    return {int(vid): source.data.vertices[index].co.copy() for vid, index in vids.items()}
+
+
+def _controller_selected_source_ids(controller: bpy.types.Object) -> set[int]:
+    """Resolve native controller vertex/edge selection to Source IDs."""
+    if controller.mode != "EDIT":
+        raise ValueError("CONTROLLER_EDIT_MODE_REQUIRED")
+    bm = bmesh.from_edit_mesh(controller.data)
+    bm.verts.ensure_lookup_table(); bm.edges.ensure_lookup_table()
+    vl = bm.verts.layers.int.get(PROXY_VID_ATTR)
+    el = bm.edges.layers.int.get(PROXY_EID_ATTR)
+    if vl is None or el is None:
+        raise ValueError("PROXY_MAPPING_MISSING")
+    selected = {int(v[vl]) for v in bm.verts if v.select and not v.hide}
+    for edge in bm.edges:
+        if edge.select and not edge.hide:
+            selected.update(int(v[vl]) for v in edge.verts)
+    if not selected:
+        raise ValueError("NO_PROXY_SELECTION")
+    return selected
+
+
+def _graph_distances(source: bpy.types.Object, allowed: set[int], seeds: set[int]) -> dict[int, int]:
+    """Shortest edge distances in one current patch, measured from immutable P0."""
+    adjacency = {vid: set() for vid in allowed}
+    for _eid, endpoints in _source_edge_vids(source).items():
+        a, b = (int(endpoints[0]), int(endpoints[1]))
+        if a in allowed and b in allowed:
+            adjacency[a].add(b); adjacency[b].add(a)
+    distances = {vid: 0 for vid in seeds if vid in allowed}
+    queue = list(distances)
+    while queue:
+        current = queue.pop(0)
+        for neighbor in adjacency.get(current, ()):
+            if neighbor not in distances:
+                distances[neighbor] = distances[current] + 1
+                queue.append(neighbor)
+    return distances
+
+
+def _proportional_alpha(distance: float, profile: str, radius: float) -> float:
+    if radius <= 0.0:
+        return 1.0
+    x = max(0.0, min(1.0, 1.0 - distance / radius))
+    if profile == "SMOOTH":
+        return x * x * (3.0 - 2.0 * x)
+    if profile == "UNIFORM":
+        return 1.0 if distance < radius else 0.0
+    return x
+
+
+def _deform_begin(source: bpy.types.Object, controller: bpy.types.Object) -> dict:
+    """Capture one immutable operation rest and its incident patch scope."""
+    key = source.as_pointer()
+    if key in _DANP_TRANSACTIONS and not _DANP_TRANSACTIONS[key].get("closed"):
+        raise ValueError("OPERATION_BUSY")
+    if source.mode not in {"OBJECT", "EDIT"} or controller.mode != "EDIT":
+        raise ValueError("CONTROLLER_EDIT_MODE_REQUIRED")
+    _validate_source_topology(source)
+    selected = _controller_selected_source_ids(controller)
+    current = _source_positions(source)
+    hidden = _hidden(source, HIDDEN_VIDS_KEY)
+    selected.difference_update(hidden)
+    if not selected:
+        raise ValueError("CONTROL_HIDDEN")
+    partition = _patch_partition(source)
+    scope = set(selected)
+    for patch in partition["patches"]:
+        if selected.intersection(set(patch["vertex_ids"])):
+            scope.update(int(v) for v in patch["vertex_ids"])
+    tx = {
+        "source": source.as_pointer(), "controller": controller.as_pointer(),
+        "source_uuid": source.get(SOURCE_UUID_KEY), "topology": source.get(TOPOLOGY_KEY),
+        "network": source.get(NETWORK_REVISION_KEY), "p0": current,
+        "selected": selected, "scope": scope, "closed": False, "preview": None,
+    }
+    _DANP_TRANSACTIONS[key] = tx
+    return tx
+
+
+def _write_source_positions(source: bpy.types.Object, positions: dict[int, Vector]) -> None:
+    vids, _ = _source_id_maps(source)
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        bm.verts.ensure_lookup_table(); layer = bm.verts.layers.int.get(VID_ATTR)
+        if layer is None: raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        for vert in bm.verts:
+            if int(vert[layer]) in positions: vert.co = positions[int(vert[layer])]
+        bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
+    else:
+        for vid, position in positions.items():
+            index = vids.get(int(vid))
+            if index is not None: source.data.vertices[index].co = position
+        source.data.update()
+
+
+def _deform_update(source: bpy.types.Object, controller: bpy.types.Object,
+                   delta=(0.0, 0.0, 0.0), profile="LINEAR", radius=0.0,
+                   targets: dict[int, Vector] | None = None) -> dict:
+    key = source.as_pointer(); tx = _DANP_TRANSACTIONS.get(key)
+    if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
+    if source.get(TOPOLOGY_KEY) != tx["topology"] or source.get(NETWORK_REVISION_KEY) != tx["network"]:
+        raise ValueError("OPERATION_STALE")
+    p0 = tx["p0"]; selected = tx["selected"]
+    targets = targets or {vid: p0[vid] + Vector(delta) for vid in selected}
+    if set(targets) != set(selected) or any(not all(math.isfinite(float(c)) for c in value) for value in targets.values()):
+        raise ValueError("TARGET_INVALID")
+    displacement = {vid: targets[vid] - p0[vid] for vid in selected}
+    partition = _patch_partition(source)
+    output = dict(p0); influence = {}
+    stationary = set(_effective_proxy_elements(source)[0]) - selected
+    for patch in partition["patches"]:
+        patch_vertices = {int(v) for v in patch["vertex_ids"]}
+        seeds = selected.intersection(patch_vertices)
+        if not seeds: continue
+        distances = _graph_distances(source, patch_vertices, seeds)
+        for vid, distance in distances.items():
+            if vid in selected or vid in stationary: continue
+            alpha = _proportional_alpha(distance, profile, float(radius))
+            if alpha > influence.get(vid, -1.0):
+                influence[vid] = alpha
+                vectors = [displacement[s] for s in seeds if s in distances]
+                if vectors: output[vid] = p0[vid] + sum(vectors, Vector()) / len(vectors) * alpha
+    for vid, target in targets.items(): output[vid] = target.copy()
+    for vid in stationary: output[vid] = p0[vid].copy()
+    _write_source_positions(source, {vid: output[vid] for vid in tx["scope"] if vid in output})
+    _sync_proxy(source, controller)
+    _OVERLAY_CACHE.clear(); _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+    tx["preview"] = output
+    return {"changed_vertices": len([vid for vid in tx["scope"] if output.get(vid) != p0.get(vid)]),
+            "selected_vertices": len(selected), "scope_vertices": len(tx["scope"])}
+
+
+def _deform_commit(source: bpy.types.Object) -> None:
+    tx = _DANP_TRANSACTIONS.get(source.as_pointer())
+    if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
+    tx["closed"] = True; _DANP_TRANSACTIONS.pop(source.as_pointer(), None)
+
+
+def _deform_cancel(source: bpy.types.Object, controller: bpy.types.Object) -> None:
+    tx = _DANP_TRANSACTIONS.get(source.as_pointer())
+    if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
+    _write_source_positions(source, tx["p0"])
+    _sync_proxy(source, controller)
+    tx["closed"] = True; _DANP_TRANSACTIONS.pop(source.as_pointer(), None)
 
 
 def _select_source_ids(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[int], add: bool = False) -> None:
@@ -1978,6 +2135,90 @@ class DANFORM_OT_topology_locked(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class DANFORM_OT_deform(bpy.types.Operator):
+    bl_idname = "dan_form.deform"
+    bl_label = "Apply DANP Deformation"
+    bl_description = "Move the selected controller vertices and propagate the change through incident patches"
+    bl_options = {"REGISTER", "UNDO"}
+    delta: bpy.props.FloatVectorProperty(name="Move", size=3, default=(0.0, 0.0, 0.0), subtype="TRANSLATION")
+    operation: EnumProperty(name="Operation", items=(("MOVE", "Move", ""), ("ROTATE", "Rotate", ""), ("SCALE", "Scale", "")), default="MOVE", options={"HIDDEN"})
+    scale: bpy.props.FloatVectorProperty(name="Scale", size=3, default=(1.0, 1.0, 1.0), subtype="XYZ")
+    rotation: bpy.props.FloatVectorProperty(name="Rotation", size=3, default=(0.0, 0.0, 0.0), subtype="EULER")
+    profile: EnumProperty(name="Profile", items=(("LINEAR", "Linear", ""), ("SMOOTH", "Smooth", ""), ("UNIFORM", "Uniform", "")), default="LINEAR")
+    radius: FloatProperty(name="Radius", default=0.0, min=0.0)
+    targets_json: StringProperty(name="Targets JSON", default="", options={"HIDDEN"})
+
+    @classmethod
+    def poll(cls, context):
+        source, controller = _context_source(context)
+        return source is not None and controller is not None and controller.mode == "EDIT"
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=360)
+
+    def draw(self, context):
+        self.layout.prop(self, "profile")
+        self.layout.prop(self, "radius")
+        if self.operation == "MOVE":
+            self.layout.prop(self, "delta")
+        elif self.operation == "SCALE":
+            self.layout.prop(self, "scale")
+        else:
+            self.layout.prop(self, "rotation")
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if source is None or controller is None:
+            return {"CANCELLED"}
+        try:
+            _deform_begin(source, controller)
+            targets = None
+            if self.targets_json:
+                raw = json.loads(self.targets_json)
+                targets = {int(k): Vector(v) for k, v in raw.items()}
+            elif self.operation != "MOVE":
+                p0 = _DANP_TRANSACTIONS[source.as_pointer()]["p0"]
+                selected = _DANP_TRANSACTIONS[source.as_pointer()]["selected"]
+                pivot = sum((p0[v] for v in selected), Vector()) / max(len(selected), 1)
+                if self.operation == "SCALE":
+                    factors = Vector(self.scale)
+                    targets = {v: pivot + (p0[v] - pivot) * factors for v in selected}
+                else:
+                    rot = Euler(self.rotation, "XYZ").to_matrix()
+                    targets = {v: pivot + rot @ (p0[v] - pivot) for v in selected}
+            result = _deform_update(source, controller, self.delta, self.profile, self.radius, targets)
+            _deform_commit(source)
+            context.scene.dan_form_status = f"Deformed {result['changed_vertices']} vertices"
+            _tag_viewport_redraw(context)
+            return {"FINISHED"}
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            try:
+                if source.as_pointer() in _DANP_TRANSACTIONS:
+                    _deform_cancel(source, controller)
+            except (ValueError, RuntimeError):
+                pass
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_cancel_deform(bpy.types.Operator):
+    bl_idname = "dan_form.cancel_deform"
+    bl_label = "Cancel DANP Deformation"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if source is None or controller is None:
+            return {"CANCELLED"}
+        try:
+            _deform_cancel(source, controller)
+            context.scene.dan_form_status = "Deformation cancelled"
+            return {"FINISHED"}
+        except ValueError as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
 def _register_topology_keymaps():
     config = bpy.context.window_manager.keyconfigs.addon
     if config is None:
@@ -2472,6 +2713,9 @@ def _register_control_keymaps():
     for operator, key, modifiers in (
         ("dan_form.hide_selected", "H", {}),
         ("dan_form.reveal_controller", "H", {"alt": True}),
+        ("dan_form.deform", "G", {}),
+        ("dan_form.deform", "R", {}),
+        ("dan_form.deform", "S", {}),
         ("dan_form.pick_selection_tool", "S", {"ctrl": True, "alt": True}),
         ("dan_form.pick_selection_tool", "C", {"ctrl": True, "alt": True}),
         ("dan_form.select_control_at_cursor", "LEFTMOUSE", {"ctrl": True, "shift": True}),
@@ -2481,6 +2725,8 @@ def _register_control_keymaps():
         item = km.keymap_items.new(operator, key, "PRESS", head=True, **modifiers)
         if operator == "dan_form.pick_selection_tool":
             item.properties.tool = "SEGMENT" if key == "S" else "CONTROL"
+        if operator == "dan_form.deform":
+            item.properties.operation = {"G": "MOVE", "R": "ROTATE", "S": "SCALE"}[key]
         if operator == "dan_form.select_segment":
             item.properties.extend = modifiers.get("shift", False)
         _CONTROL_KEYMAPS.append((km, item))
@@ -2658,6 +2904,13 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             selection_row.operator(DANFORM_OT_select_all_controls.bl_idname, text="All Controls", icon="SELECT_EXTEND")
             setup.label(text="LMB chọn · Shift cộng · Ctrl bỏ chọn", icon="INFO")
             setup.label(text="RMB/Esc dừng · MMB/Wheel điều hướng")
+            deform = layout.box()
+            deform.label(text="Proportional Deform", icon="CONSTRAINT_BONE")
+            deform.prop(scene, "dan_form_proportional_profile", text="Profile")
+            deform.prop(scene, "dan_form_proportional_radius", text="Radius")
+            move = deform.operator(DANFORM_OT_deform.bl_idname, text="Apply Move", icon="TRANSFORM_MOVE")
+            move.profile = scene.dan_form_proportional_profile
+            move.radius = scene.dan_form_proportional_radius
         list_row = layout.row(align=True)
         list_row.enabled = active.mode in {"OBJECT", "EDIT"}
         list_row.template_list(
@@ -2706,6 +2959,8 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
     DANFORM_OT_topology_locked,
+    DANFORM_OT_deform,
+    DANFORM_OT_cancel_deform,
     DANFORM_OT_pick_selection_tool,
     DANFORM_OT_select_control_at_cursor,
     DANFORM_OT_select_segment,
@@ -2740,6 +2995,10 @@ def register() -> None:
     bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False, update=_update_overlay_display)
     bpy.types.Scene.dan_form_overlay_width = FloatProperty(name="Line Width", default=3.0, min=1.0, max=8.0)
     bpy.types.Scene.dan_form_add_to_selection = BoolProperty(name="Add to Selection", default=False)
+    bpy.types.Scene.dan_form_proportional_profile = EnumProperty(
+        name="Profile", items=(("LINEAR", "Linear", ""), ("SMOOTH", "Smooth", ""), ("UNIFORM", "Uniform", "")), default="LINEAR"
+    )
+    bpy.types.Scene.dan_form_proportional_radius = FloatProperty(name="Radius", default=0.0, min=0.0)
     if _depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(_depsgraph_update_post)
     for handlers in (bpy.app.handlers.undo_post, bpy.app.handlers.redo_post, bpy.app.handlers.load_post):
@@ -2786,6 +3045,8 @@ def unregister() -> None:
         "dan_form_overlay_enabled",
         "dan_form_patches_enabled",
         "dan_form_add_to_selection",
+        "dan_form_proportional_profile",
+        "dan_form_proportional_radius",
         "dan_form_selected_control",
         "dan_form_ui_source_uuid",
         "dan_form_control_index",
