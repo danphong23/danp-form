@@ -1,0 +1,41 @@
+# DAN Form
+
+DAN Form là add-on Blender giúp người dùng hoặc AI chỉnh một model template bằng mạng đường control thưa nằm trên topology thật của Source Mesh.
+
+```text
+Source Mesh + control
+        ↓
+patch theo topology
+        ↓
+G / R / S control
+        ↓
+nội suy chuyển động trên patch hiện tại
+        ↓
+ghi trực tiếp vào Source Mesh
+```
+
+Điểm cốt lõi: **hình dạng hiện tại của patch trước mỗi thao tác là nền hình học**.
+Biến dạng dựa vào chuyển động control và proportional; không dựng lại patch chỉ từ vài
+điểm control và không kéo mesh về template ban đầu. Cộng displacement là phương pháp
+prototype cần thử, chưa phải công thức bắt buộc của sản phẩm.
+
+Control đang bật chỉ đổi qua phần được chọn; phần không chọn giữ nguyên. Ẩn control
+hoặc một đoạn sẽ bỏ ràng buộc và đường chia patch, cho phép nó đi theo mesh. Hiện lại
+lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao nhau được chọn sẽ đi
+theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
+hay deactivate riêng.
+
+Bộ này là specification đã thiết kế lại, chưa có production code. Lộ trình đã chốt:
+
+1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
+2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.
+3. Tính patch theo topology và bật/tắt lớp hiển thị patch.
+4. Edit Mode controller, G/R/S và proportional; thử/chốt nội suy, cancel/undo.
+5. Test người dùng và agent ngoài qua MCP, tạo control và chỉnh fit ảnh front/side.
+
+[Kế hoạch chi tiết](docs/roadmap/implementation-plan.md) và [task từng phase](tasks/README.md)
+đã có bước triển khai, test và điều kiện hoàn thành. Sparse và auto fitting là mở
+rộng sau lộ trình này. Controller con là quan hệ object Blender; không lồng các
+đường control. Bật/tắt hiển thị patch chỉ đổi UX.
+
+Đọc theo thứ tự: `docs/product/product-definition.md` → `docs/core/invariants.md` → `docs/core/control-model.md` → `docs/core/patch-model.md` → `docs/core/selection-and-targets.md` → `docs/core/interpolation-baseline.md` → `docs/testing/prototype-plan.md`.

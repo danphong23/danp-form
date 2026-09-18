@@ -1,0 +1,64 @@
+# Acceptance Gates
+
+**Status: Normative project gates**
+
+## Gate A — Coherent contracts
+Core, ADR-008, selection and mask rules agree. Remaining interpolation/default/quality
+choices are explicit, not silently treated as frozen behavior.
+
+## Phase completion gates — five-phase roadmap
+
+Gate A is the documentation prerequisite. P1–P5 are required milestones, not claims
+that tests have already run. Detailed steps are in [tasks](../../tasks/README.md).
+
+| Gate | Required evidence |
+| --- | --- |
+| P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one child controller; Source transforms follow once; initialization preserves geometry; undo/save/load/unregister |
+| P2 — Controls/sync | Persistent IDs and topology validation; exact Source/proxy mapping; Source edits visibly refresh proxy; canonical whole/partial masks and overlaps; rebuild/save/load/undo without geometry changes |
+| P3 — Patch UX | Face-connectivity fixtures, incident-patch lookup and invalidation; overlay follows Source; Show Patches changes display only, not masks/partition/geometry |
+| P4 — Deformation | Gates B/C/D; point/strip/edge/loop Edit Mode G/R/S; proportional comparisons; immutable-rest preview reset; fixed constraints; cancel/undo; numeric facade and full-path measurements |
+| P5 — User/agent | Gate F through actual MCP; user and agent create controls and fit reference via shared primitives; workflow quality review; robustness/regressions; documented installation and limits |
+
+Phase 1–3 do not require interpolation. Phase 2 tests mask/definition state from
+G18/G21; their deformation assertions follow in phase 4. Gate E is optional after
+the five-phase core, not a phase-5 prerequisite.
+
+## Gate B — Exact-control geometry
+G1/G2/G3/G6/G9/G10/G12/G13/G14/G15/G16 pass their geometry/constraint assertions.
+Pure fixtures verify G14 state/resampling; Blender persistence is Gate D. Record
+G4/G5/G11 quality evidence. Sparse G7/G8 is deferred to Gate E.
+
+Also pass G17–G21 preview reset, mask intent, invalid input, coordinate-space and
+definition-lifecycle assertions. G20 target-space logic can run without Blender;
+object storage/integration follows in Gate D. Use geometry-cases.md measurement contract.
+
+## Gate C — Interpolation quality decision
+Review G4/G5/G11 and proportional comparisons. Accept the candidate with evidence or
+run the smallest experiment for a named failure. This review can happen immediately
+after Gate B; do not spend later phases building UX around a known unusable deformation.
+
+## Gate D — Blender lifecycle
+Non-agent lifecycle cases pass: mapping, hide/reveal/rebuild/save/load, cancel,
+undo/redo, external coordinate sync, stale topology/network detection and multi-source.
+Human/agent parity is Gate F, not a prerequisite before the facade exists.
+
+Optional sparse integration cases belong to Gate E after the core roadmap. Unsupported features
+must reject before writes. Rebuild-generation, closed/busy operations, topology fingerprint
+and preview-reset recovery are required lifecycle checks.
+
+## Gate E — Optional sparse controls
+G7/G8 pass; simplify/refine does not deform Source or change masks/constraints. Partial
+hide boundaries remain representable. Required only if sparse simplification ships.
+
+## Gate F — Agent parity
+Equivalent targets and visibility commands yield equivalent effective network, Source
+coordinates and restore behavior through the same human/agent path.
+
+## Production readiness
+Requires passed behavior, representative quality, lifecycle/robustness and measured
+performance. Detailed prose and recorded failures alone are not passing gates.
+
+Record hardware, Blender version, Source/affected vertex counts, control sample counts,
+median/P95 full preview latency, confirm time and peak memory. Include mesh extraction,
+target generation, interpolation and Source updates; report numerical-only time separately.
+Choose release budgets after representative evidence, not by weakening settled behavior.

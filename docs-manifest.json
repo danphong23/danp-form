@@ -1,0 +1,292 @@
+[
+  {
+    "path": "AGENTS.md",
+    "sha256": "8b9766bfadf165e725b73b99daaf73707d95ce6c430561b7639b4227413675a6",
+    "bytes": 3794
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "07af3d85b00f39b94dc53c297ffccd040c63e2d2cad33a366d3066378f41c238",
+    "bytes": 2967
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "69fcfc443c560476444d48a3c0335cecff4e908180700aaa161a7966363a5a7e",
+    "bytes": 598
+  },
+  {
+    "path": "docs/agent/api-contract.md",
+    "sha256": "81976fb569f0334d4025ea1c6cf6fef1c32a4354d81051fd1d9973c54a04cfcb",
+    "bytes": 3939
+  },
+  {
+    "path": "docs/agent/shared-primitives.md",
+    "sha256": "ec27460003abc2f0d221fd8afb59342c9440b6b91092aba04f524659b2f7e6b1",
+    "bytes": 997
+  },
+  {
+    "path": "docs/architecture/data-model.md",
+    "sha256": "223dd94d44903f742ef440afca9d005621138147cecb1a57c416a1a16f7909d9",
+    "bytes": 2426
+  },
+  {
+    "path": "docs/architecture/errors-and-recovery.md",
+    "sha256": "48e8c3940106a22aee47219a178e91ea1a86747349cea3af275a1290b06f5406",
+    "bytes": 1492
+  },
+  {
+    "path": "docs/architecture/mapping-and-sync.md",
+    "sha256": "764b86c7325c5a3616bb743726b3c7e551294448e2f22df3dd9decbb8d7c9d3c",
+    "bytes": 3540
+  },
+  {
+    "path": "docs/architecture/multi-template.md",
+    "sha256": "3e32b92aca3aa89551cdf8b6344a4d741ffa2e6f588b5d89e4bc1594f5187889",
+    "bytes": 1139
+  },
+  {
+    "path": "docs/architecture/system-overview.md",
+    "sha256": "4900ade4ebffae5405037f4f049e237d43c6007a36eb065539d60370bc5caab1",
+    "bytes": 1641
+  },
+  {
+    "path": "docs/blender/integration.md",
+    "sha256": "3c85c605122fcca64fc78d053917edfd78bc2b91fe518e166772d59abda09337",
+    "bytes": 2632
+  },
+  {
+    "path": "docs/blender/interaction.md",
+    "sha256": "09852ae502423e7060d77b4355960c7aeffc25bea191b9b63136ec09d1d9e91f",
+    "bytes": 1917
+  },
+  {
+    "path": "docs/blender/storage-and-lifecycle.md",
+    "sha256": "c73e9fc7476f6a083a10733b61250ccec1218f100815126400b4a0ed9ebe78e4",
+    "bytes": 1107
+  },
+  {
+    "path": "docs/core/control-model.md",
+    "sha256": "0ac5b3a4beff5602ac79342428209ba92c00b2d21ce53361a0a6a7bafc469722",
+    "bytes": 5401
+  },
+  {
+    "path": "docs/core/interpolation-baseline.md",
+    "sha256": "7c11c8d6e65006588faf9280207fbc66f56ad6c84c0f349fee6ef2c7de01a4d7",
+    "bytes": 4469
+  },
+  {
+    "path": "docs/core/invariants.md",
+    "sha256": "b88d296f7a4604540e9aec186655e4405ceaf0bb3710370e25ffb789b5882cb2",
+    "bytes": 2553
+  },
+  {
+    "path": "docs/core/operation-semantics.md",
+    "sha256": "a52619f168ac743d9a69bb2624b52c689de82390188ec250c35f0fde97fb3d62",
+    "bytes": 3420
+  },
+  {
+    "path": "docs/core/patch-model.md",
+    "sha256": "1fbe8acaeddb727f3043a71efab23736cb8251559438ea44a47ea3500b09b5fe",
+    "bytes": 3100
+  },
+  {
+    "path": "docs/core/proportional.md",
+    "sha256": "12af3d793715ae433df33f35247f66a827c83f461b14129d809d0bbfb5b6784e",
+    "bytes": 2396
+  },
+  {
+    "path": "docs/core/selection-and-targets.md",
+    "sha256": "7197ff55adeed2eee6f3b0884fe19950db73ff23bd8d1630290affc7a6646737",
+    "bytes": 3381
+  },
+  {
+    "path": "docs/core/sparse-controls.md",
+    "sha256": "25fe3caf53b1b57afc4c6d42fb355fe9e30c8b69d10022fd8f74745e2debfb0c",
+    "bytes": 1173
+  },
+  {
+    "path": "docs/decisions/ADR-001-source-truth.md",
+    "sha256": "ec16559c6a09f727af44eab115604cd0a8614bd02b02dda2f63e30064b699b77",
+    "bytes": 313
+  },
+  {
+    "path": "docs/decisions/ADR-002-rebuildable-proxy.md",
+    "sha256": "2a3f6bf50749cb999dd724a621135da6230feb6fe765d505f52e83e98816918e",
+    "bytes": 340
+  },
+  {
+    "path": "docs/decisions/ADR-003-topology-patches.md",
+    "sha256": "d9e447208886ce168a8889109500e3aed0c445bbb3fc26e8afc1e3b3d47e89b9",
+    "bytes": 378
+  },
+  {
+    "path": "docs/decisions/ADR-004-operation-rest.md",
+    "sha256": "48c8f1d59c5b5f9ce641bc0c1ef96738dc481c1d539ab5be81575f3ecd273f0e",
+    "bytes": 335
+  },
+  {
+    "path": "docs/decisions/ADR-005-shared-primitives.md",
+    "sha256": "6fdfed1e8a76e1ac5731af222bbe447db77b58b659c2be4976052196e16b1622",
+    "bytes": 293
+  },
+  {
+    "path": "docs/decisions/ADR-006-simple-interpolation-first.md",
+    "sha256": "41fb63a0a4fb39d40a12d2cfcd93555382c77052f03bcbd7737e25c69f8de312",
+    "bytes": 572
+  },
+  {
+    "path": "docs/decisions/ADR-007-single-proportional-stage.md",
+    "sha256": "e0e78e66bbb289b09707a922b9ac8448b65ebaca2700d1b529029cc727cacaa7",
+    "bytes": 314
+  },
+  {
+    "path": "docs/decisions/ADR-008-hide-releases-control.md",
+    "sha256": "668a471bc21ebdeb5565e6b8fc820e612dfec91160c1a86fee36e20a81db83e1",
+    "bytes": 1538
+  },
+  {
+    "path": "docs/decisions/ADR-009-five-phase-development.md",
+    "sha256": "4c03e42db80780bcb5c0e78a0a916ffc37abf487f7f8c0c134eab9145789113c",
+    "bytes": 1777
+  },
+  {
+    "path": "docs/decisions/open-decisions.md",
+    "sha256": "e68f6baf67f3e4c5d65c2d2876560f72c10383bc57a39ae04a27ca7e21cf5da8",
+    "bytes": 2305
+  },
+  {
+    "path": "docs/extensions/advanced-interpolation.md",
+    "sha256": "42f6192bda0599f133a9ccfe143059665d625a730787e82f1a2b6f4053d53941",
+    "bytes": 1663
+  },
+  {
+    "path": "docs/extensions/reference-fitting.md",
+    "sha256": "0209cad9502e4fceb142ea02fe882f220773260e3b6cc144e125b31bb97c5368",
+    "bytes": 1182
+  },
+  {
+    "path": "docs/full-specification.md",
+    "sha256": "41323601c674f2b7f2de990347894d889d94817854d630b3f8582945c60fb989",
+    "bytes": 105999
+  },
+  {
+    "path": "docs/product/leg-control-examples.md",
+    "sha256": "2faf63790d260bffe3ff06249b5b32f81c135065a7298758180ec0fd3db3a809",
+    "bytes": 2065
+  },
+  {
+    "path": "docs/product/product-definition.md",
+    "sha256": "6b9cb51f9a62cfa96de50e6bea0b194d1397a1a08e80e49bad2d5840ef5daa24",
+    "bytes": 2199
+  },
+  {
+    "path": "docs/product/terminology.md",
+    "sha256": "8172015f3f991deeab1d0a26253a75ab82fb9ec678c826e329eb2a9aca7a3473",
+    "bytes": 2146
+  },
+  {
+    "path": "docs/product/user-workflows.md",
+    "sha256": "b93a57f2e1da6a7c7713fd68cf939adcae303ce87b9bbf21e08880be8e5a6540",
+    "bytes": 2095
+  },
+  {
+    "path": "docs/README.md",
+    "sha256": "b494ab3d7340167bf3214973cc7697460aad7a4970a82aeb7bd933d81b4e556f",
+    "bytes": 2083
+  },
+  {
+    "path": "docs/research/technical-options.md",
+    "sha256": "4f958c7af226fd2508e7a35e9aab05f893d5124b18ed1bf2c1e7bb3ee9822f69",
+    "bytes": 882
+  },
+  {
+    "path": "docs/roadmap/development-contract.md",
+    "sha256": "08bda0fe2d6b56af2d3a08acbffbb0b22c97cf7b0ba6c92206a565f3e495935b",
+    "bytes": 4950
+  },
+  {
+    "path": "docs/roadmap/implementation-plan.md",
+    "sha256": "41ebecda493395ab36e1e6330d830a0379ec967518534ef6907e72100a1ceb6b",
+    "bytes": 6089
+  },
+  {
+    "path": "docs/testing/acceptance-gates.md",
+    "sha256": "2c1a5d3d1b7dded78bfc13be84bc5645238a017180b33244746cea8f6ed6a1d5",
+    "bytes": 4021
+  },
+  {
+    "path": "docs/testing/blender-integration-cases.md",
+    "sha256": "75ee6b79aae7bd49a25993139ba6c7c7eb20e8357868467aaee380b9ad4d6df4",
+    "bytes": 4058
+  },
+  {
+    "path": "docs/testing/documentation-audit.md",
+    "sha256": "3797724a928f0935e6e5a73d8f294d08e04e988266816268614df97bb25940ab",
+    "bytes": 3965
+  },
+  {
+    "path": "docs/testing/geometry-cases.md",
+    "sha256": "0ce7df7f15e05d03c9b40a6292e10af90530bf5c9af01ce57d8d9ea29125d2fe",
+    "bytes": 6074
+  },
+  {
+    "path": "docs/testing/previous-design-review.md",
+    "sha256": "e3a6ffa18604100f68c188c0f2bd29d0bbd8dc270a94bfe816fee9abd6ecdef6",
+    "bytes": 2250
+  },
+  {
+    "path": "docs/testing/prototype-plan.md",
+    "sha256": "1b96b67a8ab1411e6f195034440028898afbf55bdf210130e51ded1f072348d7",
+    "bytes": 2608
+  },
+  {
+    "path": "LICENSE.md",
+    "sha256": "d9d4ed51a4ed72e245438f80adc9067b94787f42826945c8dcc2bf58e2146d3d",
+    "bytes": 258
+  },
+  {
+    "path": "README_VI.md",
+    "sha256": "ade5d6f9586cbe000083f65abbaf4b8ef8ad92883319181cf47ff27e5312cfdb",
+    "bytes": 2446
+  },
+  {
+    "path": "README.md",
+    "sha256": "8b084671cda9d4254b54ca3453b3587cb324c55f5ad6e037f975c17ac5f53a3f",
+    "bytes": 2255
+  },
+  {
+    "path": "SECURITY.md",
+    "sha256": "bc75f11b852f27351aad43a0151cb68e129daffa38735292eb6a2f32474a1f6b",
+    "bytes": 338
+  },
+  {
+    "path": "tasks/phase-01-bootstrap.md",
+    "sha256": "8697d1ac1352a4e6f3f3d31fb80f9a66f913ca0d8de79ec8108a6da6ec399abc",
+    "bytes": 2848
+  },
+  {
+    "path": "tasks/phase-02-controls-and-sync.md",
+    "sha256": "5604563805ae3445c6bf47a77ca2fa9ac4bd5fff6089c48cb2aedacdb3de3a7b",
+    "bytes": 3599
+  },
+  {
+    "path": "tasks/phase-03-patch-visualization.md",
+    "sha256": "d0cc83889a950548be012824c15cffeededd0c1146ba3dc4863ebd7e814e372d",
+    "bytes": 2415
+  },
+  {
+    "path": "tasks/phase-04-deformation.md",
+    "sha256": "c91228b68cc1e440decc662d49125f60dfa9ad8e47f68341dec108fd17553202",
+    "bytes": 4514
+  },
+  {
+    "path": "tasks/phase-05-user-agent-validation.md",
+    "sha256": "6295d7d27af9f97a48f022d60eb582949fe070ba6eaae48b9ce6c3e11ebf04a8",
+    "bytes": 3694
+  },
+  {
+    "path": "tasks/README.md",
+    "sha256": "67b0b1676b18e518f49ec62bfab7f2784af29b9d387aad5747258ddb741692e6",
+    "bytes": 1000
+  }
+]
