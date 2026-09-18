@@ -1,5 +1,12 @@
 # Design Changelog
 
+## 2026-09-18 — DANP Form 0.3.0 patch graph and display
+
+- Added runtime Source face partitioning through effective enabled control edges, with stable Source-ID face/edge membership, incident control lookup and cache invalidation.
+- Added display-only translucent patch batches and a compact Source-only Show Patches switch. Patch colors never edit Source or change masks, network revision or deformation scope.
+- Added grid fixture coverage for internal cuts, boundary edges, point controls, cache reuse, Hide/Reveal merging and restoration; verified the live character at 104 patches covering 1696 faces.
+- Kept Phase 1/2 lifecycle, performance, segment and pick suites green after the Phase 3 runtime additions. See the [Phase 3 report](docs/testing/phase-03-patch-report.md).
+
 ## 2026-09-18 — DANP Form 0.2.5 pick and visibility UX repair
 
 - Removed blocking pick input; hover no longer mutates selection. RMB/Esc cancels, navigation passes through, and native commands such as Box Select stop picking and receive their normal input.

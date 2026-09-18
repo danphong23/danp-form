@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "2c9804b9ddb019d7e0c64098a9a3b8c048d1bd146b613d459f945dca13dac286",
-    "bytes": 8665
+    "sha256": "21fba4071c34cecc2d15a33f4c7815b15e396edcf58868ffa3aac380ed4426f9",
+    "bytes": 9448
   },
   {
     "path": "CONTRIBUTING.md",
@@ -171,8 +171,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "1b0abd3411b2de98ec9a4510c9c1f6509119ca4140cde18b8c338a1e954c5e60",
-    "bytes": 174419
+    "sha256": "0ea3c9883c0ea9cf5d627a9b65d3791b5983d7625efd7fa7d30835b966d551b4",
+    "bytes": 177134
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -211,8 +211,8 @@
   },
   {
     "path": "docs/roadmap/implementation-plan.md",
-    "sha256": "16c85123e924284f4478f320155551b20b58dcee136a9a1777bdbecaa0f6261d",
-    "bytes": 6890
+    "sha256": "5d12877b427a4234cf0542b2521e79285e35220cf6e73d66698b3c486346cd91",
+    "bytes": 6928
   },
   {
     "path": "docs/roadmap/phase-02-native-list-ux.md",
@@ -270,6 +270,11 @@
     "bytes": 2522
   },
   {
+    "path": "docs/testing/phase-03-patch-report.md",
+    "sha256": "7d84fc3bbd7cab6760f709ae952916f51ee6f7337b7e24e4e14d0b402a147954",
+    "bytes": 2615
+  },
+  {
     "path": "docs/testing/previous-design-review.md",
     "sha256": "09f847539c77ec5c654021a104ed8746f64b09b3b17c52e5479af4c5258360dd",
     "bytes": 2300
@@ -291,8 +296,8 @@
   },
   {
     "path": "README.md",
-    "sha256": "db2b6194e0ead5e26f091e158c209539dd65e050a5c20716a63699bec0a026dc",
-    "bytes": 3165
+    "sha256": "59a71c805e0711e26351cc1a38bd364fd21fba41ee6191401a8d9a91a49deec1",
+    "bytes": 3360
   },
   {
     "path": "SECURITY.md",
@@ -326,8 +331,8 @@
   },
   {
     "path": "tasks/phase-03-patch-visualization.md",
-    "sha256": "90183474a0123527fbcbbdde6ab29b353dad05951dae741a3968fc4647201bd7",
-    "bytes": 2425
+    "sha256": "93cc03d613daeceb8e8868417fd9de467ad93e82916030f09edca5bf21c01ae4",
+    "bytes": 2732
   },
   {
     "path": "tasks/phase-04-deformation.md",

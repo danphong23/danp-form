@@ -78,3 +78,18 @@ def test_native_control_list_contract_symbols() -> None:
         assert symbol in source
     assert (ROOT / "docs" / "roadmap" / "phase-02-native-list-ux.md").is_file()
     assert (ROOT / "tasks" / "phase-02-native-list-ux.md").is_file()
+
+
+def test_phase3_patch_contract_symbols() -> None:
+    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    for symbol in (
+        "_source_face_records",
+        "_patch_partition",
+        "_patches_for_control",
+        "_patch_overlay_batches",
+        "_invalidate_patch_cache",
+        "dan_form_patches_enabled",
+        "PATCH_COLORS",
+    ):
+        assert symbol in source
+    assert (ROOT / "tasks" / "phase-03-patch-visualization.md").is_file()

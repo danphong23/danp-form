@@ -3,6 +3,10 @@
 **Đầu vào:** Gate P2 và P2-UX pass. **Đầu ra:** patch đúng topology, lớp hiển thị bật/tắt để
 người dùng kiểm tra. Gate P3; không tắt/bật phép biến dạng của patch.
 
+Trạng thái triển khai: partition runtime, lookup incident patch và Show Patches đã
+được triển khai; bằng chứng nằm trong [Phase 3 report](../docs/testing/phase-03-patch-report.md).
+Các gate còn lại cần tiếp tục kiểm tra khi mở rộng fixture non-manifold và review màu.
+
 ## Đọc bắt buộc
 
 [Patch model](../docs/core/patch-model.md),

@@ -43,6 +43,8 @@ _PROXY_SNAPSHOTS = {}
 _TOPOLOGY_KEYMAPS = []
 _CONTROL_KEYMAPS = []
 _NETWORK_CACHE = {}
+_PATCH_CACHE = {}
+_PATCH_OVERLAY_CACHE = {}
 _OVERLAY_CACHE = {}
 _XRAY_SHOW_IN_FRONT = {}
 _PICK_PREVIEW = {}
@@ -52,7 +54,7 @@ VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 2, 4),
+    "version": (0, 3, 0),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -502,12 +504,154 @@ def _control_effective(source: bpy.types.Object, control: dict) -> tuple[set[int
     return effective_vertices, effective_edges
 
 
+def _source_face_records(source: bpy.types.Object) -> list[dict]:
+    """Read Source faces using persistent vertex/edge IDs, never Blender indices."""
+    vertex_ids, edge_ids = _source_id_maps(source)
+    reverse_vertices = {index: vertex_id for vertex_id, index in vertex_ids.items()}
+    reverse_edges = {index: edge_id for edge_id, index in edge_ids.items()}
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        bm.faces.ensure_lookup_table()
+        return [
+            {
+                "face_id": "f:" + ":".join(str(reverse_vertices[v.index]) for v in sorted(face.verts, key=lambda item: reverse_vertices[item.index])),
+                "vertex_ids": tuple(reverse_vertices[v.index] for v in face.verts),
+                "edge_ids": tuple(reverse_edges[e.index] for e in face.edges),
+            }
+            for face in bm.faces
+        ]
+    return [
+        {
+            "face_id": "f:" + ":".join(str(reverse_vertices[index]) for index in sorted(polygon.vertices, key=lambda item: reverse_vertices[item])),
+            "vertex_ids": tuple(reverse_vertices[index] for index in polygon.vertices),
+            "edge_ids": tuple(reverse_edges[edge.index] for edge in source.data.edges
+                               if set(edge.vertices).issubset(set(polygon.vertices))),
+        }
+        for polygon in source.data.polygons
+    ]
+
+
+def _patch_partition(source: bpy.types.Object) -> dict:
+    """Derive connected Source face patches after removing enabled control cuts.
+
+    The result is runtime data. Face/vertex/edge identity comes from Source IDs;
+    the partition is never stored as a second geometric truth.
+    """
+    mapping = _source_id_maps(source)
+    faces = _source_face_records(source)
+    controls_token = source.get(CONTROLS_KEY, "")
+    hidden_vertices = source.get(HIDDEN_VIDS_KEY, "")
+    hidden_edges = source.get(HIDDEN_EIDS_KEY, "")
+    topology = source.get(TOPOLOGY_KEY, "")
+    token = (mapping, topology, controls_token, hidden_vertices, hidden_edges,
+             tuple((face["face_id"], face["edge_ids"]) for face in faces))
+    cached = _PATCH_CACHE.get(source.as_pointer())
+    if cached is not None and cached[0] == token:
+        return cached[1]
+
+    _, effective_edges = _effective_proxy_elements(source)
+    cut_edges = set(effective_edges)
+    face_by_edge: dict[int, list[int]] = {}
+    for index, face in enumerate(faces):
+        for edge_id in face["edge_ids"]:
+            face_by_edge.setdefault(int(edge_id), []).append(index)
+    adjacency = [set() for _ in faces]
+    for edge_id, incident in face_by_edge.items():
+        if edge_id in cut_edges:
+            continue
+        for left in incident:
+            adjacency[left].update(other for other in incident if other != left)
+
+    face_patch: dict[int, str] = {}
+    patches: list[dict] = []
+    for seed in range(len(faces)):
+        if seed in face_patch:
+            continue
+        stack = [seed]
+        component = set()
+        while stack:
+            current = stack.pop()
+            if current in component:
+                continue
+            component.add(current)
+            stack.extend(adjacency[current] - component)
+        face_ids = sorted(faces[index]["face_id"] for index in component)
+        patch_id = "p:" + hashlib.sha1("|".join(face_ids).encode("utf-8")).hexdigest()[:16]
+        for index in component:
+            face_patch[index] = patch_id
+        component_edges = sorted({edge_id for index in component for edge_id in faces[index]["edge_ids"]})
+        component_vertices = sorted({vertex_id for index in component for vertex_id in faces[index]["vertex_ids"]})
+        boundary_edges = sorted({edge_id for edge_id in component_edges
+                                 if len(face_by_edge.get(edge_id, [])) != 2
+                                 or any(face_patch.get(other) != patch_id
+                                        for other in face_by_edge.get(edge_id, []))})
+        patches.append({
+            "patch_id": patch_id,
+            "face_ids": face_ids,
+            "face_indices": sorted(component),
+            "vertex_ids": component_vertices,
+            "edge_ids": component_edges,
+            "boundary_edge_ids": boundary_edges,
+            "incident_control_uuids": [],
+        })
+
+    patch_by_id = {patch["patch_id"]: patch for patch in patches}
+    for patch in patches:
+        patch_edges = set(patch["boundary_edge_ids"])
+        patch_vertices = set(patch["vertex_ids"])
+        incident = []
+        for control in _controls(source):
+            effective_vertices, effective_control_edges = _control_effective(source, control)
+            _, explicit_nodes = _control_intent(source, control)
+            # Edge-backed controls are incident through their boundary edge.
+            # Their shared endpoints can belong to both neighboring patches,
+            # but must not make a boundary line appear incident everywhere.
+            touches = (patch_edges & effective_control_edges)
+            touches |= patch_vertices & (effective_vertices & explicit_nodes)
+            if touches:
+                incident.append(str(control.get("control_uuid")))
+        patch["incident_control_uuids"] = sorted(incident)
+    result = {
+        "revision": int(source.get(NETWORK_REVISION_KEY, 0)),
+        "patches": patches,
+        "face_patch_ids": {faces[index]["face_id"]: patch_id for index, patch_id in face_patch.items()},
+        "edge_patch_ids": {
+            str(edge_id): sorted({face_patch[index] for index in incident})
+            for edge_id, incident in face_by_edge.items()
+        },
+        "control_patch_ids": {
+            str(control.get("control_uuid")): sorted({patch["patch_id"] for patch in patches
+                                                        if str(control.get("control_uuid")) in patch["incident_control_uuids"]})
+            for control in _controls(source)
+        },
+    }
+    _PATCH_CACHE[source.as_pointer()] = (token, result)
+    return result
+
+
+def _patches_for_control(source: bpy.types.Object, control_uuid: str) -> list[dict]:
+    """Return incident patches for Phase 4 scope capture and diagnostics."""
+    partition = _patch_partition(source)
+    ids = set(partition["control_patch_ids"].get(str(control_uuid), []))
+    return [patch for patch in partition["patches"] if patch["patch_id"] in ids]
+
+
+def _invalidate_patch_cache(source: bpy.types.Object | None = None) -> None:
+    if source is None:
+        _PATCH_CACHE.clear()
+        _PATCH_OVERLAY_CACHE.clear()
+    else:
+        _PATCH_CACHE.pop(source.as_pointer(), None)
+        _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+
+
 def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
     global _SYNC_GUARD
     previous_guard = _SYNC_GUARD
     _SYNC_GUARD = True
     try:
         _OVERLAY_CACHE.clear()
+        _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
         _PICK_PREVIEW.clear()
         _rebuild_proxy_impl(source, controller)
         _PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
@@ -860,6 +1004,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             if not source_changed and not controller_changed:
                 continue
             _OVERLAY_CACHE.clear()
+            _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
             try:
                 if source_changed:
                     _MAPPING_CACHE.pop(source.as_pointer(), None)
@@ -888,6 +1033,8 @@ def _refresh_runtime(_unused=None) -> None:
     _UI_SIGNATURES.clear()
     _PROXY_SNAPSHOTS.clear()
     _NETWORK_CACHE.clear()
+    _PATCH_CACHE.clear()
+    _PATCH_OVERLAY_CACHE.clear()
     _OVERLAY_CACHE.clear()
     try:
         for source, controller in _source_controller_pairs():
@@ -1005,6 +1152,53 @@ def _overlay_geometry(context, overlay_mode, source, controller):
     }
 
 
+_PATCH_COLORS = (
+    (0.18, 0.55, 0.95, 0.18),
+    (0.95, 0.38, 0.28, 0.18),
+    (0.25, 0.78, 0.42, 0.18),
+    (0.85, 0.45, 0.92, 0.18),
+    (0.95, 0.70, 0.20, 0.18),
+    (0.20, 0.78, 0.82, 0.18),
+)
+
+
+def _patch_overlay_batches(context, source):
+    """Build translucent triangles for the Source patch display only."""
+    import gpu
+    from gpu_extras.batch import batch_for_shader
+
+    if not getattr(context.scene, "dan_form_patches_enabled", False):
+        return None, []
+    mapping = _source_id_maps(source)
+    partition = _patch_partition(source)
+    token = (mapping, source.matrix_world.copy(), tuple(
+        (patch["patch_id"], tuple(patch["face_indices"])) for patch in partition["patches"]
+    ))
+    cached = _PATCH_OVERLAY_CACHE.get(source.as_pointer())
+    if cached is not None and cached[0] == token:
+        return cached[1], cached[2]
+    faces = _source_face_records(source)
+    vertices_by_id, _ = _source_id_maps(source)
+    source_vertices = _source_vertices(source)
+    shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+    batches = []
+    for patch_index, patch in enumerate(partition["patches"]):
+        positions = []
+        for face_index in patch["face_indices"]:
+            face_vertices = faces[face_index]["vertex_ids"]
+            if len(face_vertices) < 3:
+                continue
+            origin = source_vertices[vertices_by_id[face_vertices[0]]].co
+            for index in range(1, len(face_vertices) - 1):
+                for vertex_id in (face_vertices[0], face_vertices[index], face_vertices[index + 1]):
+                    positions.append(source.matrix_world @ source_vertices[vertices_by_id[vertex_id]].co)
+        if positions:
+            batches.append((patch["patch_id"], batch_for_shader(shader, "TRIS", {"pos": positions}),
+                            _PATCH_COLORS[patch_index % len(_PATCH_COLORS)]))
+    _PATCH_OVERLAY_CACHE[source.as_pointer()] = (token, shader, batches)
+    return shader, batches
+
+
 def _overlay_batches(context, overlay_mode, source, controller):
     """Retain GPU buffers on idle redraw; handlers invalidate changed geometry."""
     import gpu
@@ -1078,8 +1272,17 @@ def _draw_control_overlay() -> None:
         # without this, lines can appear in front even when X-Ray is disabled.
         previous_depth = gpu.state.depth_test_get()
         previous_width = gpu.state.line_width_get()
+        previous_blend = gpu.state.blend_get() if hasattr(gpu.state, "blend_get") else "NONE"
         gpu.state.depth_test_set("NONE" if xray else "LESS_EQUAL")
         try:
+            if overlay_mode == "source" and scene.dan_form_patches_enabled:
+                patch_shader, patch_batches = _patch_overlay_batches(context, source)
+                if patch_shader is not None:
+                    gpu.state.blend_set("ALPHA")
+                    for _patch_id, patch_batch, patch_color in patch_batches:
+                        patch_shader.bind()
+                        patch_shader.uniform_float("color", patch_color)
+                        patch_batch.draw(patch_shader)
             width = min(scene.dan_form_overlay_width, 1.5) if overlay_mode == "controller_edit" else scene.dan_form_overlay_width
             for name, color, size in (
                 ("edges", (0.05, 0.75, 1.0, 0.95), width),
@@ -1110,6 +1313,7 @@ def _draw_control_overlay() -> None:
             gpu.state.depth_test_set(previous_depth)
             gpu.state.line_width_set(previous_width)
             gpu.state.point_size_set(1.0)
+            gpu.state.blend_set(previous_blend)
     except Exception:
         # Drawing must never break Blender's viewport; retry on next redraw.
         return
@@ -1373,6 +1577,8 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
         layout.operator("dan_form.pick_selection_tool", text="Hover Pick Control", icon="EYEDROPPER").tool = "CONTROL"
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
+        if context.view_layer.objects.active == source:
+            layout.prop(context.scene, "dan_form_patches_enabled", text="Show Patches")
         layout.prop(context.scene, "dan_form_overlay_xray", text="X-Ray")
         if context.view_layer.objects.active == source:
             layout.prop(context.scene, "dan_form_overlay_hidden", text="Preview Hidden Controls")
@@ -1701,6 +1907,7 @@ class DANFORM_OT_remove(bpy.types.Operator):
                     del source[key]
             _MAPPING_CACHE.pop(source.as_pointer(), None)
             _NETWORK_CACHE.pop(source.as_pointer(), None)
+            _invalidate_patch_cache(source)
             _OVERLAY_CACHE.clear()
             _ACTIVE_CONTROL_UUIDS.pop(source_uuid, None)
             _RETURN_MODES.pop(source_uuid, None)
@@ -2400,6 +2607,8 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         setup.label(text="Setup", icon="TOOL_SETTINGS")
         display = setup.row(align=True)
         display.prop(scene, "dan_form_overlay_enabled", text="Overlay")
+        if active == source:
+            display.prop(scene, "dan_form_patches_enabled", text="Patches")
         display.prop(scene, "dan_form_overlay_xray", text="X-Ray")
         if active == source:
             display.prop(scene, "dan_form_overlay_hidden", text="Preview Hidden")
@@ -2492,6 +2701,7 @@ def register() -> None:
     bpy.types.Scene.dan_form_control_index = IntProperty(name="Active Control", default=0, min=0, update=_ui_control_index_update)
     bpy.types.Scene.dan_form_ui_source_uuid = StringProperty(name="UI Source UUID", default="")
     bpy.types.Scene.dan_form_overlay_enabled = BoolProperty(name="Control Overlay", default=True)
+    bpy.types.Scene.dan_form_patches_enabled = BoolProperty(name="Show Patches", default=False)
     bpy.types.Scene.dan_form_overlay_hidden = BoolProperty(name="Show Hidden Controls", default=False)
     bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False, update=_update_overlay_display)
     bpy.types.Scene.dan_form_overlay_width = FloatProperty(name="Line Width", default=3.0, min=1.0, max=8.0)
@@ -2531,12 +2741,15 @@ def unregister() -> None:
     _RETURN_MODES.clear()
     _PROXY_SNAPSHOTS.clear()
     _NETWORK_CACHE.clear()
+    _PATCH_CACHE.clear()
+    _PATCH_OVERLAY_CACHE.clear()
     _OVERLAY_CACHE.clear()
     for prop in (
         "dan_form_overlay_width",
         "dan_form_overlay_xray",
         "dan_form_overlay_hidden",
         "dan_form_overlay_enabled",
+        "dan_form_patches_enabled",
         "dan_form_add_to_selection",
         "dan_form_selected_control",
         "dan_form_ui_source_uuid",

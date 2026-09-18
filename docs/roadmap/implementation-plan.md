@@ -21,9 +21,10 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 Mỗi phase cung cấp một bản thử được, ghi rõ tính năng đã hoạt động và giới hạn còn
 lại. Không đánh dấu phase hoàn thành chỉ vì đã có giao diện hoặc tài liệu.
 
-Đợt tiếp theo là [sidebar native list Phase 2](phase-02-native-list-ux.md), thay bố
-cục box/nhiều nút của bản UX hiện có; chưa chuyển Phase 3. Task NL2.1–NL2.4 có test
-và commit sau khi hoạt động. Báo cáo UX trước không xác nhận task mới đã pass.
+Phase 2 đã hoàn tất phần native list và UX live. Phase 3 hiện đã có patch graph,
+incident lookup và lớp Show Patches display-only; bằng chứng nằm trong
+[Phase 3 report](../testing/phase-03-patch-report.md). Bước tiếp theo sau Gate P3
+là Phase 4 deformation/proportional; không đưa solver vào Phase 3.
 
 ## Những quy tắc đã chốt
 
