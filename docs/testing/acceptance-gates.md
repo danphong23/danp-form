@@ -35,7 +35,12 @@ The latest P2-UX layout requirement is the [native list plan](../roadmap/phase-0
 UIList scrolling/active row, inline rename, +/−, membership Sync, ↑/↓ persistence,
 eye-derived state and object/mode-specific controls. Rows now highlight immediately
 and select the corresponding geometry in Edit Mode; Edit Control / Back to Model
-and global display-only Hide/Show Controls follow the updated interaction contract.
+and canonical bulk Hide/Show Controls follow the updated interaction contract and
+[ADR-010](../decisions/ADR-010-bulk-visibility-and-segment-selection.md). Assert all
+eyes Hidden/On, partial edge Hide retains shared junctions, vertex Hide releases
+incident edges, and span selection stops at effective junctions. Overlay options
+remain display-only. Current scoped fixes are in the
+[0.2.3 report](phase-02-edit-performance-report.md).
 Scoped results and NOT RUN cases are in the [0.2.1 sidebar report](phase-02-sidebar-performance-report.md). Execute
 [NL2.1–NL2.4](../../tasks/phase-02-native-list-ux.md), including undo/redo and shared
 geometry/mask assertions. Prior row-box UI tests do not pass the revised layout gate.

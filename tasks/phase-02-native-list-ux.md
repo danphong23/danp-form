@@ -3,6 +3,31 @@
 **Trạng thái: core UIList đã triển khai; lifecycle và controller cố định topology 0.2.2 đã qua regression live.
 Các checkbox rộng bên dưới vẫn là gate cần bằng chứng riêng, không tự đánh dấu hoàn tất.**
 
+## Bổ sung 0.2.3 — Edit Mode hiệu năng và viền front
+
+- [x] Profile trực tiếp Source Edit với 37 definitions: xác định đọc ID từng đỉnh
+      lặp lại trong effective network, UI projection và overlay.
+- [x] Đọc topology/ID/coordinates theo lô; cache union theo mapping và canonical masks.
+- [x] Giữ GPU buffers ở idle; invalidate theo geometry, context, masks, highlight,
+      transforms, runtime refresh; Controller Edit không vẽ lớp phụ.
+- [x] Chỉ thêm chấm cho explicit point handles, không chồng lên mọi edge endpoint.
+- [x] MCP: 28 cache/display + 37 lifecycle + 34 sidebar + 34 segment/visibility
+      checks; tổng 133, fixture được dọn.
+- [x] Ctrl+Alt+Click chọn span giữa giao điểm; Shift cộng selection; menu/F3/MCP
+      dùng active/single edge hoặc canonical edge ID. Kiểm tra cả projection pick.
+- [x] H edge mode chỉ ẩn cạnh, giữ giao điểm của đường còn bật; vertex mode ẩn
+      node và các cạnh chạm nó. Alt-H dùng current Source để Reveal.
+- [x] Hide/Show Controls chuyển sang canonical toàn bộ, mọi mắt Hidden/On,
+      giữ object/mode, bao gồm controller Edit rỗng; ADR-010 thay quy tắc 0.2.1.
+- [x] Computer Use: Source Edit → Edit Control → Back to Source Edit; trả về
+      model Object, selection được khôi phục, nhân vật được frame đầy đủ.
+- [x] Computer Use H/Alt-H: canonical mask 24E/0V → 0E/0V, mắt Hidden → On,
+      giữ controller Edit; trả lại Source Edit đang dùng khi bắt đầu test cuối.
+- [x] Bổ sung 13 nhóm front contour trên nhân vật live; giữ 37 definitions cũ
+      và geometry. Cube giữ 6 definitions; không thêm topology vào model.
+
+Bằng chứng/giới hạn: [báo cáo 0.2.3](../docs/testing/phase-02-edit-performance-report.md).
+
 ## Bổ sung 0.2.2 — Lifecycle và controller chỉ chỉnh vị trí
 
 - [x] Tên sản phẩm DANP Form; giữ namespace/schema cũ để đọc file hiện có.
@@ -23,7 +48,8 @@ Bằng chứng và ca NOT RUN: [báo cáo 0.2.2](../docs/testing/phase-02-contro
 - [x] Handler chỉ sync khi Source geometry đổi, bỏ mesh update nếu tọa độ không đổi.
 - [x] Bỏ handler/overlay trùng khi nạp lại addon đang cài.
 - [x] Chọn dòng highlight tức thì ở Object; tự chọn Source/proxy IDs trong Edit.
-- [x] Hide/Show Controls là display-only; Edit Control / Back to Model nhớ mode.
+- [x] 0.2.1: Hide/Show Controls từng là display-only (đã thay bằng ADR-010 ở 0.2.3);
+      Edit Control / Back to Model nhớ mode.
 - [x] Overlay theo ngữ cảnh: Source-backed khi chọn model, controller-backed khi
       chọn proxy Object Mode, và tắt lớp phụ trong Controller Edit Mode.
 - [x] Sync ghi membership mới, no-op giữ revision; active row giữ đúng UUID sau rebuild.

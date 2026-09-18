@@ -1,5 +1,15 @@
 # Design Changelog
 
+## 2026-09-18 — DANP Form 0.2.3 performance and control selection
+
+- Replaced repeated per-vertex ID/coordinate reads with bulk BMesh/Mesh access and cached Source edge connectivity.
+- Cached the effective network and GPU overlay buffers; geometry/context/masks/highlight/transforms invalidate them while idle redraw reuses buffers.
+- Kept explicit point handles visible without drawing large dots over every edge endpoint.
+- Added Ctrl+Alt+Click junction-span selection (Shift adds), scoped H/Alt-H canonical partial Hide/Reveal and edge intent that retains shared junctions.
+- Changed Hide/Show Controls to canonical bulk visibility, synchronizing every list eye; see ADR-010. Overlay options remain display-only.
+- Passed 28 cache/display, 37 lifecycle/protection, 34 sidebar and 34 segment/visibility checks (133 total) in the existing open Blender file; Computer Use verified canonical H/Alt-H mask changes.
+- Added front contour definitions to the user's live character without modifying its geometry; these are scene data, not an automatic silhouette addon feature. See the [performance and contour report](docs/testing/phase-02-edit-performance-report.md).
+
 ## 2026-09-18 — DANP Form 0.2.2 lifecycle and controller protection
 
 - Corrected product/sidebar naming to DANP Form; retained extension, operator and data IDs for existing files.

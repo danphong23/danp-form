@@ -40,12 +40,15 @@ _ACTIVE_CONTROL_UUIDS = {}
 _RETURN_MODES = {}
 _PROXY_SNAPSHOTS = {}
 _TOPOLOGY_KEYMAPS = []
+_CONTROL_KEYMAPS = []
+_NETWORK_CACHE = {}
+_OVERLAY_CACHE = {}
 VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
 
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 2, 2),
+    "version": (0, 2, 3),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -193,12 +196,16 @@ def _source_id_maps(source: bpy.types.Object) -> tuple[dict[int, int], dict[int,
         bm = bmesh.from_edit_mesh(source.data)
         bm.verts.ensure_lookup_table()
         bm.edges.ensure_lookup_table()
+        bm.verts.index_update()
+        bm.edges.index_update()
         vid_layer = bm.verts.layers.int.get(VID_ATTR)
         eid_layer = bm.edges.layers.int.get(EID_ATTR)
         if vid_layer is None or eid_layer is None:
             raise ValueError("SOURCE_ID_LAYERS_MISSING")
         vids = {int(vert[vid_layer]): vert.index for vert in bm.verts}
         eids = {int(edge[eid_layer]): edge.index for edge in bm.edges}
+        index_vids = [int(vert[vid_layer]) for vert in bm.verts]
+        edge_vids = {int(edge[eid_layer]): tuple(int(v[vid_layer]) for v in edge.verts) for edge in bm.edges}
     else:
         vid_attr = source.data.attributes.get(VID_ATTR)
         eid_attr = source.data.attributes.get(EID_ATTR)
@@ -206,8 +213,24 @@ def _source_id_maps(source: bpy.types.Object) -> tuple[dict[int, int], dict[int,
             raise ValueError("SOURCE_ID_LAYERS_MISSING")
         vids = {int(item.value): index for index, item in enumerate(vid_attr.data)}
         eids = {int(item.value): index for index, item in enumerate(eid_attr.data)}
-    _MAPPING_CACHE[cache_key] = (signature, vids, eids)
+        index_vids = [int(item.value) for item in vid_attr.data]
+        edge_vids = {int(eid_attr.data[edge.index].value): tuple(index_vids[i] for i in edge.vertices) for edge in source.data.edges}
+    _MAPPING_CACHE[cache_key] = (signature, vids, eids, index_vids, edge_vids)
     return vids, eids
+
+
+def _source_edge_vids(source):
+    _source_id_maps(source)
+    return _MAPPING_CACHE[source.as_pointer()][4]
+
+
+def _source_vertices(source):
+    """Borrow vertices for one synchronous read, never across callbacks or undo."""
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        bm.verts.ensure_lookup_table()
+        return bm.verts
+    return source.data.vertices
 
 
 def _source_vid(source: bpy.types.Object, vertex_index: int) -> int:
@@ -398,6 +421,13 @@ def _effective_proxy_elements(source: bpy.types.Object) -> tuple[list[int], list
     hidden_eids = _hidden(source, HIDDEN_EIDS_KEY)
     vid_to_index, eid_to_index = _source_id_maps(source)
     visible_edges: set[int] = set()
+    cache_key = source.as_pointer()
+    mapping = _MAPPING_CACHE[cache_key]
+    token = (source.get(CONTROLS_KEY), source.get(HIDDEN_VIDS_KEY), source.get(HIDDEN_EIDS_KEY))
+    cached = _NETWORK_CACHE.get(cache_key)
+    if cached is not None and cached[0] is mapping and cached[1] == token:
+        return list(cached[2]), list(cached[3])
+    edge_vids = mapping[4]
     visible_vertices: set[int] = set()
     for control in controls:
         for edge_id in control.get("edge_ids", []):
@@ -405,8 +435,7 @@ def _effective_proxy_elements(source: bpy.types.Object) -> tuple[list[int], list
             edge_index = eid_to_index.get(edge_id)
             if edge_index is None or edge_id in hidden_eids:
                 continue
-            edge = source.data.edges[edge_index]
-            endpoint_ids = {_source_vid(source, vertex_index) for vertex_index in edge.vertices}
+            endpoint_ids = set(edge_vids[edge_id])
             if endpoint_ids & hidden_vids:
                 continue
             visible_edges.add(edge_id)
@@ -417,25 +446,28 @@ def _effective_proxy_elements(source: bpy.types.Object) -> tuple[list[int], list
         for edge_id in control.get("edge_ids", []):
             edge_index = eid_to_index.get(int(edge_id))
             if edge_index is not None:
-                endpoint_ids.update(_source_vid(source, vertex_index) for vertex_index in source.data.edges[edge_index].vertices)
+                endpoint_ids.update(edge_vids[int(edge_id)])
         for vertex_id in control.get("vertex_ids", []):
             vertex_id = int(vertex_id)
             if vertex_id not in hidden_vids and vertex_id in vid_to_index and (
                 not control.get("edge_ids") or vertex_id not in endpoint_ids
             ):
                 visible_vertices.add(vertex_id)
-    return sorted(visible_vertices), sorted(visible_edges)
+    vertices, edges = sorted(visible_vertices), sorted(visible_edges)
+    _NETWORK_CACHE[cache_key] = (mapping, token, vertices, edges)
+    return list(vertices), list(edges)
 
 
 def _control_intent(source: bpy.types.Object, control: dict) -> tuple[set[int], set[int]]:
     """Return edge and explicit-node intent for whole-definition actions."""
     _, edge_indices = _source_id_maps(source)
+    edge_vids = _source_edge_vids(source)
     endpoint_ids: set[int] = set()
     for edge_id in control.get("edge_ids", []):
         edge_index = edge_indices.get(int(edge_id))
         if edge_index is None:
             continue
-        endpoint_ids.update(_source_vid(source, vertex_index) for vertex_index in source.data.edges[edge_index].vertices)
+        endpoint_ids.update(edge_vids[int(edge_id)])
     edge_ids = {int(edge_id) for edge_id in control.get("edge_ids", []) if int(edge_id) in edge_indices}
     node_ids = {int(vertex_id) for vertex_id in control.get("vertex_ids", [])}
     if edge_ids:
@@ -447,6 +479,7 @@ def _control_effective(source: bpy.types.Object, control: dict) -> tuple[set[int
     hidden_vids = _hidden(source, HIDDEN_VIDS_KEY)
     hidden_eids = _hidden(source, HIDDEN_EIDS_KEY)
     _, edge_indices = _source_id_maps(source)
+    edge_vids = _source_edge_vids(source)
     effective_edges: set[int] = set()
     effective_vertices: set[int] = set()
     for edge_id in control.get("edge_ids", []):
@@ -454,7 +487,7 @@ def _control_effective(source: bpy.types.Object, control: dict) -> tuple[set[int
         edge_index = edge_indices.get(edge_id)
         if edge_index is None or edge_id in hidden_eids:
             continue
-        endpoints = {_source_vid(source, index) for index in source.data.edges[edge_index].vertices}
+        endpoints = set(edge_vids[edge_id])
         if endpoints & hidden_vids:
             continue
         effective_edges.add(edge_id)
@@ -469,6 +502,7 @@ def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> No
     previous_guard = _SYNC_GUARD
     _SYNC_GUARD = True
     try:
+        _OVERLAY_CACHE.clear()
         _rebuild_proxy_impl(source, controller)
         _PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
         _guard_proxy_topology(source, controller)
@@ -489,13 +523,14 @@ def _rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object) 
         # Temporarily leave only the controller edit context, then restore it.
         bpy.ops.object.mode_set(mode="OBJECT")
     proxy_mesh.clear_geometry()
-    proxy_vertices = [tuple(_source_co(source, vid_to_index[vid])) for vid in vertex_ids]
+    source_vertices = _source_vertices(source)
+    edge_vids = _source_edge_vids(source)
+    proxy_vertices = [tuple(source_vertices[vid_to_index[vid]].co) for vid in vertex_ids]
     proxy_vertex_index = {vid: index for index, vid in enumerate(vertex_ids)}
     proxy_edges = []
     kept_edge_ids = []
     for edge_id in edge_ids:
-        edge = source.data.edges[eid_to_index[edge_id]]
-        endpoint_ids = [_source_vid(source, index) for index in edge.vertices]
+        endpoint_ids = edge_vids[edge_id]
         if all(endpoint in proxy_vertex_index for endpoint in endpoint_ids):
             proxy_edges.append(tuple(proxy_vertex_index[endpoint] for endpoint in endpoint_ids))
             kept_edge_ids.append(edge_id)
@@ -541,6 +576,7 @@ def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
     if proxy_attr is None:
         return
     source_vids, _ = _source_id_maps(source)
+    source_vertices = _source_vertices(source)
     changed = False
     if controller.mode == "EDIT":
         bm = bmesh.from_edit_mesh(controller.data)
@@ -550,7 +586,7 @@ def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
         for vert in bm.verts:
             source_index = source_vids.get(int(vert[layer]))
             if source_index is not None:
-                position = _source_co(source, source_index)
+                position = source_vertices[source_index].co
                 if (vert.co - position).length_squared > 1e-16:
                     vert.co = position
                     changed = True
@@ -561,7 +597,7 @@ def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
     for index, item in enumerate(proxy_attr.data):
         source_index = source_vids.get(int(item.value))
         if source_index is not None and index < len(controller.data.vertices):
-            position = _source_co(source, source_index)
+            position = source_vertices[source_index].co
             vert = controller.data.vertices[index]
             if (vert.co - position).length_squared > 1e-16:
                 vert.co = position
@@ -604,11 +640,10 @@ def _guard_proxy_topology(source, controller) -> bool:
         _validate_source_topology(source)
         vids, eids = _effective_proxy_elements(source)
         vmap, emap = _source_id_maps(source)
-        expected_edges = {
-            eid: tuple(sorted(_source_vid(source, i) for i in source.data.edges[emap[eid]].vertices))
-            for eid in eids
-        }
-        vertices = [(vid, tuple(_source_co(source, vmap[vid])), False, False) for vid in vids]
+        edge_vids = _source_edge_vids(source)
+        source_vertices = _source_vertices(source)
+        expected_edges = {eid: tuple(sorted(edge_vids[eid])) for eid in eids}
+        vertices = [(vid, tuple(source_vertices[vmap[vid]].co), False, False) for vid in vids]
         edges = [(eid, expected_edges[eid], False, False) for eid in eids]
         snapshot = (token, set(vids), expected_edges, (vertices, edges))
     state = _proxy_state(controller)
@@ -753,14 +788,9 @@ def _mutate_masks(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[
     elif reveal:
         hidden_vids.difference_update(vertex_ids)
         hidden_eids.difference_update(edge_ids)
-        _, edge_indices = _source_id_maps(source)
+        edge_vids = _source_edge_vids(source)
         for edge_id in edge_ids:
-            edge_index = edge_indices.get(edge_id)
-            if edge_index is not None:
-                hidden_vids.difference_update(
-                    _source_vid(source, vertex_index)
-                    for vertex_index in source.data.edges[edge_index].vertices
-                )
+            hidden_vids.difference_update(edge_vids.get(edge_id, ()))
     else:
         hidden_vids.update(vertex_ids)
         hidden_eids.update(edge_ids)
@@ -786,15 +816,10 @@ def _prune_masks_after_remove(source: bpy.types.Object) -> None:
         edges, nodes = _control_intent(source, control)
         defined_edges.update(edges)
         defined_nodes.update(nodes)
-    _, edge_indices = _source_id_maps(source)
+    edge_vids = _source_edge_vids(source)
     for control in _controls(source):
         for edge_id in control.get("edge_ids", []):
-            index = edge_indices.get(int(edge_id))
-            if index is not None:
-                defined_nodes.update(
-                    _source_vid(source, vertex_index)
-                    for vertex_index in source.data.edges[index].vertices
-                )
+            defined_nodes.update(edge_vids.get(int(edge_id), ()))
     hidden_vids = _hidden(source, HIDDEN_VIDS_KEY) & defined_nodes
     hidden_eids = _hidden(source, HIDDEN_EIDS_KEY) & defined_edges
     _json_set(source, HIDDEN_VIDS_KEY, sorted(hidden_vids))
@@ -822,6 +847,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             controller_changed = controller.as_pointer() in changed_geometry or controller.data.as_pointer() in changed_geometry
             if not source_changed and not controller_changed:
                 continue
+            _OVERLAY_CACHE.clear()
             try:
                 if source_changed:
                     _MAPPING_CACHE.pop(source.as_pointer(), None)
@@ -846,6 +872,8 @@ def _refresh_runtime(_unused=None) -> None:
     _MAPPING_CACHE.clear()
     _UI_SIGNATURES.clear()
     _PROXY_SNAPSHOTS.clear()
+    _NETWORK_CACHE.clear()
+    _OVERLAY_CACHE.clear()
     try:
         for source, controller in _source_controller_pairs():
             _guard_proxy_topology(source, controller)
@@ -886,148 +914,116 @@ def _overlay_mode(context: bpy.types.Context) -> str:
     return "none"
 
 
+def _overlay_geometry(context, overlay_mode, source, controller):
+    """Collect one frame of world-space positions from a single mesh read."""
+    scene = context.scene
+    selected_control = _control(source, scene.dan_form_selected_control)
+    selected_vertices, selected_edges = _control_effective(source, selected_control) if selected_control else (set(), set())
+    # Edge vertices are already legible through the colored lines and native
+    # Edit selection. Only explicit point handles need an extra dot; painting
+    # every endpoint makes dense contours (especially fingers) into solid blobs.
+    point_ids = set()
+    for control in _controls(source):
+        point_ids.update(_control_intent(source, control)[1])
+    selected_point_ids = _control_intent(source, selected_control)[1] if selected_control else set()
+    if overlay_mode == "controller":
+        mesh = controller.data
+        vl = mesh.attributes.get(PROXY_VID_ATTR)
+        el = mesh.attributes.get(PROXY_EID_ATTR)
+        if vl is None or el is None:
+            return {}
+        matrix = controller.matrix_world
+        positions = {int(item.value): matrix @ vert.co for item, vert in zip(vl.data, mesh.vertices)}
+        index_vids = [int(item.value) for item in vl.data]
+        edges = {int(item.value): tuple(index_vids[i] for i in edge.vertices) for item, edge in zip(el.data, mesh.edges)}
+        vertex_ids, edge_ids = list(positions), list(edges)
+    else:
+        vid_indices, _ = _source_id_maps(source)
+        edges = _source_edge_vids(source)
+        vertex_ids, edge_ids = _effective_proxy_elements(source)
+        if scene.dan_form_overlay_hidden:
+            controls = _controls(source)
+            edge_ids = sorted({int(eid) for control in controls for eid in control.get("edge_ids", []) if int(eid) in edges})
+            vertex_ids = sorted({int(vid) for control in controls for vid in control.get("vertex_ids", []) if int(vid) in vid_indices}
+                                | {vid for eid in edge_ids for vid in edges[eid]})
+        vertices = _source_vertices(source)
+        matrix = source.matrix_world
+        positions = {vid: matrix @ vertices[vid_indices[vid]].co for vid in vertex_ids if vid in vid_indices}
+    return {
+        "edges": [positions[vid] for eid in edge_ids for vid in edges[eid] if vid in positions],
+        "selected_edges": [positions[vid] for eid in selected_edges if eid in edges for vid in edges[eid] if vid in positions],
+        "points": [positions[vid] for vid in point_ids if vid in positions],
+        "selected_points": [positions[vid] for vid in selected_point_ids & selected_vertices if vid in positions],
+    }
+
+
+def _overlay_batches(context, overlay_mode, source, controller):
+    """Retain GPU buffers on idle redraw; handlers invalidate changed geometry."""
+    import gpu
+    from gpu_extras.batch import batch_for_shader
+
+    scene = context.scene
+    token = (context.window.as_pointer() if context.window else 0,
+             source.as_pointer(), source.data.as_pointer(), source.mode,
+             controller.as_pointer(), controller.data.as_pointer(), controller.mode,
+             controller.get(PROXY_GENERATION_KEY), overlay_mode,
+             source.get(CONTROLS_KEY), source.get(HIDDEN_VIDS_KEY), source.get(HIDDEN_EIDS_KEY),
+             scene.dan_form_selected_control, scene.dan_form_overlay_hidden,
+             tuple(tuple(row) for row in source.matrix_world),
+             tuple(tuple(row) for row in controller.matrix_world))
+    if _OVERLAY_CACHE.get("token") != token:
+        geometry = _overlay_geometry(context, overlay_mode, source, controller)
+        shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+        batches = {name: batch_for_shader(shader, "LINES" if "edges" in name else "POINTS", {"pos": positions})
+                   for name, positions in geometry.items() if positions}
+        _OVERLAY_CACHE.update(token=token, shader=shader, batches=batches)
+    return _OVERLAY_CACHE["shader"], _OVERLAY_CACHE["batches"]
+
+
 def _draw_control_overlay() -> None:
-    """Draw the contextual control overlay without modifying mesh data."""
+    """Draw cached buffers; controller Edit displays only Blender's own mesh."""
     try:
         import gpu
-        from gpu_extras.batch import batch_for_shader
 
         context = bpy.context
         scene = context.scene
         if not getattr(scene, "dan_form_overlay_enabled", True):
             return
         overlay_mode = _overlay_mode(context)
-        # In Controller Edit Mode the actual proxy mesh is the authoritative
-        # display.  Suppressing this callback avoids a duplicate Source wire
-        # that can appear offset while the user moves proxy vertices.
-        if overlay_mode == "controller_edit_hidden" or overlay_mode == "none":
+        if overlay_mode in {"controller_edit_hidden", "none"}:
             return
         source, controller = _context_source(context)
-        if source is None or controller is None or source.type != "MESH" or not source.get(SOURCE_UUID_KEY):
+        if source is None or controller is None or not source.get(SOURCE_UUID_KEY):
             return
-        if overlay_mode == "source" and (
-            source.get(VIEWPORT_HIDDEN_KEY, False)
-        ):
+        if overlay_mode == "source" and source.get(VIEWPORT_HIDDEN_KEY, False):
             return
-        selected_uuid = getattr(scene, "dan_form_selected_control", "")
-        selected_control = _control(source, selected_uuid)
-
-        if overlay_mode == "controller":
-            # Controller Object Mode must use the current proxy coordinates,
-            # including edits made before returning to Object Mode.  Mapping
-            # only supplies selection colors; it never supplies positions.
-            proxy_mesh = controller.data
-            proxy_vid_attr = proxy_mesh.attributes.get(PROXY_VID_ATTR)
-            proxy_eid_attr = proxy_mesh.attributes.get(PROXY_EID_ATTR)
-            if proxy_vid_attr is None or proxy_eid_attr is None:
-                return
-            vid_to_index = {int(item.value): index for index, item in enumerate(proxy_vid_attr.data)}
-            eid_to_index = {int(item.value): index for index, item in enumerate(proxy_eid_attr.data)}
-            vertex_ids = list(vid_to_index)
-            edge_positions = []
-            for edge in proxy_mesh.edges:
-                edge_positions.extend(
-                    controller.matrix_world @ proxy_mesh.vertices[index].co
-                    for index in edge.vertices
-                )
-            selected_positions = []
-            selected_vertices = set()
-            if selected_control:
-                selected_vertices, selected_edges = _control_effective(source, selected_control)
-                for edge_id in selected_edges:
-                    edge_index = eid_to_index.get(edge_id)
-                    if edge_index is not None:
-                        selected_positions.extend(
-                            controller.matrix_world @ proxy_mesh.vertices[index].co
-                            for index in proxy_mesh.edges[edge_index].vertices
-                        )
-            standalone = [controller.matrix_world @ vertex.co for vertex in proxy_mesh.vertices]
-            selected_points = [
-                controller.matrix_world @ proxy_mesh.vertices[vid_to_index[vertex_id]].co
-                for vertex_id in selected_vertices
-                if vertex_id in vid_to_index
-            ]
-        else:
-            vertex_ids, edge_ids = _effective_proxy_elements(source)
-            if getattr(scene, "dan_form_overlay_hidden", False):
-                _, all_edge_indices = _source_id_maps(source)
-                edge_ids = sorted({int(edge_id) for c in _controls(source) for edge_id in c.get("edge_ids", []) if int(edge_id) in all_edge_indices})
-                vertex_ids = sorted({int(vertex_id) for c in _controls(source) for vertex_id in c.get("vertex_ids", [])})
-                for edge_id in edge_ids:
-                    edge = source.data.edges[all_edge_indices[edge_id]]
-                    vertex_ids.extend(_source_vid(source, index) for index in edge.vertices)
-                vertex_ids = sorted(set(vertex_ids))
-            vid_to_index, eid_to_index = _source_id_maps(source)
-            edge_positions = []
-            for edge_id in edge_ids:
-                edge_index = eid_to_index.get(edge_id)
-                if edge_index is None:
+        shader, batches = _overlay_batches(context, overlay_mode, source, controller)
+        xray = scene.dan_form_overlay_xray
+        if xray:
+            gpu.state.depth_test_set("NONE")
+        try:
+            width = scene.dan_form_overlay_width
+            for name, color, size in (
+                ("edges", (0.05, 0.75, 1.0, 0.95), width),
+                ("selected_edges", (1.0, 0.45, 0.05, 1.0), width + 1.0),
+                ("points", (0.2, 1.0, 0.7, 1.0), 6.0),
+                ("selected_points", (1.0, 0.45, 0.05, 1.0), 8.0),
+            ):
+                batch = batches.get(name)
+                if batch is None:
                     continue
-                edge = source.data.edges[edge_index]
-                edge_positions.extend(
-                    (source.matrix_world @ _source_co(source, index)) for index in edge.vertices
-                )
-            selected_positions = []
-            if selected_control:
-                _, selected_edges = _control_effective(source, selected_control)
-                for edge_id in selected_edges:
-                    edge_index = eid_to_index.get(edge_id)
-                    if edge_index is not None:
-                        selected_positions.extend(
-                            (source.matrix_world @ _source_co(source, index))
-                            for index in source.data.edges[edge_index].vertices
-                        )
-            standalone = []
-            for vertex_id in vertex_ids:
-                index = vid_to_index.get(vertex_id)
-                if index is not None:
-                    standalone.append(source.matrix_world @ _source_co(source, index))
-            selected_points = []
-            if selected_control:
-                selected_vertices, _ = _control_effective(source, selected_control)
-                selected_points = [
-                    source.matrix_world @ _source_co(source, vid_to_index[vertex_id])
-                    for vertex_id in selected_vertices
-                    if vertex_id in vid_to_index
-                ]
-
-        shader = gpu.shader.from_builtin("UNIFORM_COLOR")
-        if getattr(scene, "dan_form_overlay_xray", False):
-            try:
-                gpu.state.depth_test_set("NONE")
-            except Exception:
-                pass
-        if edge_positions:
-            batch = batch_for_shader(shader, "LINES", {"pos": edge_positions})
-            shader.bind()
-            shader.uniform_float("color", (0.05, 0.75, 1.0, 0.95))
-            gpu.state.line_width_set(float(getattr(scene, "dan_form_overlay_width", 3.0)))
-            batch.draw(shader)
-        if selected_positions:
-            batch = batch_for_shader(shader, "LINES", {"pos": selected_positions})
-            shader.bind()
-            shader.uniform_float("color", (1.0, 0.45, 0.05, 1.0))
-            gpu.state.line_width_set(float(getattr(scene, "dan_form_overlay_width", 3.0)) + 1.0)
-            batch.draw(shader)
-        if standalone:
-            batch = batch_for_shader(shader, "POINTS", {"pos": standalone})
-            shader.bind()
-            shader.uniform_float("color", (0.2, 1.0, 0.7, 1.0))
-            gpu.state.point_size_set(6.0)
-            batch.draw(shader)
-        if selected_points:
-            batch = batch_for_shader(shader, "POINTS", {"pos": selected_points})
-            shader.bind()
-            shader.uniform_float("color", (1.0, 0.45, 0.05, 1.0))
-            gpu.state.point_size_set(8.0)
-            batch.draw(shader)
-        if getattr(scene, "dan_form_overlay_xray", False):
-            try:
+                shader.bind()
+                shader.uniform_float("color", color)
+                if "edges" in name:
+                    gpu.state.line_width_set(float(size))
+                else:
+                    gpu.state.point_size_set(float(size))
+                batch.draw(shader)
+        finally:
+            if xray:
                 gpu.state.depth_test_set("LESS_EQUAL")
-            except Exception:
-                pass
     except Exception:
-        # Drawing must never break Blender's viewport; the next redraw retries.
+        # Drawing must never break Blender's viewport; retry on next redraw.
         return
 
 
@@ -1283,6 +1279,7 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
         layout.separator()
         layout.operator("dan_form.reveal", text="Reveal All", icon="HIDE_OFF")
         layout.operator("dan_form.hide_selected", text="Hide Selected", icon="HIDE_ON")
+        layout.operator("dan_form.select_segment", text="Select Segment Between Junctions", icon="EDGESEL")
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
         layout.prop(context.scene, "dan_form_overlay_hidden", text="Show Hidden Controls")
@@ -1491,6 +1488,12 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
         source, controller = _context_source(context)
         try:
             vertex_ids, edge_ids = _proxy_selection(controller)
+            if context.tool_settings.mesh_select_mode[1]:
+                # Edge endpoints are incidental selection, not explicit node Hide.
+                endpoints = {vid for eid in edge_ids for vid in _source_edge_vids(source).get(eid, ())}
+                vertex_ids.difference_update(endpoints)
+            else:
+                edge_ids.clear()
             changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=False)
             if changed:
                 _rebuild_proxy(source, controller)
@@ -1512,6 +1515,12 @@ class DANFORM_OT_reveal(bpy.types.Operator):
     bl_description = "Reveal all controls, or Source IDs supplied in ids_json"
     bl_options = {"REGISTER", "UNDO"}
     ids_json: StringProperty(name="IDs JSON", default="")
+
+    @classmethod
+    def poll(cls, context):
+        source, controller = _context_source(context)
+        active = context.view_layer.objects.active
+        return source is not None and controller is not None and active.mode in {"OBJECT", "EDIT"}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
@@ -1598,6 +1607,8 @@ class DANFORM_OT_remove(bpy.types.Operator):
                 if key in source:
                     del source[key]
             _MAPPING_CACHE.pop(source.as_pointer(), None)
+            _NETWORK_CACHE.pop(source.as_pointer(), None)
+            _OVERLAY_CACHE.clear()
             _ACTIVE_CONTROL_UUIDS.pop(source_uuid, None)
             _RETURN_MODES.pop(source_uuid, None)
             for scene in bpy.data.scenes:
@@ -1656,25 +1667,165 @@ def _unregister_topology_keymaps():
     _TOPOLOGY_KEYMAPS.clear()
 
 
+def _proxy_segment(controller, seed_id):
+    """Return a visible maximal edge span; logical definitions never split it."""
+    bm = bmesh.from_edit_mesh(controller.data)
+    el = bm.edges.layers.int.get(PROXY_EID_ATTR)
+    vl = bm.verts.layers.int.get(PROXY_VID_ATTR)
+    if el is None or vl is None:
+        raise ValueError("PROXY_MAPPING_MISSING")
+    seed = next((e for e in bm.edges if int(e[el]) == seed_id), None)
+    if seed is None:
+        raise ValueError("VISIBLE_CONTROL_EDGE_REQUIRED")
+    edges = {seed}
+    for start in seed.verts:
+        vert, previous = start, seed
+        while len(vert.link_edges) == 2:
+            following = next(e for e in vert.link_edges if e != previous)
+            if following in edges:
+                break
+            edges.add(following)
+            vert, previous = following.other_vert(vert), following
+    return ({int(v[vl]) for e in edges for v in e.verts}, {int(e[el]) for e in edges})
+
+
+class DANFORM_OT_select_segment(bpy.types.Operator):
+    bl_idname = "dan_form.select_segment"
+    bl_label = "Select Segment Between Junctions"
+    bl_description = "Ctrl+Alt+Click an edge; Shift adds a span. Stop at junctions/endpoints; select a full uncut loop"
+    bl_options = {"REGISTER", "UNDO"}
+    edge_id: IntProperty(name="Source Edge ID", default=0, min=0)
+    extend: BoolProperty(name="Extend Selection", default=False)
+
+    @classmethod
+    def poll(cls, context):
+        return DANFORM_OT_topology_locked.poll(context)
+
+    def invoke(self, context, event):
+        if event.type != "LEFTMOUSE":
+            return self.execute(context)
+        if context.region is None or context.region.type != "WINDOW" or context.region_data is None:
+            return {"CANCELLED"}
+        from bpy_extras.view3d_utils import location_3d_to_region_2d
+        from mathutils import Vector
+        _, controller = _context_source(context)
+        bm = bmesh.from_edit_mesh(controller.data)
+        layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+        if layer is None:
+            return {"CANCELLED"}
+        mouse = Vector((event.mouse_region_x, event.mouse_region_y))
+        candidates = []
+        for edge in bm.edges:
+            world = [controller.matrix_world @ v.co for v in edge.verts]
+            screen = [location_3d_to_region_2d(context.region, context.region_data, p) for p in world]
+            if any(p is None for p in screen):
+                continue
+            a, b = screen
+            delta = b - a
+            factor = max(0.0, min(1.0, (mouse - a).dot(delta) / delta.length_squared)) if delta.length_squared else 0.0
+            distance = (mouse - (a + factor * delta)).length
+            if distance <= 12.0:
+                midpoint = world[0].lerp(world[1], factor)
+                depth = -(context.region_data.view_matrix @ midpoint).z
+                candidates.append((distance, depth, int(edge[layer])))
+        if not candidates:
+            self.report({"INFO"}, "Click closer to a control edge")
+            return {"CANCELLED"}
+        self.edge_id = min(candidates)[2]
+        context.tool_settings.mesh_select_mode = (False, True, False)
+        return self.execute(context)
+
+    def execute(self, context):
+        _, controller = _context_source(context)
+        seed_id = self.edge_id
+        if not seed_id:
+            bm = bmesh.from_edit_mesh(controller.data)
+            layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+            active = bm.select_history.active
+            if isinstance(active, bmesh.types.BMEdge) and layer is not None:
+                seed_id = int(active[layer])
+            else:
+                selected = [e for e in bm.edges if e.select]
+                if len(selected) == 1 and layer is not None:
+                    seed_id = int(selected[0][layer])
+        try:
+            vertices, edges = _proxy_segment(controller, seed_id)
+            _select_proxy_ids(controller, vertices, edges, add=self.extend)
+            context.scene.dan_form_status = f"Selected span: {len(edges)} edges"
+            return {"FINISHED"}
+        except ValueError as exc:
+            self.report({"WARNING"}, str(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_reveal_controller(bpy.types.Operator):
+    bl_idname = "dan_form.reveal_controller"
+    bl_label = "Reveal Hidden Controls"
+    bl_description = "Alt+H reveals canonical hidden controls using current Source positions"
+    bl_options = {"INTERNAL", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return DANFORM_OT_topology_locked.poll(context)
+
+    def execute(self, context):
+        return bpy.ops.dan_form.reveal()
+
+
+def _register_control_keymaps():
+    config = bpy.context.window_manager.keyconfigs.addon
+    if config is None:
+        return
+    km = config.keymaps.new(name="Mesh", space_type="EMPTY")
+    for operator, key, modifiers in (
+        ("dan_form.hide_selected", "H", {}),
+        ("dan_form.reveal_controller", "H", {"alt": True}),
+        ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True}),
+        ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True, "shift": True}),
+    ):
+        item = km.keymap_items.new(operator, key, "PRESS", head=True, **modifiers)
+        if operator == "dan_form.select_segment":
+            item.properties.extend = modifiers.get("shift", False)
+        _CONTROL_KEYMAPS.append((km, item))
+
+
+def _unregister_control_keymaps():
+    for km, item in _CONTROL_KEYMAPS:
+        km.keymap_items.remove(item)
+    _CONTROL_KEYMAPS.clear()
+
+
 class DANFORM_OT_toggle_viewport_controls(bpy.types.Operator):
     bl_idname = "dan_form.toggle_viewport_controls"
     bl_label = "Hide/Show Controls"
-    bl_description = "Show or hide all control wires in the viewport; keep control influence and masks"
+    bl_description = "Hide or reveal every control, including all list eyes and control constraints"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
         source, controller = _context_source(context)
         active = context.view_layer.objects.active
-        return source is not None and controller is not None and active.mode in {"OBJECT", "EDIT"}
+        return source is not None and controller is not None and bool(_controls(source)) and active.mode in {"OBJECT", "EDIT"}
 
     def execute(self, context):
         source, controller = _context_source(context)
-        hidden = not bool(source.get(VIEWPORT_HIDDEN_KEY, False))
-        if hidden and context.view_layer.objects.active == controller:
-            bpy.ops.dan_form.focus_source()
-        source[VIEWPORT_HIDDEN_KEY] = hidden
-        controller.hide_set(hidden, view_layer=context.view_layer)
+        visible_vertices, visible_edges = _effective_proxy_elements(source)
+        hide = bool(visible_vertices or visible_edges)
+        if hide:
+            edges, nodes = set(), set()
+            for control in _controls(source):
+                control_edges, control_nodes = _control_intent(source, control)
+                edges.update(control_edges)
+                nodes.update(control_nodes)
+            changed = _mutate_masks(source, nodes, edges, reveal=False)
+        else:
+            changed = _mutate_masks(source, set(), set(), reveal=True)
+        source[VIEWPORT_HIDDEN_KEY] = False  # Migrate the old display-only flag.
+        controller.hide_set(False, view_layer=context.view_layer)
+        if changed:
+            _rebuild_proxy(source, controller)
+        _sync_context_ui_list(context)
+        context.scene.dan_form_status = "Hidden all controls" if hide else "Revealed all controls"
         _tag_viewport_redraw(context)
         return {"FINISHED"}
 
@@ -1714,7 +1865,7 @@ class DANFORM_OT_focus_controller(bpy.types.Operator):
     def poll(cls, context):
         source, controller = _context_source(context)
         active = context.view_layer.objects.active
-        return source is not None and controller is not None and bool(_controls(source)) and active.mode in {"OBJECT", "EDIT"}
+        return source is not None and controller is not None and bool(_effective_proxy_elements(source)[0]) and active.mode in {"OBJECT", "EDIT"}
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
@@ -1787,7 +1938,7 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
                 navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
         else:
             navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
-        hidden = bool(source.get(VIEWPORT_HIDDEN_KEY, False))
+        hidden = not bool(_effective_proxy_elements(source)[0])
         navigation.operator(DANFORM_OT_toggle_viewport_controls.bl_idname, text="Show Controls" if hidden else "Hide Controls", icon="HIDE_ON" if hidden else "HIDE_OFF")
         list_row = layout.row(align=True)
         list_row.enabled = active.mode in {"OBJECT", "EDIT"}
@@ -1837,6 +1988,8 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
     DANFORM_OT_topology_locked,
+    DANFORM_OT_select_segment,
+    DANFORM_OT_reveal_controller,
     DANFORM_OT_toggle_viewport_controls,
     DANFORM_OT_focus_source,
     DANFORM_OT_focus_controller,
@@ -1871,9 +2024,11 @@ def register() -> None:
     _refresh_runtime()
     _register_overlay()
     _register_topology_keymaps()
+    _register_control_keymaps()
 
 
 def unregister() -> None:
+    _unregister_control_keymaps()
     _unregister_topology_keymaps()
     _unregister_overlay()
     if _depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
@@ -1886,6 +2041,8 @@ def unregister() -> None:
     _ACTIVE_CONTROL_UUIDS.clear()
     _RETURN_MODES.clear()
     _PROXY_SNAPSHOTS.clear()
+    _NETWORK_CACHE.clear()
+    _OVERLAY_CACHE.clear()
     for prop in (
         "dan_form_overlay_width",
         "dan_form_overlay_xray",

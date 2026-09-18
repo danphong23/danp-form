@@ -41,6 +41,12 @@ overlay is suppressed because Blender's selected wire/vertex display is already 
 authoritative view; this prevents a second, confusing line from being drawn. Show
 Overlay/X-Ray/Show Hidden are display-only and distinct from DANP Form Hide/Reveal;
 rare display/maintenance actions belong in the list menu.
+Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
+events, context, masks, selected row and object transforms invalidate the relevant
+display; idle redraw only draws existing buffers. Topology/ID caches contain no
+long-lived BMesh handles or coordinate buffers. Colored point markers represent
+explicit point handles, including a point definition sharing an edge vertex;
+ordinary edge endpoints use the colored line and Blender's native Edit selection.
 The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
 up/down controls, and Sync below it only in Source Edit Mode. Clicking a row immediately highlights
 its effective control geometry. In Source/controller Edit Mode it also replaces the
@@ -49,10 +55,12 @@ Selecting a hidden definition never reveals its canonical masks.
 
 Edit Control activates the model's controller, enters its Edit Mode and selects the
 active definition. Back to Model returns to the Source in the Object/Edit Mode used
-before navigating to the controller. Hide Controls / Show Controls hides both the
-controller object and Source wire overlay without changing masks or control influence.
-Hiding the whole controller while it is active returns to the model first. Edit Control
-shows a globally hidden controller but preserves individual definition masks.
+before navigating to the controller. Hide Controls / Show Controls applies canonical
+Hide/Reveal to every definition and synchronizes every eye. If some geometry is
+visible it hides all; if all is hidden it reveals all, including previously hidden
+individual portions. It keeps object/mode; an empty controller can Show All in Edit.
+Edit Control never reveals masks and is disabled on Source with no effective handles.
+This replaces the old display-only bulk button; see [ADR-010](../decisions/ADR-010-bulk-visibility-and-segment-selection.md).
 No repeated row action boxes or persistent Display/Maintenance blocks.
 
 Creation (+), membership Sync and definition removal (−) belong to the model.
@@ -64,6 +72,15 @@ See the [current native list plan](../roadmap/phase-02-native-list-ux.md) for th
 object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation G/R/S.
 
 ## Selection and deformation
+
+Ctrl+Alt+Click an edge in controller Edit selects its visible span up to junctions
+or endpoints (degree other than two); Shift adds the span. A closed uninterrupted
+loop selects fully. Names/overlapping groups do not split the graph. The list menu
+or F3 uses a single selected/active edge; agents can pass `edge_id` to
+`dan_form.select_segment`. Overlapping projected edges require visual review.
+H hides selected edges in edge mode, preserving other lines at shared endpoints;
+H in vertex mode hides nodes and all incident edges. Alt-H reveals all from current
+Source positions. Partial masks produce Partial eye state for every affected group.
 
 Vertex mode selects nodes; edge mode selects full represented Source spans. Mixed
 selection is a union; span endpoints are selected, not implicit stationary nodes.

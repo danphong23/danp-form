@@ -25,9 +25,12 @@ lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao n
 theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
 hay deactivate riêng.
 
-Bộ này gồm specification và addon prototype Phase 1/2. Bản 0.2.2 dùng tên DANP
+Bộ này gồm specification và addon prototype Phase 1/2. Bản 0.2.3 dùng tên DANP
 Form; model có Init/Remove, controller chỉ sửa vị trí các điểm đã có. Biến dạng
 Source từ controller thuộc Phase 4, chưa triển khai. Lộ trình đã chốt:
+
+Controller Edit: Ctrl+Alt+Click chọn đoạn giữa giao điểm; Shift để chọn thêm.
+H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ toàn bộ con mắt.
 
 1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
 2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.

@@ -983,6 +983,12 @@ overlay is suppressed because Blender's selected wire/vertex display is already 
 authoritative view; this prevents a second, confusing line from being drawn. Show
 Overlay/X-Ray/Show Hidden are display-only and distinct from DANP Form Hide/Reveal;
 rare display/maintenance actions belong in the list menu.
+Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
+events, context, masks, selected row and object transforms invalidate the relevant
+display; idle redraw only draws existing buffers. Topology/ID caches contain no
+long-lived BMesh handles or coordinate buffers. Colored point markers represent
+explicit point handles, including a point definition sharing an edge vertex;
+ordinary edge endpoints use the colored line and Blender's native Edit selection.
 The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
 up/down controls, and Sync below it only in Source Edit Mode. Clicking a row immediately highlights
 its effective control geometry. In Source/controller Edit Mode it also replaces the
@@ -991,10 +997,12 @@ Selecting a hidden definition never reveals its canonical masks.
 
 Edit Control activates the model's controller, enters its Edit Mode and selects the
 active definition. Back to Model returns to the Source in the Object/Edit Mode used
-before navigating to the controller. Hide Controls / Show Controls hides both the
-controller object and Source wire overlay without changing masks or control influence.
-Hiding the whole controller while it is active returns to the model first. Edit Control
-shows a globally hidden controller but preserves individual definition masks.
+before navigating to the controller. Hide Controls / Show Controls applies canonical
+Hide/Reveal to every definition and synchronizes every eye. If some geometry is
+visible it hides all; if all is hidden it reveals all, including previously hidden
+individual portions. It keeps object/mode; an empty controller can Show All in Edit.
+Edit Control never reveals masks and is disabled on Source with no effective handles.
+This replaces the old display-only bulk button; see [ADR-010](../decisions/ADR-010-bulk-visibility-and-segment-selection.md).
 No repeated row action boxes or persistent Display/Maintenance blocks.
 
 Creation (+), membership Sync and definition removal (−) belong to the model.
@@ -1006,6 +1014,15 @@ See the [current native list plan](../roadmap/phase-02-native-list-ux.md) for th
 object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation G/R/S.
 
 ## Selection and deformation
+
+Ctrl+Alt+Click an edge in controller Edit selects its visible span up to junctions
+or endpoints (degree other than two); Shift adds the span. A closed uninterrupted
+loop selects fully. Names/overlapping groups do not split the graph. The list menu
+or F3 uses a single selected/active edge; agents can pass `edge_id` to
+`dan_form.select_segment`. Overlapping projected edges require visual review.
+H hides selected edges in edge mode, preserving other lines at shared endpoints;
+H in vertex mode hides nodes and all incident edges. Alt-H reveals all from current
+Source positions. Partial masks produce Partial eye state for every affected group.
 
 Vertex mode selects nodes; edge mode selects full represented Source spans. Mixed
 selection is a union; span endpoints are selected, not implicit stationary nodes.
@@ -1637,7 +1654,12 @@ The latest P2-UX layout requirement is the [native list plan](../roadmap/phase-0
 UIList scrolling/active row, inline rename, +/−, membership Sync, ↑/↓ persistence,
 eye-derived state and object/mode-specific controls. Rows now highlight immediately
 and select the corresponding geometry in Edit Mode; Edit Control / Back to Model
-and global display-only Hide/Show Controls follow the updated interaction contract.
+and canonical bulk Hide/Show Controls follow the updated interaction contract and
+[ADR-010](../decisions/ADR-010-bulk-visibility-and-segment-selection.md). Assert all
+eyes Hidden/On, partial edge Hide retains shared junctions, vertex Hide releases
+incident edges, and span selection stops at effective junctions. Overlay options
+remain display-only. Current scoped fixes are in the
+[0.2.3 report](phase-02-edit-performance-report.md).
 Scoped results and NOT RUN cases are in the [0.2.1 sidebar report](phase-02-sidebar-performance-report.md). Execute
 [NL2.1–NL2.4](../../tasks/phase-02-native-list-ux.md), including undo/redo and shared
 geometry/mask assertions. Prior row-box UI tests do not pass the revised layout gate.
@@ -2441,7 +2463,7 @@ girl chibi 1
   giữ definitions/masks. Remove gỡ toàn bộ binding/definitions/masks/ID layers và
   controller, giữ hình học model và dữ liệu ngoài addon; giữ mode của Source.
 - Không có khối Display/Maintenance. Edit Control / Back to Model và nút Hide/Show
-  Controls nằm trên danh sách để điều hướng và đổi hiển thị viewport nhanh.
+  Controls nằm trên danh sách để điều hướng và Hide/Reveal toàn bộ nhanh (ADR-010).
   Khi chọn model, overlay màu lấy Source làm mốc để người dùng biết control nằm ở
   đâu. Khi chọn controller ở Object Mode, overlay đọc trực tiếp proxy mesh để đường
   màu trùng với từng điểm đang chỉnh. Trong Controller Edit Mode, lớp overlay phụ
@@ -2461,9 +2483,9 @@ girl chibi 1
 | Sync trong Source Edit Mode | Thay membership của định nghĩa active bằng Source selection |
 | ↑ / ↓ | Di chuyển định nghĩa active một dòng; giữ UUID và active item |
 | Select trong menu | Chọn lại phần tương ứng khi cần; không dùng nút Select thường trực |
-| Edit Control | Vào controller Edit Mode, chọn đường active; hiện lại controller nếu bị ẩn toàn bộ |
+| Edit Control | Vào controller Edit Mode, chọn phần effective của đường active; khóa khi không còn control bật |
 | Back to Model | Trở về Source và mode Object/Edit trước khi sửa control |
-| Hide/Show Controls | Chỉ ẩn/hiện controller và overlay viewport; giữ masks và hiệu lực control |
+| Hide/Show Controls | Canonical Hide/Reveal toàn bộ; mọi con mắt đều Hidden/On, giữ object/mode; Show gồm cả phần đã ẩn riêng |
 | Shift + Select | Thêm phần tương ứng vào selection hiện có |
 | Con mắt | DANP Form Hide/Reveal toàn định nghĩa, theo trạng thái effective hiện tại |
 
@@ -2738,3 +2760,180 @@ removes protection. No Phase 3 patch display or Phase 4 deformation is claimed.
 The earlier 0.2.1 report records behavior at that version. Its controller-side
 create/Sync/delete workflow has been superseded by this model-only definition
 editing contract.
+
+---
+
+<!-- source: docs/testing/phase-02-edit-performance-report.md -->
+
+# Phase 2 — Edit Mode performance and front contours, 0.2.3
+
+**Status: PASS for these scoped fixes, 2026-09-18.**
+
+## Live session and cause
+
+Blender 5.2.1 LTS, installed `bl_ext.user_default.dan_form`, Layout, already-open
+`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+Preflight active object was `girl chibi 1` in Object Mode with 37 definitions;
+Source has 1,698 vertices, 3,392 edges and 1,696 faces. Cube has 8 vertices,
+12 edges, 6 faces and 6 definitions. Exactly one addon depsgraph handler was present.
+Dirty was true before and after. No separate Blender process, scene builder,
+file save/reopen or discard was used.
+
+The 0.2.2 implementation resolved each edge endpoint repeatedly through
+`_source_vid`, and each coordinate through `_source_co`. Profiling one network
+query and one list projection recorded 3,632 per-vertex ID reads with 0.226 seconds
+cumulative time. Network union was recomputed during every Source overlay redraw,
+which also rebuilt world positions, shaders and GPU batches. More definitions and
+overlap amplified this cost; it was measurable on this modest mesh.
+
+## Fix
+
+Source mapping now reads index-to-ID and edge-to-endpoint-ID tables once per
+mapping build. Connectivity contains copied IDs, not retained BMesh handles.
+Consumers borrow a vertex sequence for one synchronous coordinate read, instead
+of acquiring Edit data once per point. Effective union caches are tied to their
+mapping instance and canonical definitions/masks; callers receive list copies.
+
+The overlay retains its shader and position batches across idle redraw. Geometry
+events, proxy rebuild, model/controller context, canonical masks, selected UUID,
+Show Hidden and world transforms invalidate position data. Runtime refresh and
+unregister release caches. Width/X-Ray change drawing state and reuse buffers.
+Controller Edit returns before geometry/GPU access. Explicit point definitions
+keep visible point markers even when sharing a vertex with an edge control;
+edge endpoints no longer receive large auxiliary dots.
+
+## Measurements
+
+All numbers are synchronous Python timings in Source Edit Mode, not total input
+latency or viewport FPS. Before medians used three calls; after timings used warm
+medians of 10 calls on the same 37-definition model, then 15 on the final model.
+
+| Operation | 0.2.2, 37 definitions | 0.2.3, same 37 | 0.2.3, final 50 |
+| --- | ---: | ---: | ---: |
+| Effective network | 228.029 ms | 0.0956 ms | 0.2373 ms |
+| Unchanged proxy sync | 52.528 ms | 0.7810 ms | 1.4272 ms |
+| Valid topology guard | 0.869 ms | 0.6759 ms | 1.4787 ms |
+| Forced list projection | 228 ms profiled | 1.0971 ms | 2.3300 ms |
+| Overlay position collection | not isolated before | 0.5565 ms before point-marker refinement | 2.7920 ms |
+| Cached GPU buffer access | rebuilt each redraw, not separately timed | 0.0122 ms | 0.0132 ms |
+
+The final character proxy has 824 vertices and 924 edges. A separate sidebar
+regression measured idle mapping/list at 0.0016/0.0039 ms and eye operators at
+42.317 ms per operation across the final three Hide/Reveal pairs. Eye actions still rebuild
+the proxy legitimately; those costs are distinct from idle redraw.
+
+## Verification
+
+[Cache/display regression](../../tests/live_edit_performance.py) passed 28 checks
+using a removable fixture in this same scene. Actual geometry events verified
+Source BMesh positions, proxy sync and GPU invalidation; idle calls retained buffer
+identity and never called the position builder. Coverage includes explicit point
+highlight, canonical shared-point hiding, Show Hidden without mask mutation,
+Reveal, object transforms, controller Object pose, Controller Edit suppression,
+and runtime cache refresh. Test controls and meshes were removed in `finally`.
+
+[Lifecycle regression](../../tests/live_controller_lifecycle.py) passed all 37
+checks, including native topology edits/recovery and full removal. The existing
+50-definition character then passed all 34
+[sidebar regression](../../tests/live_sidebar_regression.py) checks, with Source
+definitions/masks/coordinates and controller pose/selection restored. Another 34
+[segment/visibility checks](../../tests/live_control_segments.py) passed on removable
+crossing-lines and closed-loop fixtures. Final total: 133 checks, covering span stops,
+additive selection, edge/node Hide intent, partial eyes, selective reveal, scoped keys
+and Hide/Show All even on an empty controller in Edit Mode.
+The user's Source and Cube topology, coordinates and transforms remained
+unchanged; all original definitions survived.
+
+Computer Use selected the returned Blender window, focused the model viewport,
+entered Source Edit with Tab, clicked Edit Control and Back to Model. Screenshots
+confirmed Source Edit, actual controller Edit with no auxiliary colored layer,
+and return to Source Edit. The original model Object Mode and mesh selection were
+restored through MCP afterward. The full character was framed in the existing
+front orientation for review. This proves those UI transitions, not a measured
+native input-latency/FPS threshold or a modal deformation test.
+
+Final Computer Use verification focused the actual controller viewport and pressed
+H on 24 selected front-foot edges. MCP confirmed canonical masks 24E/0V, the eye
+Hidden and Controller Edit retained. Alt-H restored masks 0E/0V and eye On.
+Original Source selection, masks/revision and the user's Source Edit Mode were
+restored. The projected-edge picking branch was exercised through a real View3D
+context with a synthetic event; physical Ctrl+Alt+mouse dispatch was NOT RUN.
+
+Syntax/static contracts, documentation links/hashes, installed-source consistency
+and extension ZIP contents were checked before commit.
+
+## Front outline scene data
+
+The earlier 37 definitions captured anatomical rings and longitudinal handles;
+they omitted substantial front contours, particularly head, ears and fingers.
+The live character now has 13 additional logical groups:
+
+- `Front.Outline.All` for selecting the complete contour set.
+- `Front.Head.Outline` and `Front.Ear.Outline.L/R`.
+- `Front.Body.Outline`.
+- `Front.Arm.Outline.L/R` and `Front.Hand.Outline.L/R`.
+- `Front.Leg.Outline.L/R` and `Front.Foot.Outline.L/R`.
+
+These Source-backed definitions cover all 498 base-mesh edges where neighboring
+face normals change front-facing sign for the current front view. Their regional
+union equals the whole group, including finger contours. Logical groups may
+contain multiple paths/loops or junctions; grouping does not add a constraint
+hierarchy. Original 37 definitions, identities and geometry remain intact; Cube
+retains its existing six controls. `Front.Outline.All` is active for review.
+
+This is a setup of the current scene, not a newly shipped automatic silhouette
+feature. Facing-sign contours can include overlapping/occluded paths and follow
+base mesh topology; they are not an exact visibility-filtered boundary of the
+Subdivision render. No extra mesh vertices were introduced for fitting.
+
+## Limits
+
+NOT RUN: interactive undo/redo and file reopen, physical Ctrl+Alt+mouse dispatch, sustained
+large-mesh FPS, modal transform movement/cancel, exact rendered-silhouette
+visibility extraction and Phase 4 patch deformation. Cache refresh hooks were
+tested directly; that is not evidence of interactive undo/redo. The scene remains
+unsaved so the user can review the added definitions before saving.
+
+---
+
+<!-- source: docs/decisions/ADR-010-bulk-visibility-and-segment-selection.md -->
+
+# ADR-010 — Bulk canonical visibility and junction spans
+
+**Status: Accepted — explicit user request, 2026-09-18.**
+
+## Decision
+
+Hide/Show Controls above the list now applies canonical DANP Form Hide/Reveal to
+every control of the active Source. This supersedes the 0.2.1 display-only bulk
+button. If any effective geometry remains, Hide masks every defined edge and
+explicit node; if none remains, Show clears canonical masks. All eyes derive
+Hidden or On respectively. Show All intentionally reveals earlier individual
+hidden portions too; it is not a saved visibility preset. The legacy operator ID
+is retained, and its old viewport-only flag is cleared by the explicit bulk action.
+
+Overlay/X-Ray/Show Hidden and Blender object/collection visibility remain display
+options. They do not change masks, cuts or constraints. Hide All keeps the current
+object/mode so Show All works even on an empty controller in Edit Mode. Edit Control
+is disabled on Source when no effective handle remains, until controls are revealed.
+
+Controller H hides selected canonical geometry; Alt-H reveals all from current
+Source positions. Edge selection has edge intent: its selected endpoints are not
+explicit node Hide, preserving intersecting enabled edges. Vertex selection has
+node intent, releasing all incident edges under ADR-008. An overlapping logical
+group observes the same canonical masks; it cannot override them.
+
+Ctrl+Alt+Click selects a maximal visible span from the picked edge, stopping at
+vertices with degree other than two in the effective network. Shift adds a span.
+An uninterrupted closed loop selects completely. Logical names/membership do not
+introduce artificial junctions. Menu/F3 can use a single selected/active edge;
+MCP can supply the canonical Source edge ID. Selection never changes definitions,
+canonical masks or Source geometry. Projected near edges can overlap, so selection
+must remain visually reviewable; agents likewise must inspect mapping and topology.
+
+## Scope
+
+The complete front contour group and anatomical regional groups coexist as
+overlapping selection conveniences, not a hierarchy of constraints. Phase 2
+implements mapping, visibility and selection only. Patch display is phase 3 and
+mesh deformation/proportional remains phase 4.

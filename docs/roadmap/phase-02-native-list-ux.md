@@ -49,7 +49,7 @@ girl chibi 1
   giữ definitions/masks. Remove gỡ toàn bộ binding/definitions/masks/ID layers và
   controller, giữ hình học model và dữ liệu ngoài addon; giữ mode của Source.
 - Không có khối Display/Maintenance. Edit Control / Back to Model và nút Hide/Show
-  Controls nằm trên danh sách để điều hướng và đổi hiển thị viewport nhanh.
+  Controls nằm trên danh sách để điều hướng và Hide/Reveal toàn bộ nhanh (ADR-010).
   Khi chọn model, overlay màu lấy Source làm mốc để người dùng biết control nằm ở
   đâu. Khi chọn controller ở Object Mode, overlay đọc trực tiếp proxy mesh để đường
   màu trùng với từng điểm đang chỉnh. Trong Controller Edit Mode, lớp overlay phụ
@@ -69,9 +69,9 @@ girl chibi 1
 | Sync trong Source Edit Mode | Thay membership của định nghĩa active bằng Source selection |
 | ↑ / ↓ | Di chuyển định nghĩa active một dòng; giữ UUID và active item |
 | Select trong menu | Chọn lại phần tương ứng khi cần; không dùng nút Select thường trực |
-| Edit Control | Vào controller Edit Mode, chọn đường active; hiện lại controller nếu bị ẩn toàn bộ |
+| Edit Control | Vào controller Edit Mode, chọn phần effective của đường active; khóa khi không còn control bật |
 | Back to Model | Trở về Source và mode Object/Edit trước khi sửa control |
-| Hide/Show Controls | Chỉ ẩn/hiện controller và overlay viewport; giữ masks và hiệu lực control |
+| Hide/Show Controls | Canonical Hide/Reveal toàn bộ; mọi con mắt đều Hidden/On, giữ object/mode; Show gồm cả phần đã ẩn riêng |
 | Shift + Select | Thêm phần tương ứng vào selection hiện có |
 | Con mắt | DANP Form Hide/Reveal toàn định nghĩa, theo trạng thái effective hiện tại |
 
