@@ -1,5 +1,13 @@
 # Design Changelog
 
+## 2026-09-18 — DANP Form 0.3.1 patch mode-switch performance
+
+- Fixed Object Mode patch face extraction from an O(face × edge) scan to an O(face + edge) lookup table.
+- Cached Source face connectivity across mode changes and reused a topology token instead of comparing thousands of ID mappings on every redraw.
+- Grouped translucent patch triangles into six palette GPU batches at most; a 104-patch character no longer submits 104 draw batches.
+- Optimized incident control lookup by computing each control's effective membership once per partition.
+- Live measurement improved cached face reads to about 0.05 ms, cached overlay to about 4.7 ms, and first partition construction to about 172 ms. Mode-switch fixture checks pass with Show Patches enabled.
+
 ## 2026-09-18 — DANP Form 0.3.0 patch graph and display
 
 - Added runtime Source face partitioning through effective enabled control edges, with stable Source-ID face/edge membership, incident control lookup and cache invalidation.

@@ -3100,13 +3100,14 @@ chỉ làm thay đổi lớp màu.
 
 ## Các trường hợp đã kiểm tra
 
-Fixture lưới hai quad có một edge chung đạt 13 kiểm tra:
+Fixture lưới hai quad có một edge chung đạt 15 kiểm tra:
 
 - edge control nội bộ tạo hai patch và được lookup ở cả hai phía;
 - boundary edge không tự tách patch và chỉ lookup patch chứa biên đó;
 - point control không tạo cut;
 - partition giữ cache khi topology/network không đổi;
-- overlay tạo một batch cho mỗi patch;
+- face connectivity cache được dùng lại khi mode không đổi và partition giữ nguyên qua Object/Edit;
+- overlay tạo batch màu theo palette, không tạo một GPU batch riêng cho mỗi patch;
 - tắt overlay không đổi tọa độ hoặc network revision;
 - Hide edge cut gộp hai patch, Reveal khôi phục hai patch;
 - Hide boundary edge không làm thay đổi partition nội bộ.
@@ -3118,13 +3119,20 @@ Kiểm tra trên file Blender đang mở `Project/2. toon/girl_chibi_1.blend`:
 - partition hiện tại: 104 patch, bao phủ đủ 1696 face;
 - 50/50 control có lookup patch không rỗng;
 - thử Hide một edge rồi Reveal: 104 → 103 → 104 patch;
-- overlay tạo 104 batch;
+- overlay tạo 6 palette batch cho 104 patch;
 - hidden vertex/edge mask cuối cùng rỗng, không còn fixture test;
 - context được khôi phục về `DANPFORM_CTRL_girl chibi 1` / Controller Edit.
 
 Năm suite hồi quy Phase 1/2 vẫn đạt 197 checks: lifecycle 37, sidebar 34,
 Edit/performance 38, segment/visibility 43 và pick UX 45. Test patch graph
 được chạy thêm trực tiếp qua MCP trên file live.
+
+Đo hiệu năng trên character live với Show Patches bật: đọc face connectivity lần
+đầu khoảng 69 ms và lần sau khoảng 0.05 ms; dựng partition lần đầu khoảng 172 ms
+và lần sau khoảng 0.9 ms; dựng 6 GPU palette batches lần đầu khoảng 51 ms và dùng
+lại khoảng 4.7 ms. Chuyển Object/Edit sau khi cache ấm đo khoảng 80–102 ms, gần
+tương đương khi Show Patches tắt trong cùng phiên, thay vì bottleneck hơn một giây
+do quét face × edge trước đây.
 
 ## Giới hạn còn lại
 

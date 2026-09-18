@@ -45,6 +45,7 @@ _CONTROL_KEYMAPS = []
 _NETWORK_CACHE = {}
 _PATCH_CACHE = {}
 _PATCH_OVERLAY_CACHE = {}
+_FACE_CACHE = {}
 _OVERLAY_CACHE = {}
 _XRAY_SHOW_IN_FRONT = {}
 _PICK_PREVIEW = {}
@@ -54,7 +55,7 @@ VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 3, 0),
+    "version": (0, 3, 1),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -507,12 +508,17 @@ def _control_effective(source: bpy.types.Object, control: dict) -> tuple[set[int
 def _source_face_records(source: bpy.types.Object) -> list[dict]:
     """Read Source faces using persistent vertex/edge IDs, never Blender indices."""
     vertex_ids, edge_ids = _source_id_maps(source)
+    face_cache_token = (source.data.as_pointer(), source.get(TOPOLOGY_KEY, ""),
+                        len(source.data.vertices), len(source.data.edges), len(source.data.polygons))
+    cached = _FACE_CACHE.get(source.as_pointer())
+    if cached is not None and cached[0] == face_cache_token:
+        return cached[1]
     reverse_vertices = {index: vertex_id for vertex_id, index in vertex_ids.items()}
     reverse_edges = {index: edge_id for edge_id, index in edge_ids.items()}
     if source.mode == "EDIT":
         bm = bmesh.from_edit_mesh(source.data)
         bm.faces.ensure_lookup_table()
-        return [
+        records = [
             {
                 "face_id": "f:" + ":".join(str(reverse_vertices[v.index]) for v in sorted(face.verts, key=lambda item: reverse_vertices[item.index])),
                 "vertex_ids": tuple(reverse_vertices[v.index] for v in face.verts),
@@ -520,15 +526,23 @@ def _source_face_records(source: bpy.types.Object) -> list[dict]:
             }
             for face in bm.faces
         ]
-    return [
+        _FACE_CACHE[source.as_pointer()] = (face_cache_token, records)
+        return records
+    edge_by_vertices = {
+        frozenset(edge.vertices): int(reverse_edges[edge.index])
+        for edge in source.data.edges
+    }
+    records = [
         {
             "face_id": "f:" + ":".join(str(reverse_vertices[index]) for index in sorted(polygon.vertices, key=lambda item: reverse_vertices[item])),
             "vertex_ids": tuple(reverse_vertices[index] for index in polygon.vertices),
-            "edge_ids": tuple(reverse_edges[edge.index] for edge in source.data.edges
-                               if set(edge.vertices).issubset(set(polygon.vertices))),
+            "edge_ids": tuple(edge_by_vertices[frozenset((polygon.vertices[index], polygon.vertices[(index + 1) % len(polygon.vertices)]))]
+                               for index in range(len(polygon.vertices))),
         }
         for polygon in source.data.polygons
     ]
+    _FACE_CACHE[source.as_pointer()] = (face_cache_token, records)
+    return records
 
 
 def _patch_partition(source: bpy.types.Object) -> dict:
@@ -538,12 +552,14 @@ def _patch_partition(source: bpy.types.Object) -> dict:
     the partition is never stored as a second geometric truth.
     """
     mapping = _source_id_maps(source)
+    mapping_token = (source.data.as_pointer(), source.get(TOPOLOGY_KEY, ""),
+                     len(source.data.vertices), len(source.data.edges), len(source.data.polygons))
     faces = _source_face_records(source)
     controls_token = source.get(CONTROLS_KEY, "")
     hidden_vertices = source.get(HIDDEN_VIDS_KEY, "")
     hidden_edges = source.get(HIDDEN_EIDS_KEY, "")
     topology = source.get(TOPOLOGY_KEY, "")
-    token = (mapping, topology, controls_token, hidden_vertices, hidden_edges,
+    token = (mapping_token, topology, controls_token, hidden_vertices, hidden_edges,
              tuple((face["face_id"], face["edge_ids"]) for face in faces))
     cached = _PATCH_CACHE.get(source.as_pointer())
     if cached is not None and cached[0] == token:
@@ -596,20 +612,24 @@ def _patch_partition(source: bpy.types.Object) -> dict:
         })
 
     patch_by_id = {patch["patch_id"]: patch for patch in patches}
+    control_incidence = []
+    for control in _controls(source):
+        effective_vertices, effective_control_edges = _control_effective(source, control)
+        _, explicit_nodes = _control_intent(source, control)
+        control_incidence.append((str(control.get("control_uuid")), effective_vertices,
+                                  effective_control_edges, explicit_nodes))
     for patch in patches:
         patch_edges = set(patch["boundary_edge_ids"])
         patch_vertices = set(patch["vertex_ids"])
         incident = []
-        for control in _controls(source):
-            effective_vertices, effective_control_edges = _control_effective(source, control)
-            _, explicit_nodes = _control_intent(source, control)
+        for control_uuid, effective_vertices, effective_control_edges, explicit_nodes in control_incidence:
             # Edge-backed controls are incident through their boundary edge.
             # Their shared endpoints can belong to both neighboring patches,
             # but must not make a boundary line appear incident everywhere.
             touches = (patch_edges & effective_control_edges)
             touches |= patch_vertices & (effective_vertices & explicit_nodes)
             if touches:
-                incident.append(str(control.get("control_uuid")))
+                incident.append(control_uuid)
         patch["incident_control_uuids"] = sorted(incident)
     result = {
         "revision": int(source.get(NETWORK_REVISION_KEY, 0)),
@@ -640,9 +660,11 @@ def _invalidate_patch_cache(source: bpy.types.Object | None = None) -> None:
     if source is None:
         _PATCH_CACHE.clear()
         _PATCH_OVERLAY_CACHE.clear()
+        _FACE_CACHE.clear()
     else:
         _PATCH_CACHE.pop(source.as_pointer(), None)
         _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+        _FACE_CACHE.pop(source.as_pointer(), None)
 
 
 def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
@@ -1008,6 +1030,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             try:
                 if source_changed:
                     _MAPPING_CACHE.pop(source.as_pointer(), None)
+                    _FACE_CACHE.pop(source.as_pointer(), None)
                     _validate_source_topology(source)
                 _guard_proxy_topology(source, controller)
                 if source_changed:
@@ -1035,6 +1058,7 @@ def _refresh_runtime(_unused=None) -> None:
     _NETWORK_CACHE.clear()
     _PATCH_CACHE.clear()
     _PATCH_OVERLAY_CACHE.clear()
+    _FACE_CACHE.clear()
     _OVERLAY_CACHE.clear()
     try:
         for source, controller in _source_controller_pairs():
@@ -1170,8 +1194,10 @@ def _patch_overlay_batches(context, source):
     if not getattr(context.scene, "dan_form_patches_enabled", False):
         return None, []
     mapping = _source_id_maps(source)
+    mapping_token = (source.data.as_pointer(), source.get(TOPOLOGY_KEY, ""),
+                     len(source.data.vertices), len(source.data.edges), len(source.data.polygons))
     partition = _patch_partition(source)
-    token = (mapping, source.matrix_world.copy(), tuple(
+    token = (mapping_token, tuple(source.matrix_world), tuple(
         (patch["patch_id"], tuple(patch["face_indices"])) for patch in partition["patches"]
     ))
     cached = _PATCH_OVERLAY_CACHE.get(source.as_pointer())
@@ -1181,7 +1207,11 @@ def _patch_overlay_batches(context, source):
     vertices_by_id, _ = _source_id_maps(source)
     source_vertices = _source_vertices(source)
     shader = gpu.shader.from_builtin("UNIFORM_COLOR")
-    batches = []
+    # Group patches by palette color. Drawing one batch per patch made a
+    # character with 100+ patches stall mode changes even though the geometry
+    # was already cached. Patch identity remains in the partition/lookup API;
+    # only the GPU submission is grouped.
+    grouped_positions: dict[int, list] = {}
     for patch_index, patch in enumerate(partition["patches"]):
         positions = []
         for face_index in patch["face_indices"]:
@@ -1193,8 +1223,12 @@ def _patch_overlay_batches(context, source):
                 for vertex_id in (face_vertices[0], face_vertices[index], face_vertices[index + 1]):
                     positions.append(source.matrix_world @ source_vertices[vertices_by_id[vertex_id]].co)
         if positions:
-            batches.append((patch["patch_id"], batch_for_shader(shader, "TRIS", {"pos": positions}),
-                            _PATCH_COLORS[patch_index % len(_PATCH_COLORS)]))
+            grouped_positions.setdefault(patch_index % len(_PATCH_COLORS), []).extend(positions)
+    batches = [
+        (f"palette:{palette_index}", batch_for_shader(shader, "TRIS", {"pos": positions}),
+         _PATCH_COLORS[palette_index])
+        for palette_index, positions in sorted(grouped_positions.items())
+    ]
     _PATCH_OVERLAY_CACHE[source.as_pointer()] = (token, shader, batches)
     return shader, batches
 
@@ -2743,6 +2777,7 @@ def unregister() -> None:
     _NETWORK_CACHE.clear()
     _PATCH_CACHE.clear()
     _PATCH_OVERLAY_CACHE.clear()
+    _FACE_CACHE.clear()
     _OVERLAY_CACHE.clear()
     for prop in (
         "dan_form_overlay_width",

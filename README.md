@@ -28,7 +28,7 @@ controls/sync; patch visualization; Edit Mode deformation/proportional; human an
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).
 
-Version 0.3.0 displays DANP Form, offers model Init/Remove and keeps controller
+Version 0.3.1 displays DANP Form, offers model Init/Remove and keeps controller
 topology fixed. Controller-to-Source deformation is still a Phase 4 task.
 Existing `dan_form` extension/operator/data IDs remain compatible.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
@@ -41,6 +41,8 @@ The optional thin cyan highlight follows native selection and Hide/Show; it has
 no selection or input ownership. See the [UX audit](docs/testing/phase-02-pick-ux-audit.md).
 Phase 3 now derives Source face patches from the effective control network and can
 show them as a display-only translucent overlay. See the [patch report](docs/testing/phase-03-patch-report.md).
+Patch connectivity and GPU submissions are cached so Show Patches does not rebuild
+all face records during an Object/Edit mode switch.
 
 ## Start here
 

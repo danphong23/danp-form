@@ -58,6 +58,9 @@ def run():
         addon._invalidate_patch_cache(fixture)
 
         partition = addon._patch_partition(fixture)
+        records = addon._source_face_records(fixture)
+        check(addon._source_face_records(fixture) is records,
+              "face connectivity cache reuses unchanged topology")
         check(len(partition["patches"]) == 2, "internal enabled edge splits two face patches")
         check(set(partition["face_patch_ids"].values()) == {p["patch_id"] for p in partition["patches"]},
               "every face belongs to exactly one patch")
@@ -68,6 +71,13 @@ def run():
         check(len(addon._patches_for_control(fixture, "point")) == 1,
               "point control reports its containing patch")
         check(addon._patch_partition(fixture) is partition, "unchanged partition uses cache")
+
+        scene.dan_form_patches_enabled = True
+        bpy.ops.object.mode_set(mode="EDIT")
+        edit_partition = addon._patch_partition(fixture)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        check(len(edit_partition["patches"]) == len(partition["patches"]),
+              "mode switch preserves patch partition")
 
         revision = int(fixture.get(addon.NETWORK_REVISION_KEY, 0))
         coordinates = [tuple(vertex.co) for vertex in fixture.data.vertices]

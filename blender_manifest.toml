@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "dan_form"
-version = "0.3.0"
+version = "0.3.1"
 name = "DANP Form"
 tagline = "Source-backed control shell for template mesh editing"
 maintainer = "DANP Form"
