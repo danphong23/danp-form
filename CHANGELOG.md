@@ -8,6 +8,7 @@
 - Added Ctrl+Alt+Click junction-span selection (Shift adds), scoped H/Alt-H canonical partial Hide/Reveal and edge intent that retains shared junctions.
 - Changed Hide/Show Controls to canonical bulk visibility, synchronizing every list eye; see ADR-010. Overlay options remain display-only.
 - Controller Edit now reads the live controller BMesh and highlights all enabled proxy edges cyan while leaving Blender's native orange selection visible above it.
+- Control overlay depth now follows the opaque mesh by default; X-Ray is the explicit mode that draws through the mesh.
 - Added Ctrl+Shift+Click to select a whole logical control under the cursor; shared edges use the active list row or fail explicitly instead of guessing.
 - Live 50-definition character measurement: 4.706 ms median for invalidated BMesh position collection and 0.0119 ms for cached batch access.
 - Passed 38 cache/highlight, 37 lifecycle/protection, 34 sidebar and 36 segment/visibility checks (145 total) in the existing open Blender file; Computer Use verified canonical H/Alt-H and Controller Edit readability.

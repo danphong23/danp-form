@@ -984,6 +984,9 @@ native selected wire/vertex display remains authoritative for selection, so the 
 does not paint a duplicate orange copy over selected elements. Show
 Overlay/X-Ray/Show Hidden are display-only and distinct from DANP Form Hide/Reveal;
 rare display/maintenance actions belong in the list menu.
+With X-Ray off, the overlay uses the normal depth test and is occluded by the opaque
+mesh. X-Ray explicitly disables that test when the user needs to inspect controls
+through the model.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
 events, context, masks, selected row and object transforms invalidate the relevant
 display; idle redraw only draws existing buffers. Topology/ID caches contain no

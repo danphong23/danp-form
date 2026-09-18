@@ -1032,8 +1032,10 @@ def _draw_control_overlay() -> None:
             return
         shader, batches = _overlay_batches(context, overlay_mode, source, controller)
         xray = scene.dan_form_overlay_xray
-        if xray:
-            gpu.state.depth_test_set("NONE")
+        # POST_VIEW runs after the regular viewport draw.  Set the depth state
+        # explicitly so the normal overlay follows the opaque mesh surface;
+        # without this, lines can appear in front even when X-Ray is disabled.
+        gpu.state.depth_test_set("NONE" if xray else "LESS_EQUAL")
         try:
             width = scene.dan_form_overlay_width
             for name, color, size in (
@@ -1053,8 +1055,9 @@ def _draw_control_overlay() -> None:
                     gpu.state.point_size_set(float(size))
                 batch.draw(shader)
         finally:
-            if xray:
-                gpu.state.depth_test_set("LESS_EQUAL")
+            # Leave Blender's normal viewport depth state in a predictable
+            # state for the next draw callback.
+            gpu.state.depth_test_set("LESS_EQUAL")
     except Exception:
         # Drawing must never break Blender's viewport; retry on next redraw.
         return
