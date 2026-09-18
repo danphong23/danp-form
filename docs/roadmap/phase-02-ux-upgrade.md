@@ -1,13 +1,15 @@
 # Phase 2 — Nâng cấp UX trước Phase 3
 
-**Trạng thái: kế hoạch triển khai, 2026-09-18; chưa triển khai/test đợt nâng cấp.**
+**Trạng thái: kế hoạch UX phiên bản trước; đã có bản triển khai và
+[live report](../testing/phase-02-ux-live-report.md). Bố cục/quản lý danh sách được
+thay thế bởi [kế hoạch native list mới](phase-02-native-list-ux.md).**
 
 Đây là phần bổ sung của Phase 2, không tạo thêm phase chính. Hoàn thành Gate P2
 và P2-UX trước khi chuyển sang hiển thị patch. Yêu cầu của người dùng là sidebar
 theo model đang chọn, tạo đường liên tục trong Edit Mode, thấy đường rõ trên Source
 và quản lý các đường bằng danh sách. Chi tiết bố cục dưới đây là đề xuất triển khai.
 
-## Hiện trạng đã kiểm tra trong mã
+## Hiện trạng trước đợt triển khai UX đầu tiên
 
 Trong `dan_form/__init__.py`, panel và operator dùng `scene.dan_form_source` được
 chọn thủ công. Make Control gọi chuyển Object Mode rồi chọn controller. Sidebar chỉ

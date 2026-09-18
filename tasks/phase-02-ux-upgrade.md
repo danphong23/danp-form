@@ -2,6 +2,10 @@
 
 **Trạng thái: kế hoạch; các task dưới đây chưa được đánh dấu PASS.**
 
+Bản UX đầu đã được triển khai và có báo cáo live, nhưng checklist này không chứng
+minh mọi ca đã pass. Bố cục/danh sách tiếp tục được thay thế bởi
+[native list tasks](phase-02-native-list-ux.md); dùng kế hoạch mới cho đợt tiếp theo.
+
 Đọc [kế hoạch UX](../docs/roadmap/phase-02-ux-upgrade.md),
 [Phase 2 nền](phase-02-controls-and-sync.md),
 [interaction](../docs/blender/interaction.md),

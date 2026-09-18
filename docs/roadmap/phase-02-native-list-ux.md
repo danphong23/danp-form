@@ -1,0 +1,143 @@
+# Phase 2 — Sidebar gọn theo danh sách Blender
+
+**Trạng thái: kế hoạch mới theo phản hồi người dùng, 2026-09-18; chưa triển khai.**
+
+Kế hoạch này thay thế bố cục sidebar và cách quản lý danh sách trong
+[kế hoạch UX trước](phase-02-ux-upgrade.md). Giữ context theo active model, Source
+là nguồn hình học, IDs ổn định, overlap-safe membership và canonical Hide/Reveal.
+Không thêm phase chính; đây vẫn là công việc Phase 2 trước Phase 3.
+
+## Mục tiêu và hiện trạng
+
+Bản mã hiện tại có các box riêng cho từng đường, lặp Select/Rename/Delete/Hide và
+hiện Display/Maintenance thường trực. Tên đường bị cạnh tranh chỗ với các nút.
+Thay bằng danh sách theo cách trình bày của Vertex Groups/Shape Keys: dòng active,
+tên sửa trực tiếp, con mắt, cột +/− và lên/xuống. Nút hiện theo object/mode.
+
+Danh sách chứa **các đường/định nghĩa control của model hiện tại**, không phải danh
+sách nhiều controller object. Mỗi Source vẫn có một controller object dùng chung.
+
+## Bố cục duy nhất
+
+```text
+DAN Form
+girl chibi 1
+┌─────────────────────────┐  [+]
+│ Đường trên           👁 │  [−]
+│ Đường dưới           👁 │  [⋮]
+│ Đường dọc            ◐ │  [↑]
+│                         │  [↓]
+└─────────────────────────┘
+       [Select] [Sync]          chỉ hiện trong Edit Mode
+```
+
+- Dùng UIList native của Blender, có cuộn nội bộ, khoảng 5 dòng mặc định, hỗ trợ
+  điều chỉnh chiều cao theo khả năng UIList. Mỗi dòng chỉ có tên và trạng thái mắt.
+- Cột nút là thao tác trên dòng active. Tooltip giải thích chức năng; không lặp
+  Select/Rename/Delete thành nút trên từng dòng.
+- Tên Source là một nhãn gọn. Không hiện tên proxy, số effective, revision hoặc
+  hộp status thành công thường trực. Lỗi dùng report Blender; hướng dẫn trống tối đa
+  một dòng khi cần, ví dụ “Chọn cạnh rồi nhấn +”.
+- Mesh chưa khởi tạo chỉ có nút **Create Controller**. Khi đã khởi tạo thì thay
+  nút đó bằng danh sách; controller bị mất thì có **Rebuild Controller** trong
+  trạng thái lỗi, giữ definitions/masks hiện có.
+- Không có khối Display/Maintenance hoặc Edit Source/View Controller thường trực.
+  Overlay màu có mặc định dễ nhìn. Các lệnh hiếm như Reveal All, Hide Whole, tùy
+  chọn hiển thị và Remove Controller nằm trong menu ⋮; không thêm menu nhiều tầng.
+- Remove Controller khác −: chỉ bỏ object proxy và giữ định nghĩa trên Source;
+  tooltip/menu phải nói rõ. Nếu xóa object đang edit thì rời object đó an toàn,
+  chọn Source và hiển thị trạng thái cần dựng lại controller.
+
+## Hành vi các thao tác
+
+| Thao tác | Kết quả |
+| --- | --- |
+| Click tên/dòng | Đổi dòng active, highlight đường; không đổi mode hoặc selection mesh |
+| Nhấn đúp tên | Sửa tên trực tiếp tại dòng, Enter xác nhận, Escape hủy; không mở dialog UUID |
+| + trong Edit Mode | Tạo định nghĩa mới từ selection của mesh đang thao tác, chọn dòng mới |
+| − | Xóa định nghĩa active; giữ phần chung, Source topology và tọa độ |
+| Sync trong Edit Mode | Thay membership của định nghĩa active bằng selection hiện tại |
+| ↑ / ↓ | Di chuyển định nghĩa active một dòng; giữ UUID và active item |
+| Select trong Edit Mode | Chọn cả phần tương ứng trong mesh đang thao tác; không chuyển object/mode |
+| Shift + Select | Thêm phần tương ứng vào selection hiện có |
+| Con mắt | DAN Form Hide/Reveal toàn định nghĩa, theo trạng thái effective hiện tại |
+
+Select mặc định thay selection trên mesh active. Face selection cũ không được để
+lại khiến cả vùng bị chọn ngoài ý muốn; không sửa selection của mesh edit khác.
+Điểm, cạnh, loop, tập rời và network đều là selection hợp lệ; không thêm loại role
+front/side hay tính năng group mới.
+
+**Sync ở đây là cập nhật nội dung đường**, không phải kéo tọa độ về template hay
+chép vị trí proxy vào Source. Ví dụ đường A có cạnh 1–2–3: chọn 1–2–3–4 trên Source,
+chọn dòng A rồi Sync sẽ mở rộng A thành 1–2–3–4. Chọn dòng A rồi Select trước nếu
+muốn bắt đầu chỉnh selection từ chính đường A. Selection rỗng khiến +/Sync bị khóa,
+không xóa nội dung đường ngầm.
+
+Sync giữ control UUID, tên và thứ tự. Recompute union từ tất cả definitions: phần
+bỏ khỏi A vẫn tồn tại nếu B dùng; prune masks chỉ cho IDs không còn định nghĩa nào
+dùng. Giữ masks của phần overlap còn tồn tại, không tự Reveal. Phần mới dùng vị trí
+Source hiện tại và canonical masks đang có. Nếu membership không đổi thì là no-op.
+Các lệnh cấu trúc validate trước ghi; lỗi không để metadata/proxy thay đổi dở dang.
+
+Rename và reorder chỉ là metadata UX, không đổi masks, effective network, topology
+partition hoặc network revision dùng cho deformation. Lưu thứ tự trên Source; UUID
+quyết định identity, index chỉ dùng cho UI. Sau khi −, active item chuyển sang dòng
+kề hợp lệ; sau reorder vẫn giữ cùng UUID. Có undo/redo cho tạo, xóa, Sync, đổi tên,
+đổi thứ tự và Hide/Reveal; đổi dòng active không tạo undo cấu trúc.
+
+## Sidebar theo context
+
+| Active object/mode | Hiển thị và thao tác |
+| --- | --- |
+| Source chưa khởi tạo | Create Controller nếu Source đủ điều kiện; giữ object/mode sau tạo |
+| Source Object Mode | Danh sách, mắt, −, menu và ↑/↓; + bị khóa; không hiện Select/Sync |
+| Source Edit Mode | Danh sách và toàn bộ thao tác; +/Sync đọc selection Source BMesh |
+| Controller Object Mode | Cùng danh sách của Source; như Source Object Mode |
+| Controller Edit Mode | Danh sách và Select/Sync; +/Sync dùng Source IDs từ selection proxy effective |
+| Mode khác, ví dụ Sculpt | Danh sách chỉ để đọc; khóa các thao tác ghi trạng thái để tránh ngắt workflow |
+| Empty/unrelated object | Một dòng hướng dẫn chọn model/controller, không giữ danh sách model cũ |
+| Binding lỗi/không chỉnh được | Một lý do ngắn; khóa thao tác, không đoán Source theo tên |
+
+Trong Controller Edit Mode, +/Sync chỉ gom hình học control đã có mapping, không
+tạo cạnh mới trên Source. Muốn mở rộng đường sang vùng chưa có control thì chọn
+Source và edit selection tại đó. Không bật model Edit Mode ngầm khi click dòng.
+
+Các nút phụ thuộc selection/active definition: −/Sync/↑/↓ không có dòng active thì
+khóa; ↑/↓ ở đầu/cuối khóa tương ứng. Source binding phải revalidate ở execute.
+Multi-selection lấy active object làm context; multi-object Edit chỉ xử lý active
+mesh. Mỗi Source nhớ active control UUID riêng để chuyển model không chọn nhầm dòng.
+
+## Con mắt và overlap
+
+On dùng mắt mở, Hidden dùng mắt đóng; Partial dùng mắt với dấu trạng thái phụ kín
+đáo và tooltip “Một phần đường đang ẩn”. Không hiện ba nhãn trạng thái thành cột.
+On click → Hide Whole; Hidden/Partial click → Reveal Whole. Menu vẫn có Hide Whole
+cho dòng Partial. Đây là canonical masks chung, không phải cờ bật riêng mỗi dòng.
+
+Ví dụ A và B cùng chứa cạnh 2–3: ẩn A có thể làm B thành Partial; xóa A vẫn giữ
+cạnh 2–3 nếu B dùng. Whole edge Hide giữ junction được đường khác hỗ trợ; điểm rời
+dùng node intent. Reveal chọn vị trí Source hiện tại. Mắt khác object/collection
+visibility; display overlay không thay masks hoặc hiệu lực đường control.
+
+## Cách triển khai và test
+
+| Task | Kết quả | Test trước bàn giao |
+| --- | --- | --- |
+| NL2.1 — Backing list | Projection UIList theo Source, active UUID, rename/order | Chuyển model, tên trùng, rename cancel, reorder/save metadata, undo/redo; panel draw chỉ đọc |
+| NL2.2 — +/−/Sync | Primitive chung create/remove/replace membership | Source/controller Edit, selection rỗng, overlap một phần/toàn bộ, prune masks, no-op/lỗi không ghi dở |
+| NL2.3 — Panel native | Danh sách cuộn, cột icon, Select/Sync theo mode, menu gọn | Sidebar hẹp tên ưu tiên; 0/1/20 đường; thao tác chuột/đúp tên; không lặp nút mỗi dòng |
+| NL2.4 — Bàn giao | Overlay/highlight và regression, package, báo cáo | CUA workflow thật; MCP assertions IDs/masks/geometry/context; install/reload; commit sau test đạt |
+
+UIList và selection cache là projection của dữ liệu Source, không tạo nguồn metadata
+thứ hai. Chọn CollectionProperty runtime hoặc migration storage theo nhu cầu triển
+khai, giữ tương thích JSON definitions hiện có và tránh ghi Source trong draw.
+UI callbacks và operator dùng chung primitives undo-safe; cache làm mới sau load,
+undo/redo, change context và definition edits. Không tái dùng index thuộc Source cũ.
+
+Test runtime theo hướng dẫn workspace, trên tiến trình và file Blender đang mở;
+không chạy Blender riêng. Bảo toàn dữ liệu/selection và không lưu đè phiên dirty.
+Test save/reopen cần bản sao an toàn và bảo toàn phiên; thiếu bằng chứng ghi NOT RUN.
+Báo cáo live UX cũ không chứng minh native list mới đã đạt. Chỉ chuyển Phase 3 sau
+Gate P2 và P2-UX, bao gồm các tiêu chí native list này.
+
+Checklist: [Native list UX tasks](../../tasks/phase-02-native-list-ux.md).

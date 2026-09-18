@@ -56,8 +56,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "18c3471df02161fbb829709aa85f3b30414bdab7ddef803eb64ac94c57fef8ba",
-    "bytes": 3335
+    "sha256": "98e38308e3807b41e55e86b37208452335f3efa94bd37ef0714b244e3dda492f",
+    "bytes": 3910
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -166,8 +166,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "82f89b03589e274f003394063fe1fa3c680dd4dc4976d1433cd3a606b382d12b",
-    "bytes": 124221
+    "sha256": "1d5a2b7e01563b5bab217efbc4f1768c104adad49594b5cfe846ea567d7cc587",
+    "bytes": 135831
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -191,8 +191,8 @@
   },
   {
     "path": "docs/README.md",
-    "sha256": "faac59a694d7d39aeef1e4430b57cebdcfc976684e6147848159668c989fdd49",
-    "bytes": 2250
+    "sha256": "898c122cc6710a5fe90eda8325a824bb3cf2a8f48a4b8a8073ab8afdbb3a01b1",
+    "bytes": 2336
   },
   {
     "path": "docs/research/technical-options.md",
@@ -206,18 +206,23 @@
   },
   {
     "path": "docs/roadmap/implementation-plan.md",
-    "sha256": "9c278c5b19952a057d52146b11aec77820d8ca6d81a4b66932ec09c547e6b329",
-    "bytes": 6690
+    "sha256": "9f5ac0d44f0aed2de2527ba7ecfb14a36f923abe566282e2037d5bb54d041b80",
+    "bytes": 6803
+  },
+  {
+    "path": "docs/roadmap/phase-02-native-list-ux.md",
+    "sha256": "b3b7f75c36088cabb1624a6d0e2a918dd9ae7997a6c2409050b599041b41d383",
+    "bytes": 10163
   },
   {
     "path": "docs/roadmap/phase-02-ux-upgrade.md",
-    "sha256": "7d46861a602916b410508b8736a5e342981edd04b9db58df8b66958fac132ea3",
-    "bytes": 12629
+    "sha256": "864cb0b42a4a052bf0410857b5d9a0557e3023952649c762466965de58560ec9",
+    "bytes": 12811
   },
   {
     "path": "docs/testing/acceptance-gates.md",
-    "sha256": "33318054ec29d21ea5ae34bc6a67dfc33f5f66d0cd8555fba3a05b6bfc2c9fda",
-    "bytes": 4782
+    "sha256": "329d78be33b89fac0bc706b180ed11225eeace38a10f9438aedb44212570914b",
+    "bytes": 5209
   },
   {
     "path": "docs/testing/blender-integration-cases.md",
@@ -276,13 +281,18 @@
   },
   {
     "path": "tasks/phase-02-controls-and-sync.md",
-    "sha256": "87fcf04bc3196a86cd54af9d37376fe27f90b2a77cea184d507ad39670f15d82",
-    "bytes": 3882
+    "sha256": "8baf4a90c107096b778b5f0fa8e2b58e7af33ac5e1f21dd875ffd81111119254",
+    "bytes": 3890
+  },
+  {
+    "path": "tasks/phase-02-native-list-ux.md",
+    "sha256": "451259e3615100a6bbab62c6964d708a76cec10a98abde456e9f736bf0fda2da",
+    "bytes": 2977
   },
   {
     "path": "tasks/phase-02-ux-upgrade.md",
-    "sha256": "c908f57a66382094e0b53d473a2a64b7ffbbd200760811eea6ac6eaa52403624",
-    "bytes": 4185
+    "sha256": "6a3123a552cd398148eeeea29e0ed670477ef2a2361f07bba4a9c7fd1f88193f",
+    "bytes": 4474
   },
   {
     "path": "tasks/phase-03-patch-visualization.md",
@@ -301,7 +311,7 @@
   },
   {
     "path": "tasks/README.md",
-    "sha256": "24d633cf19ef599b69bf19684d869af91ab00fae40152fb2df4cc6f1e7fa379c",
-    "bytes": 1267
+    "sha256": "82439845b4afc7c40cd7535b02a4379d0d296494cc3177f7dee0d8018d4d46cc",
+    "bytes": 1380
   }
 ]

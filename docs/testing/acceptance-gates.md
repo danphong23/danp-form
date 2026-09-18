@@ -31,6 +31,12 @@ as screenshots. Assert partial/full overlap, mixed point/edge intent, no implici
 Reveal, wrong-context rejection, undo/redo and handler cleanup. Missing lifecycle
 evidence remains NOT RUN; documentation validation cannot pass these runtime gates.
 
+The latest P2-UX layout requirement is the [native list plan](../roadmap/phase-02-native-list-ux.md):
+UIList scrolling/active row, inline rename, +/−, membership Sync, ↑/↓ persistence,
+eye-derived state and object/mode-specific controls. Execute
+[NL2.1–NL2.4](../../tasks/phase-02-native-list-ux.md), including undo/redo and shared
+geometry/mask assertions. Prior row-box UI tests do not pass the revised layout gate.
+
 ## Gate B — Exact-control geometry
 G1/G2/G3/G6/G9/G10/G12/G13/G14/G15/G16 pass their geometry/constraint assertions.
 Pure fixtures verify G14 state/resampling; Blender persistence is Gate D. Record

@@ -49,3 +49,20 @@ def test_phase2_contract_symbols() -> None:
 def test_phase2_ux_documents_exist() -> None:
     assert (ROOT / "docs" / "roadmap" / "phase-02-ux-upgrade.md").is_file()
     assert (ROOT / "tasks" / "phase-02-ux-upgrade.md").is_file()
+
+
+def test_native_control_list_contract_symbols() -> None:
+    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    for symbol in (
+        "DANFORM_PG_ControlItem",
+        "DANFORM_UL_controls",
+        "DANFORM_MT_control_menu",
+        "DANFORM_OT_sync_control",
+        "DANFORM_OT_move_control",
+        "dan_form_control_items",
+        "dan_form_control_index",
+        "_sync_ui_list",
+    ):
+        assert symbol in source
+    assert (ROOT / "docs" / "roadmap" / "phase-02-native-list-ux.md").is_file()
+    assert (ROOT / "tasks" / "phase-02-native-list-ux.md").is_file()

@@ -27,9 +27,17 @@ explain this. Selection never implicitly reveals hidden geometry.
 
 A colored Source control overlay makes edges/points readable without altering Source
 materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
-from DAN Form Hide/Reveal. Main controls precede collapsed Display and Maintenance.
-See the [UX plan](../roadmap/phase-02-ux-upgrade.md) for layout, context-specific Select
-actions and tests required before Phase 3. Phase 2 does not enable deformation G/R/S.
+from DAN Form Hide/Reveal; rare display/maintenance actions belong in the list menu.
+The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
+up/down controls, and context-specific Select/Sync below it in Edit Mode. No repeated
+row action boxes or persistent Display/Maintenance blocks. Clicking a row changes
+the active definition without changing object/mode or mesh selection.
+
+Sync replaces the active definition's membership from current Source or mapped proxy
+selection, preserving UUID/name/order and canonical shared masks. Coordinate display
+sync remains automatic. Rename/reorder do not change deformation or network revision.
+See the [current native list plan](../roadmap/phase-02-native-list-ux.md) for the
+object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation G/R/S.
 
 ## Selection and deformation
 

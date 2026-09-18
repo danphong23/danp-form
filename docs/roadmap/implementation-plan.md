@@ -13,7 +13,7 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 | Phase | Kết quả có thể thử trong Blender | Task | Điều kiện hoàn thành |
 | --- | --- | --- | --- |
 | 1 — Khởi tạo | Cài extension, mở sidebar, chọn Source, tạo controller con của Source | [Bootstrap](../../tasks/phase-01-bootstrap.md) | Gate P1 |
-| 2 — Control và đồng bộ | Tạo đường từ vertex/edge Source, controller trùng mesh, Hide/Reveal; sidebar theo model, giữ Edit Mode, danh sách và màu đường | [Controls](../../tasks/phase-02-controls-and-sync.md), [UX upgrade](../../tasks/phase-02-ux-upgrade.md) | Gate P2 và P2-UX |
+| 2 — Control và đồng bộ | Tạo đường từ vertex/edge Source, controller trùng mesh, Hide/Reveal; sidebar native list theo model/mode, giữ Edit Mode và màu đường | [Controls](../../tasks/phase-02-controls-and-sync.md), [Native list UX](../../tasks/phase-02-native-list-ux.md) | Gate P2 và P2-UX |
 | 3 — Hiển thị patch | Thấy các patch thật và bật/tắt lớp hiển thị để kiểm tra vùng | [Patch UX](../../tasks/phase-03-patch-visualization.md) | Gate P3 |
 | 4 — Biến dạng | Edit Mode controller: chọn điểm/dải/cạnh/loop, G/R/S với proportional, commit/cancel/undo | [Deformation](../../tasks/phase-04-deformation.md) | Gate P4 và B/C/D |
 | 5 — Kiểm chứng thực tế | Người dùng và agent qua MCP tạo control, chỉnh model fit ảnh front/side, so sánh kết quả | [User and agent validation](../../tasks/phase-05-user-agent-validation.md) | Gate P5 và F |
@@ -21,8 +21,9 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 Mỗi phase cung cấp một bản thử được, ghi rõ tính năng đã hoạt động và giới hạn còn
 lại. Không đánh dấu phase hoàn thành chỉ vì đã có giao diện hoặc tài liệu.
 
-Đợt tiếp theo là [nâng cấp UX Phase 2](phase-02-ux-upgrade.md), chưa chuyển Phase 3.
-Kế hoạch chia thành UX2.1–UX2.5, mỗi task có test và commit sau khi hoạt động.
+Đợt tiếp theo là [sidebar native list Phase 2](phase-02-native-list-ux.md), thay bố
+cục box/nhiều nút của bản UX hiện có; chưa chuyển Phase 3. Task NL2.1–NL2.4 có test
+và commit sau khi hoạt động. Báo cáo UX trước không xác nhận task mới đã pass.
 
 ## Những quy tắc đã chốt
 

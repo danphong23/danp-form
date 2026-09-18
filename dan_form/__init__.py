@@ -8,7 +8,7 @@ import uuid
 
 import bmesh
 import bpy
-from bpy.props import BoolProperty, FloatProperty, PointerProperty, StringProperty
+from bpy.props import BoolProperty, CollectionProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
 from mathutils import Matrix
 
 
@@ -29,8 +29,10 @@ NEXT_EID_KEY = "dan_form_next_eid"
 TOPOLOGY_KEY = "dan_form_topology_fingerprint"
 NETWORK_REVISION_KEY = "dan_form_control_network_revision"
 PROXY_GENERATION_KEY = "dan_form_proxy_generation"
+UI_SOURCE_UUID_KEY = "dan_form_ui_source_uuid"
 OVERLAY_HANDLE = None
 _SYNC_GUARD = False
+_UI_SYNC_GUARD = False
 
 bl_info = {
     "name": "DAN Form",
@@ -226,6 +228,85 @@ def _context_source(context: bpy.types.Context) -> tuple[bpy.types.Object | None
     if source is not None:
         return source, active
     return None, None
+
+
+def _find_source_by_uuid(source_uuid: str) -> bpy.types.Object | None:
+    if not source_uuid:
+        return None
+    return next(
+        (obj for obj in bpy.data.objects if obj.type == "MESH" and obj.get(SOURCE_UUID_KEY) == source_uuid),
+        None,
+    )
+
+
+def _control_state(source: bpy.types.Object, control: dict) -> tuple[str, int, int]:
+    effective_vertices, effective_edges = _control_effective(source, control)
+    total = len(control.get("vertex_ids", [])) + len(control.get("edge_ids", []))
+    effective = len(effective_vertices) + len(effective_edges)
+    state = "On" if effective == total else ("Hidden" if effective == 0 else "Partial")
+    return state, effective, total
+
+
+def _active_control(context: bpy.types.Context, source: bpy.types.Object) -> dict | None:
+    scene = context.scene
+    items = getattr(scene, "dan_form_control_items", None)
+    index = int(getattr(scene, "dan_form_control_index", 0))
+    if items is not None and 0 <= index < len(items):
+        item = items[index]
+        if item.source_uuid == _source_uuid(source):
+            return _control(source, item.control_uuid)
+    return _control(source, getattr(scene, "dan_form_selected_control", ""))
+
+
+def _sync_ui_list(scene: bpy.types.Scene, source: bpy.types.Object | None) -> None:
+    """Project persistent definitions into a native Blender UIList collection."""
+    global _UI_SYNC_GUARD
+    items = getattr(scene, "dan_form_control_items", None)
+    if items is None:
+        return
+    source_uuid = str(source.get(SOURCE_UUID_KEY, "")) if source is not None else ""
+    controls = _controls(source) if source is not None and source_uuid else []
+    signature = []
+    for control in controls:
+        state, effective_count, total_count = _control_state(source, control)
+        signature.append((str(control.get("control_uuid", "")), str(control.get("name", "Control")), state, effective_count, total_count))
+    current_signature = [
+        (item.control_uuid, item.control_name, item.state, item.effective_count, item.total_count)
+        for item in items
+        if item.source_uuid == source_uuid
+    ]
+    current_source = getattr(scene, "dan_form_ui_source_uuid", "")
+    if current_source == source_uuid and current_signature == signature and len(items) == len(controls):
+        if items:
+            scene.dan_form_control_index = max(0, min(int(scene.dan_form_control_index), len(items) - 1))
+        else:
+            scene.dan_form_control_index = 0
+        return
+    active_uuid = ""
+    if 0 <= int(getattr(scene, "dan_form_control_index", 0)) < len(items):
+        active_uuid = items[int(scene.dan_form_control_index)].control_uuid
+    if not active_uuid:
+        active_uuid = getattr(scene, "dan_form_selected_control", "")
+    _UI_SYNC_GUARD = True
+    try:
+        items.clear()
+        for control in controls:
+            item = items.add()
+            item.control_uuid = str(control.get("control_uuid", ""))
+            item.source_uuid = source_uuid
+            item.control_name = str(control.get("name", "Control"))
+            item.state, item.effective_count, item.total_count = _control_state(source, control)
+        scene.dan_form_ui_source_uuid = source_uuid
+        selected_index = next((i for i, item in enumerate(items) if item.control_uuid == active_uuid), 0)
+        scene.dan_form_control_index = selected_index if items else 0
+        scene.dan_form_selected_control = items[scene.dan_form_control_index].control_uuid if items else ""
+    finally:
+        _UI_SYNC_GUARD = False
+
+
+def _sync_context_ui_list(context: bpy.types.Context) -> None:
+    source, _ = _context_source(context)
+    _sync_ui_list(context.scene, source)
 
 
 def _set_scene_context(context: bpy.types.Context, source: bpy.types.Object | None, controller: bpy.types.Object | None) -> None:
@@ -568,6 +649,12 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                 pass
         finally:
             _SYNC_GUARD = False
+    try:
+        active_source, _ = _context_source(bpy.context)
+        for current_scene in bpy.data.scenes:
+            _sync_ui_list(current_scene, active_source)
+    except (AttributeError, RuntimeError, ValueError):
+        pass
 
 
 def _overlay_source(context: bpy.types.Context) -> bpy.types.Object | None:
@@ -737,6 +824,148 @@ class DANFORM_OT_sync(bpy.types.Operator):
             return {"CANCELLED"}
 
 
+def _ui_item_name_update(item, context: bpy.types.Context) -> None:
+    global _UI_SYNC_GUARD
+    if _UI_SYNC_GUARD:
+        return
+    source = _find_source_by_uuid(item.source_uuid)
+    controls = _controls(source) if source is not None else []
+    control = next((entry for entry in controls if entry.get("control_uuid") == item.control_uuid), None)
+    if source is None or control is None:
+        return
+    new_name = item.control_name.strip()
+    if not new_name:
+        _UI_SYNC_GUARD = True
+        try:
+            item.control_name = str(control.get("name", "Control"))
+        finally:
+            _UI_SYNC_GUARD = False
+        return
+    if new_name != control.get("name"):
+        control["name"] = new_name
+        _json_set(source, CONTROLS_KEY, controls)
+        if context is not None and getattr(context, "scene", None) is not None:
+            context.scene.dan_form_selected_control = item.control_uuid
+            context.scene.dan_form_status = f"Renamed: {new_name}"
+
+
+class DANFORM_PG_ControlItem(bpy.types.PropertyGroup):
+    control_uuid: StringProperty(options={"HIDDEN"})
+    source_uuid: StringProperty(options={"HIDDEN"})
+    control_name: StringProperty(name="Control Name", update=_ui_item_name_update)
+    state: StringProperty(options={"HIDDEN"})
+    effective_count: IntProperty(options={"HIDDEN"})
+    total_count: IntProperty(options={"HIDDEN"})
+
+
+class DANFORM_UL_controls(bpy.types.UIList):
+    bl_idname = "DANFORM_UL_controls"
+
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        row = layout.row(align=True)
+        toggle = row.operator(
+            "dan_form.set_control_visibility",
+            text="",
+            icon="HIDE_ON" if item.state == "Hidden" else "HIDE_OFF",
+        )
+        toggle.control_uuid = item.control_uuid
+        toggle.reveal = item.state in {"Hidden", "Partial"}
+        row.prop(item, "control_name", text="", emboss=False)
+        if item.state == "Partial":
+            row.label(text="~")
+
+
+class DANFORM_OT_sync_control(bpy.types.Operator):
+    bl_idname = "dan_form.sync_control"
+    bl_label = "Sync Control Membership"
+    bl_description = "Replace the active control membership from the current edit selection"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        control = _active_control(context, source) if source is not None else None
+        active = context.view_layer.objects.active
+        if source is None or control is None or active not in {source, controller} or active.mode != "EDIT":
+            self.report({"ERROR"}, "EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
+            return {"CANCELLED"}
+        try:
+            if active == source:
+                vertex_ids, edge_ids = _source_selection(source)
+            else:
+                vertex_ids, edge_ids = _proxy_selection(controller)
+            if not vertex_ids and not edge_ids:
+                self.report({"ERROR"}, "EMPTY_SELECTION")
+                return {"CANCELLED"}
+            old_membership = (
+                sorted(int(value) for value in control.get("vertex_ids", [])),
+                sorted(int(value) for value in control.get("edge_ids", [])),
+            )
+            new_membership = (sorted(vertex_ids), sorted(edge_ids))
+            if old_membership == new_membership:
+                context.scene.dan_form_status = "Control membership unchanged"
+                return {"FINISHED"}
+            control["vertex_ids"] = new_membership[0]
+            control["edge_ids"] = new_membership[1]
+            _json_set(source, CONTROLS_KEY, _controls(source))
+            _prune_masks_after_remove(source)
+            _update_revision(source)
+            if controller is not None:
+                _rebuild_proxy(source, controller)
+                _sync_proxy(source, controller)
+            _set_scene_context(context, source, controller)
+            context.scene.dan_form_status = f"Synced {control.get('name', 'Control')}"
+            _sync_context_ui_list(context)
+            return {"FINISHED"}
+        except (ValueError, RuntimeError) as exc:
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_move_control(bpy.types.Operator):
+    bl_idname = "dan_form.move_control"
+    bl_label = "Move Control"
+    bl_description = "Reorder the active control definition"
+    bl_options = {"REGISTER", "UNDO"}
+    direction: IntProperty(default=1, options={"HIDDEN"})
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        source, controller = _context_source(context)
+        if source is None:
+            return {"CANCELLED"}
+        controls = _controls(source)
+        active_control = _active_control(context, source)
+        if active_control is None:
+            return {"CANCELLED"}
+        index = next((i for i, item in enumerate(controls) if item.get("control_uuid") == active_control.get("control_uuid")), -1)
+        target = index + (1 if self.direction > 0 else -1)
+        if index < 0 or target < 0 or target >= len(controls):
+            return {"CANCELLED"}
+        controls[index], controls[target] = controls[target], controls[index]
+        _json_set(source, CONTROLS_KEY, controls)
+        _set_scene_context(context, source, controller)
+        context.scene.dan_form_selected_control = active_control.get("control_uuid", "")
+        _sync_context_ui_list(context)
+        context.scene.dan_form_status = "Control order updated"
+        return {"FINISHED"}
+
+
+class DANFORM_MT_control_menu(bpy.types.Menu):
+    bl_idname = "DANFORM_MT_control_menu"
+    bl_label = "Control Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("dan_form.select_control", text="Select Active", icon="RESTRICT_SELECT_OFF")
+        layout.operator("dan_form.sync_control", text="Sync Membership", icon="FILE_REFRESH")
+        layout.separator()
+        layout.operator("dan_form.reveal", text="Reveal All", icon="HIDE_OFF")
+        layout.operator("dan_form.hide_selected", text="Hide Selected", icon="HIDE_ON")
+        layout.separator()
+        layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
+        layout.prop(context.scene, "dan_form_overlay_hidden", text="Show Hidden Controls")
+        layout.operator("dan_form.remove_controller", text="Remove Controller", icon="TRASH")
+
+
 class DANFORM_OT_create_control(bpy.types.Operator):
     bl_idname = "dan_form.create_control"
     bl_label = "Make Control from Source Selection"
@@ -745,15 +974,23 @@ class DANFORM_OT_create_control(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        source, _ = _context_source(context)
-        return source is not None and source == context.view_layer.objects.active and source.mode == "EDIT"
+        source, controller = _context_source(context)
+        active = context.view_layer.objects.active
+        return source is not None and active in {source, controller} and active.mode == "EDIT"
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
         scene = context.scene
         try:
-            _ensure_source_ids(source)
-            vertex_ids, edge_ids = _source_selection(source)
+            active = context.view_layer.objects.active
+            if active == source:
+                vertex_ids, edge_ids = _source_selection(source)
+            elif active == controller:
+                vertex_ids, edge_ids = _proxy_selection(controller)
+            else:
+                raise ValueError("EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
+            if not vertex_ids and not edge_ids:
+                raise ValueError("EMPTY_SELECTION")
             controls = _controls(source)
             controls.append({
                 "control_uuid": uuid.uuid4().hex,
@@ -771,6 +1008,7 @@ class DANFORM_OT_create_control(bpy.types.Operator):
             _set_scene_context(context, source, controller)
             scene.dan_form_selected_control = controls[-1]["control_uuid"]
             scene.dan_form_status = f"Created {controls[-1]['name']} ({len(vertex_ids)}V/{len(edge_ids)}E)"
+            _sync_context_ui_list(context)
             self.report({"INFO"}, scene.dan_form_status)
             return {"FINISHED"}
         except ValueError as exc:
@@ -803,6 +1041,7 @@ class DANFORM_OT_rename_control(bpy.types.Operator):
         _set_scene_context(context, source, controller)
         context.scene.dan_form_selected_control = self.control_uuid
         context.scene.dan_form_status = f"Renamed: {control['name']}"
+        _sync_context_ui_list(context)
         return {"FINISHED"}
 
 
@@ -816,6 +1055,9 @@ class DANFORM_OT_select_control(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
+        if not self.control_uuid and source is not None:
+            active_control = _active_control(context, source)
+            self.control_uuid = active_control.get("control_uuid", "") if active_control else ""
         control = _control(source, self.control_uuid)
         if source is None or control is None:
             return {"CANCELLED"}
@@ -867,6 +1109,7 @@ class DANFORM_OT_set_control_visibility(bpy.types.Operator):
             if was_controller_edit and controller.name in bpy.data.objects:
                 effective_vertices, effective_edges = _control_effective(source, control)
                 _select_proxy_ids(controller, effective_vertices, effective_edges)
+            _sync_context_ui_list(context)
             return {"FINISHED"}
         except (ValueError, RuntimeError) as exc:
             self.report({"ERROR"}, str(exc))
@@ -884,9 +1127,13 @@ class DANFORM_OT_delete_control(bpy.types.Operator):
         source, controller = _context_source(context)
         if source is None:
             return {"CANCELLED"}
+        if not self.control_uuid:
+            active_control = _active_control(context, source)
+            self.control_uuid = active_control.get("control_uuid", "") if active_control else ""
         controls = _controls(source)
+        deleted_index = next((i for i, item in enumerate(controls) if item.get("control_uuid") == self.control_uuid), -1)
         remaining = [item for item in controls if item.get("control_uuid") != self.control_uuid]
-        if len(remaining) == len(controls):
+        if deleted_index < 0:
             return {"CANCELLED"}
         _json_set(source, CONTROLS_KEY, remaining)
         _prune_masks_after_remove(source)
@@ -896,6 +1143,11 @@ class DANFORM_OT_delete_control(bpy.types.Operator):
         _set_scene_context(context, source, controller)
         context.scene.dan_form_selected_control = ""
         context.scene.dan_form_status = "Control deleted"
+        _sync_context_ui_list(context)
+        if context.scene.dan_form_control_items:
+            context.scene.dan_form_control_index = min(
+                deleted_index, len(context.scene.dan_form_control_items) - 1
+            )
         return {"FINISHED"}
 
 
@@ -1037,76 +1289,61 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         if source is None:
             layout.label(text="Chọn một mesh DAN Form hoặc controller", icon="INFO")
             return
-        controls = _controls(source)
-        header = layout.box()
-        header.label(text=f"Model: {source.name}", icon="MESH_DATA")
-        if controller is not None:
-            header.label(text=f"Controller: {controller.name}", icon="CURVE_DATA")
-        nav = header.row(align=True)
-        nav.operator(DANFORM_OT_focus_source.bl_idname, icon="EDITMODE_HLT", text="Edit Source")
-        nav.operator(DANFORM_OT_focus_controller.bl_idname, icon="MESH_DATA", text="View Controller")
         if source.get(SOURCE_UUID_KEY) is None:
             layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
             return
         if controller is None:
             layout.operator(DANFORM_OT_initialize.bl_idname, icon="OUTLINER_OB_MESH")
             return
-        row = layout.row(align=True)
-        row.enabled = active == source and source.mode == "EDIT"
-        row.operator(DANFORM_OT_create_control.bl_idname, icon="ADD", text="Make Control")
-        row.operator(DANFORM_OT_hide_selected.bl_idname, icon="HIDE_ON", text="Hide Selected")
-        row = layout.row(align=True)
-        row.operator(DANFORM_OT_reveal.bl_idname, icon="HIDE_OFF", text="Reveal All")
-        layout.separator()
-        layout.label(text=f"Controls ({len(controls)})", icon="LINENUMBERS_ON")
-        if not controls:
-            layout.label(text="Chọn điểm/cạnh trên Source rồi Make Control", icon="INFO")
-        for item in controls:
-            try:
-                effective_vertices, effective_edges = _control_effective(source, item)
-                total_edges = len(item.get("edge_ids", []))
-                total_vertices = len(item.get("vertex_ids", []))
-                effective_total = len(effective_edges) + len(effective_vertices)
-                total = total_edges + total_vertices
-                state = "On" if effective_total == total else ("Hidden" if effective_total == 0 else "Partial")
-                box = layout.box()
-                row = box.row(align=True)
-                row.label(text=state)
-                row.label(text=item.get("name", "Control"))
-                row.label(text=f"{effective_total}/{total} effective")
-                select_op = row.operator(DANFORM_OT_select_control.bl_idname, text="Select")
-                select_op.control_uuid = item["control_uuid"]
-                rename_op = row.operator(DANFORM_OT_rename_control.bl_idname, text="Rename")
-                rename_op.control_uuid = item["control_uuid"]
-                delete_op = row.operator(DANFORM_OT_delete_control.bl_idname, text="Delete")
-                delete_op.control_uuid = item["control_uuid"]
-                actions = box.row(align=True)
-                visibility_op = actions.operator(
-                    DANFORM_OT_set_control_visibility.bl_idname,
-                    text="Hide" if state != "Hidden" else "Reveal",
-                )
-                visibility_op.control_uuid = item["control_uuid"]
-                visibility_op.reveal = state == "Hidden"
-            except Exception as exc:
-                layout.label(text=f"Control UI error: {type(exc).__name__}: {str(exc)[:32]}")
-        display = layout.box()
-        display.label(text="Display", icon="SHADING_WIRE")
-        display.prop(scene, "dan_form_overlay_enabled", text="Control overlay")
-        display.prop(scene, "dan_form_overlay_hidden", text="Show hidden controls")
-        display.prop(scene, "dan_form_overlay_xray", text="X-Ray")
-        display.prop(scene, "dan_form_overlay_width", text="Line width")
-        maintenance = layout.box()
-        maintenance.label(text="Maintenance", icon="TOOL_SETTINGS")
-        maintenance.operator(DANFORM_OT_sync.bl_idname, icon="FILE_REFRESH")
-        maintenance.operator(DANFORM_OT_remove_controller.bl_idname, icon="TRASH")
+        header = layout.row()
+        header.label(text=source.name, icon="MESH_DATA")
+        if active == source and source.mode == "EDIT":
+            header.label(text="Edit Source", icon="EDITMODE_HLT")
+        elif active == controller and controller.mode == "EDIT":
+            header.label(text="Edit Controller", icon="EDITMODE_HLT")
+        else:
+            header.label(text="Object", icon="OBJECT_DATA")
+        list_row = layout.row(align=True)
+        list_row.template_list(
+            DANFORM_UL_controls.bl_idname,
+            "DANFORM_CONTROLS",
+            scene,
+            "dan_form_control_items",
+            scene,
+            "dan_form_control_index",
+            rows=5,
+            maxrows=5,
+        )
+        buttons = list_row.column(align=True)
+        buttons.operator(DANFORM_OT_create_control.bl_idname, text="", icon="ADD")
+        buttons.operator(DANFORM_OT_delete_control.bl_idname, text="", icon="REMOVE")
+        buttons.separator()
+        buttons.menu(DANFORM_MT_control_menu.bl_idname, text="", icon="DOWNARROW_HLT")
+        buttons.separator()
+        move_up = buttons.operator(DANFORM_OT_move_control.bl_idname, text="", icon="TRIA_UP")
+        move_up.direction = -1
+        move_down = buttons.operator(DANFORM_OT_move_control.bl_idname, text="", icon="TRIA_DOWN")
+        move_down.direction = 1
+        edit_context = active in {source, controller} and active.mode == "EDIT"
+        if edit_context:
+            actions = layout.row(align=True)
+            select_op = actions.operator(DANFORM_OT_select_control.bl_idname, text="Select", icon="RESTRICT_SELECT_OFF")
+            select_op.control_uuid = ""
+            actions.operator(DANFORM_OT_sync_control.bl_idname, text="Sync", icon="FILE_REFRESH")
+        elif not scene.dan_form_control_items:
+            layout.label(text="Edit Source rồi chọn điểm/cạnh để nhấn +", icon="INFO")
         if scene.dan_form_status:
             layout.label(text=scene.dan_form_status, icon="INFO")
 
 
 CLASSES = (
+    DANFORM_PG_ControlItem,
+    DANFORM_UL_controls,
     DANFORM_OT_initialize,
     DANFORM_OT_sync,
     DANFORM_OT_create_control,
+    DANFORM_OT_sync_control,
+    DANFORM_OT_move_control,
     DANFORM_OT_rename_control,
     DANFORM_OT_select_control,
     DANFORM_OT_set_control_visibility,
@@ -1116,6 +1353,7 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_focus_source,
     DANFORM_OT_focus_controller,
+    DANFORM_MT_control_menu,
     DANFORM_PT_sidebar,
 )
 
@@ -1131,6 +1369,9 @@ def register() -> None:
     bpy.types.Scene.dan_form_controller = PointerProperty(name="DAN Form Controller", type=bpy.types.Object)
     bpy.types.Scene.dan_form_status = StringProperty(name="DAN Form Status", default="Select a mesh Source")
     bpy.types.Scene.dan_form_selected_control = StringProperty(name="Selected Control", default="")
+    bpy.types.Scene.dan_form_control_items = CollectionProperty(type=DANFORM_PG_ControlItem)
+    bpy.types.Scene.dan_form_control_index = IntProperty(name="Active Control", default=0, min=0)
+    bpy.types.Scene.dan_form_ui_source_uuid = StringProperty(name="UI Source UUID", default="")
     bpy.types.Scene.dan_form_overlay_enabled = BoolProperty(name="Control Overlay", default=True)
     bpy.types.Scene.dan_form_overlay_hidden = BoolProperty(name="Show Hidden Controls", default=False)
     bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False)
@@ -1150,6 +1391,9 @@ def unregister() -> None:
         "dan_form_overlay_hidden",
         "dan_form_overlay_enabled",
         "dan_form_selected_control",
+        "dan_form_ui_source_uuid",
+        "dan_form_control_index",
+        "dan_form_control_items",
         "dan_form_status",
         "dan_form_controller",
         "dan_form_source",
