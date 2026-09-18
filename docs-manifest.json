@@ -56,8 +56,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "98e38308e3807b41e55e86b37208452335f3efa94bd37ef0714b244e3dda492f",
-    "bytes": 3910
+    "sha256": "c4ea957355cf05a647169f8445e937bcb3868bfa887c547b8594217441ef126f",
+    "bytes": 4565
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -166,8 +166,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "1d5a2b7e01563b5bab217efbc4f1768c104adad49594b5cfe846ea567d7cc587",
-    "bytes": 135831
+    "sha256": "2696df24528806d194db79c9f1749d7b835bc0f9c0bb635cd8503fa96bd9e266",
+    "bytes": 142960
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -191,8 +191,8 @@
   },
   {
     "path": "docs/README.md",
-    "sha256": "898c122cc6710a5fe90eda8325a824bb3cf2a8f48a4b8a8073ab8afdbb3a01b1",
-    "bytes": 2336
+    "sha256": "c514175aaf016384f217d68a66c308ce1121f4d25fd22e8b2333911d2249983d",
+    "bytes": 2497
   },
   {
     "path": "docs/research/technical-options.md",
@@ -211,8 +211,8 @@
   },
   {
     "path": "docs/roadmap/phase-02-native-list-ux.md",
-    "sha256": "b3b7f75c36088cabb1624a6d0e2a918dd9ae7997a6c2409050b599041b41d383",
-    "bytes": 10163
+    "sha256": "851dda265e953736b60bcc72b5aca4694d059032caa74fa43a58b1a505d8ef81",
+    "bytes": 10852
   },
   {
     "path": "docs/roadmap/phase-02-ux-upgrade.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/testing/acceptance-gates.md",
-    "sha256": "329d78be33b89fac0bc706b180ed11225eeace38a10f9438aedb44212570914b",
-    "bytes": 5209
+    "sha256": "49666093db4c65d70b400e632d1a133ad53a785368f3e525d34c1a58f2e538b7",
+    "bytes": 5513
   },
   {
     "path": "docs/testing/blender-integration-cases.md",
@@ -238,6 +238,11 @@
     "path": "docs/testing/geometry-cases.md",
     "sha256": "0ce7df7f15e05d03c9b40a6292e10af90530bf5c9af01ce57d8d9ea29125d2fe",
     "bytes": 6074
+  },
+  {
+    "path": "docs/testing/phase-02-sidebar-performance-report.md",
+    "sha256": "c057e2855ab8060bb560e1fa1a28fbf6ef4504940d6efd60f25f43d1fbd04540",
+    "bytes": 5244
   },
   {
     "path": "docs/testing/phase-02-ux-live-report.md",
@@ -286,8 +291,8 @@
   },
   {
     "path": "tasks/phase-02-native-list-ux.md",
-    "sha256": "451259e3615100a6bbab62c6964d708a76cec10a98abde456e9f736bf0fda2da",
-    "bytes": 2977
+    "sha256": "928de416e0ffdd86d9d08d041247ccd650a8813fcd8874c5e242de1bbd25e724",
+    "bytes": 3902
   },
   {
     "path": "tasks/phase-02-ux-upgrade.md",

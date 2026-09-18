@@ -29,9 +29,18 @@ A colored Source control overlay makes edges/points readable without altering So
 materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
 from DAN Form Hide/Reveal; rare display/maintenance actions belong in the list menu.
 The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
-up/down controls, and context-specific Select/Sync below it in Edit Mode. No repeated
-row action boxes or persistent Display/Maintenance blocks. Clicking a row changes
-the active definition without changing object/mode or mesh selection.
+up/down controls, and Sync below it in Edit Mode. Clicking a row immediately highlights
+its effective control geometry. In Source/controller Edit Mode it also replaces the
+active mesh selection with that definition; in Object Mode it keeps object/mode.
+Selecting a hidden definition never reveals its canonical masks.
+
+Edit Control activates the model's controller, enters its Edit Mode and selects the
+active definition. Back to Model returns to the Source in the Object/Edit Mode used
+before navigating to the controller. Hide Controls / Show Controls hides both the
+controller object and Source wire overlay without changing masks or control influence.
+Hiding the whole controller while it is active returns to the model first. Edit Control
+shows a globally hidden controller but preserves individual definition masks.
+No repeated row action boxes or persistent Display/Maintenance blocks.
 
 Sync replaces the active definition's membership from current Source or mapped proxy
 selection, preserving UUID/name/order and canonical shared masks. Coordinate display

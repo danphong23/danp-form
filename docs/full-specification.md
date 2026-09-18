@@ -971,9 +971,18 @@ A colored Source control overlay makes edges/points readable without altering So
 materials or geometry. Show Overlay/X-Ray/Show Hidden are display-only and distinct
 from DAN Form Hide/Reveal; rare display/maintenance actions belong in the list menu.
 The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
-up/down controls, and context-specific Select/Sync below it in Edit Mode. No repeated
-row action boxes or persistent Display/Maintenance blocks. Clicking a row changes
-the active definition without changing object/mode or mesh selection.
+up/down controls, and Sync below it in Edit Mode. Clicking a row immediately highlights
+its effective control geometry. In Source/controller Edit Mode it also replaces the
+active mesh selection with that definition; in Object Mode it keeps object/mode.
+Selecting a hidden definition never reveals its canonical masks.
+
+Edit Control activates the model's controller, enters its Edit Mode and selects the
+active definition. Back to Model returns to the Source in the Object/Edit Mode used
+before navigating to the controller. Hide Controls / Show Controls hides both the
+controller object and Source wire overlay without changing masks or control influence.
+Hiding the whole controller while it is active returns to the model first. Edit Control
+shows a globally hidden controller but preserves individual definition masks.
+No repeated row action boxes or persistent Display/Maintenance blocks.
 
 Sync replaces the active definition's membership from current Source or mapped proxy
 selection, preserving UUID/name/order and canonical shared masks. Coordinate display
@@ -1599,7 +1608,10 @@ evidence remains NOT RUN; documentation validation cannot pass these runtime gat
 
 The latest P2-UX layout requirement is the [native list plan](../roadmap/phase-02-native-list-ux.md):
 UIList scrolling/active row, inline rename, +/−, membership Sync, ↑/↓ persistence,
-eye-derived state and object/mode-specific controls. Execute
+eye-derived state and object/mode-specific controls. Rows now highlight immediately
+and select the corresponding geometry in Edit Mode; Edit Control / Back to Model
+and global display-only Hide/Show Controls follow the updated interaction contract.
+Scoped results and NOT RUN cases are in the [0.2.1 sidebar report](phase-02-sidebar-performance-report.md). Execute
 [NL2.1–NL2.4](../../tasks/phase-02-native-list-ux.md), including undo/redo and shared
 geometry/mask assertions. Prior row-box UI tests do not pass the revised layout gate.
 
@@ -1743,9 +1755,11 @@ For development, begin with the [five-phase roadmap](roadmap/implementation-plan
 [phase tasks](../tasks/README.md). ADR-009 records the accepted sequence, Source-child
 controller, patch display semantics and reference-based phase-5 validation.
 
-Current next work is the [Phase 2 native list UX](roadmap/phase-02-native-list-ux.md),
+Current Phase 2 UI uses the [native list UX](roadmap/phase-02-native-list-ux.md),
 with [task checklists](../tasks/phase-02-native-list-ux.md) and Gate P2-UX before Phase 3.
-It replaces the row-box sidebar layout of the previous UX implementation.
+The [0.2.1 sidebar report](testing/phase-02-sidebar-performance-report.md) records
+the performance fix, direct row selection, viewport visibility and Edit/Back navigation.
+Remaining gate checks must be supported by their own live evidence.
 
 1. `product/product-definition.md`
 2. `product/terminology.md`
@@ -2351,7 +2365,10 @@ remain lifecycle evidence for Gate P2; they do not invalidate the UX checks abov
 
 # Phase 2 — Sidebar gọn theo danh sách Blender
 
-**Trạng thái: kế hoạch mới theo phản hồi người dùng, 2026-09-18; chưa triển khai.**
+**Trạng thái: UIList đã triển khai; cập nhật chọn trực tiếp, navigation và hiệu năng
+trong 0.2.1 theo phản hồi ngày 2026-09-18.**
+
+Bằng chứng và giới hạn kiểm tra: [báo cáo sidebar 0.2.1](../testing/phase-02-sidebar-performance-report.md).
 
 Kế hoạch này thay thế bố cục sidebar và cách quản lý danh sách trong
 [kế hoạch UX trước](phase-02-ux-upgrade.md). Giữ context theo active model, Source
@@ -2360,9 +2377,9 @@ Không thêm phase chính; đây vẫn là công việc Phase 2 trước Phase 3
 
 ## Mục tiêu và hiện trạng
 
-Bản mã hiện tại có các box riêng cho từng đường, lặp Select/Rename/Delete/Hide và
-hiện Display/Maintenance thường trực. Tên đường bị cạnh tranh chỗ với các nút.
-Thay bằng danh sách theo cách trình bày của Vertex Groups/Shape Keys: dòng active,
+Bản sidebar cũ có các box riêng cho từng đường, lặp Select/Rename/Delete/Hide và
+hiện Display/Maintenance thường trực. Bản hiện tại dùng danh sách theo cách trình
+bày của Vertex Groups/Shape Keys: dòng active,
 tên sửa trực tiếp, con mắt, cột +/− và lên/xuống. Nút hiện theo object/mode.
 
 Danh sách chứa **các đường/định nghĩa control của model hiện tại**, không phải danh
@@ -2373,13 +2390,14 @@ sách nhiều controller object. Mỗi Source vẫn có một controller object 
 ```text
 DAN Form
 girl chibi 1
+[Edit Control / Back to Model] [Hide / Show Controls]
 ┌─────────────────────────┐  [+]
 │ Đường trên           👁 │  [−]
 │ Đường dưới           👁 │  [⋮]
 │ Đường dọc            ◐ │  [↑]
 │                         │  [↓]
 └─────────────────────────┘
-       [Select] [Sync]          chỉ hiện trong Edit Mode
+            [Sync]             chỉ hiện trong Edit Mode
 ```
 
 - Dùng UIList native của Blender, có cuộn nội bộ, khoảng 5 dòng mặc định, hỗ trợ
@@ -2392,7 +2410,8 @@ girl chibi 1
 - Mesh chưa khởi tạo chỉ có nút **Create Controller**. Khi đã khởi tạo thì thay
   nút đó bằng danh sách; controller bị mất thì có **Rebuild Controller** trong
   trạng thái lỗi, giữ definitions/masks hiện có.
-- Không có khối Display/Maintenance hoặc Edit Source/View Controller thường trực.
+- Không có khối Display/Maintenance. Edit Control / Back to Model và nút Hide/Show
+  Controls nằm trên danh sách để điều hướng và đổi hiển thị viewport nhanh.
   Overlay màu có mặc định dễ nhìn. Các lệnh hiếm như Reveal All, Hide Whole, tùy
   chọn hiển thị và Remove Controller nằm trong menu ⋮; không thêm menu nhiều tầng.
 - Remove Controller khác −: chỉ bỏ object proxy và giữ định nghĩa trên Source;
@@ -2403,13 +2422,16 @@ girl chibi 1
 
 | Thao tác | Kết quả |
 | --- | --- |
-| Click tên/dòng | Đổi dòng active, highlight đường; không đổi mode hoặc selection mesh |
+| Click tên/dòng | Highlight đường ngay; trong Edit Mode tự chọn điểm/cạnh tương ứng, Object Mode giữ mode/object |
 | Nhấn đúp tên | Sửa tên trực tiếp tại dòng, Enter xác nhận, Escape hủy; không mở dialog UUID |
 | + trong Edit Mode | Tạo định nghĩa mới từ selection của mesh đang thao tác, chọn dòng mới |
 | − | Xóa định nghĩa active; giữ phần chung, Source topology và tọa độ |
 | Sync trong Edit Mode | Thay membership của định nghĩa active bằng selection hiện tại |
 | ↑ / ↓ | Di chuyển định nghĩa active một dòng; giữ UUID và active item |
-| Select trong Edit Mode | Chọn cả phần tương ứng trong mesh đang thao tác; không chuyển object/mode |
+| Select trong menu | Chọn lại phần tương ứng khi cần; không dùng nút Select thường trực |
+| Edit Control | Vào controller Edit Mode, chọn đường active; hiện lại controller nếu bị ẩn toàn bộ |
+| Back to Model | Trở về Source và mode Object/Edit trước khi sửa control |
+| Hide/Show Controls | Chỉ ẩn/hiện controller và overlay viewport; giữ masks và hiệu lực control |
 | Shift + Select | Thêm phần tương ứng vào selection hiện có |
 | Con mắt | DAN Form Hide/Reveal toàn định nghĩa, theo trạng thái effective hiện tại |
 
@@ -2420,8 +2442,8 @@ front/side hay tính năng group mới.
 
 **Sync ở đây là cập nhật nội dung đường**, không phải kéo tọa độ về template hay
 chép vị trí proxy vào Source. Ví dụ đường A có cạnh 1–2–3: chọn 1–2–3–4 trên Source,
-chọn dòng A rồi Sync sẽ mở rộng A thành 1–2–3–4. Chọn dòng A rồi Select trước nếu
-muốn bắt đầu chỉnh selection từ chính đường A. Selection rỗng khiến +/Sync bị khóa,
+chọn dòng A trước, chỉnh selection thành 1–2–3–4 rồi Sync sẽ mở rộng A thành 1–2–3–4.
+Chọn dòng sẽ tự chọn cả đường A trong Edit Mode. Selection rỗng khiến +/Sync bị khóa,
 không xóa nội dung đường ngầm.
 
 Sync giữ control UUID, tên và thứ tự. Recompute union từ tất cả definitions: phần
@@ -2441,10 +2463,10 @@ kề hợp lệ; sau reorder vẫn giữ cùng UUID. Có undo/redo cho tạo, x�
 | Active object/mode | Hiển thị và thao tác |
 | --- | --- |
 | Source chưa khởi tạo | Create Controller nếu Source đủ điều kiện; giữ object/mode sau tạo |
-| Source Object Mode | Danh sách, mắt, −, menu và ↑/↓; + bị khóa; không hiện Select/Sync |
+| Source Object Mode | Danh sách, mắt, −, menu, ↑/↓, Edit Control, Hide/Show Controls; + bị khóa; không hiện Sync |
 | Source Edit Mode | Danh sách và toàn bộ thao tác; +/Sync đọc selection Source BMesh |
 | Controller Object Mode | Cùng danh sách của Source; như Source Object Mode |
-| Controller Edit Mode | Danh sách và Select/Sync; +/Sync dùng Source IDs từ selection proxy effective |
+| Controller Edit Mode | Danh sách tự chọn và Sync, Back to Model, Hide/Show Controls; +/Sync dùng Source IDs từ selection proxy effective |
 | Mode khác, ví dụ Sculpt | Danh sách chỉ để đọc; khóa các thao tác ghi trạng thái để tránh ngắt workflow |
 | Empty/unrelated object | Một dòng hướng dẫn chọn model/controller, không giữ danh sách model cũ |
 | Binding lỗi/không chỉnh được | Một lý do ngắn; khóa thao tác, không đoán Source theo tên |
@@ -2492,3 +2514,98 @@ Báo cáo live UX cũ không chứng minh native list mới đã đạt. Chỉ c
 Gate P2 và P2-UX, bao gồm các tiêu chí native list này.
 
 Checklist: [Native list UX tasks](../../tasks/phase-02-native-list-ux.md).
+
+---
+
+<!-- source: docs/testing/phase-02-sidebar-performance-report.md -->
+
+# Phase 2 — Sidebar performance and navigation, 0.2.1
+
+**Status: PASS for the scoped fixes below, 2026-09-18. This does not close every P2-UX gate.**
+
+## Live session
+
+Blender 5.2.1 LTS, existing open file
+`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+Active model `girl chibi 1`, four existing definitions, workspace Layout;
+1,698 vertices, 3,392 edges, 1,696 polygons on Source.
+Dirty was true before and after. No scene builder, separate Blender process, save,
+reopen or discard was used. Regression restores definitions, masks, revision,
+coordinates, object/mode and mesh selection in a finally block.
+
+## Root causes and changes
+
+- `_source_id_maps` called `_ensure_source_ids` on each Object Mode read. That
+  hashed the full topology, serialized Source properties and called mesh.update.
+  Overlay, list projection and handlers repeated this work during redraw.
+- The depsgraph handler synced every model on every event. `_sync_proxy` wrote
+  coordinates and called mesh.update even when all coordinates were identical.
+- Two DAN Form handler instances were present: the installed extension and the
+  previous live test module. Each also owned an overlay handler. Both were
+  unregistered and only the installed extension module was reloaded.
+
+Mapping reads now use runtime caches without Source writes. Explicit initialization
+assigns IDs; structural/visibility operations validate topology. Geometry updates
+invalidate the mapping. List projection returns immediately for unchanged metadata
+and masks. Proxy sync runs for Source geometry changes and only updates changed
+coordinates. Load/undo/redo handlers invalidate projections and mapping caches.
+
+The active UIList callback immediately updates overlay highlight, including point
+controls. In Edit Mode it selects corresponding Source/proxy IDs. Edit Control enters
+controller Edit Mode; Back to Model restores the previous Source Object/Edit Mode.
+Hide/Show Controls changes controller/overlay display only, without rebuilding the
+proxy or changing canonical masks. Individual eyes retain canonical Hide/Reveal.
+
+Related regressions fixed: Sync serialized a fresh unchanged list after editing a
+detached definition dict; it now saves the modified list. Controller rebuilds could
+refresh the UI during mode transitions before the new active UUID was assigned;
+explicit reconciliation now keeps the row and UUID aligned.
+
+## Measured synchronous costs
+
+| Operation | Before, one sample | After, warm median of 30 calls |
+| --- | ---: | ---: |
+| ID mapping read | 22.796 ms | 0.0016 ms |
+| Unchanged UI list projection | 113.931 ms | 0.0024 ms |
+| Proxy sync, unchanged coordinates | 12.962 ms | 0.0334 ms |
+
+Individual eye operators averaged about 13–22 ms per operation across regression runs
+(latest installed reload: 22.402 ms), measured in three Hide/Reveal pairs per run.
+These are Python/operator measurements in this specific live session,
+not total interaction latency or FPS. Before samples included the old implementation
+and the duplicate handler state; after samples use one registered implementation.
+Cold mapping rebuilds and changed list projections still perform actual work.
+
+## Verification
+
+[Live regression](../../tests/live_sidebar_regression.py) ran through MCP in this
+session and passed 29 assertions:
+
+- Idle graph events skip proxy sync; cached list rows stay allocated; read-only
+  lookups never assign Source IDs or modify Source properties.
+- Object Mode row selection changes highlight without changing object/mode.
+- Global display toggles hide/show controller, preserve masks and do not rebuild it.
+- Edit Control enters proxy Edit Mode; row selection selects effective proxy IDs;
+  Back restores either prior Source Object Mode or Source Edit Mode.
+- Source Edit row selection selects definition IDs; controller Edit supports create,
+  Sync membership and delete through mapped Source IDs.
+- Source Sync persists replacement membership, changes revision once and is a no-op
+  when membership is unchanged. Overlap deletion preserves shared point geometry.
+- Sidebar operations leave Source coordinates unchanged. An external Source
+  coordinate change still updates the corresponding proxy coordinate.
+
+Computer Use identified the exact Blender window, then visibly confirmed row
+selection/highlight, Edit Control, automatic Edit selection on another row, Back to
+Model, Hide Controls and Show Controls. It ended in model Object Mode with controls
+visible and Layout unchanged. No text/code was typed into Blender UI.
+
+Compile and the existing static package/contract checks passed. The live test is
+intentionally not collected as a standalone pytest test: it needs this open Blender.
+The installed extension files were updated to 0.2.1 and reloaded from their real disk
+location; all 29 assertions passed again and exactly one DAN Form depsgraph handler
+remained. The extension ZIP was verified byte-for-byte against source and manifest.
+
+NOT RUN in this scoped verification: file save/reopen, interactive undo/redo,
+20-control scrolling, very large mesh stress/FPS and deformation (a later phase).
+Cache lifecycle hooks were installed but those are not evidence of interactive
+undo/redo or save/reopen validation.

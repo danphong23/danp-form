@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "dan_form"
-version = "0.2.0"
+version = "0.2.1"
 name = "DAN Form"
 tagline = "Source-backed control shell for template mesh editing"
 maintainer = "DAN Form"

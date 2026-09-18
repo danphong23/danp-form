@@ -14,9 +14,11 @@ For development, begin with the [five-phase roadmap](roadmap/implementation-plan
 [phase tasks](../tasks/README.md). ADR-009 records the accepted sequence, Source-child
 controller, patch display semantics and reference-based phase-5 validation.
 
-Current next work is the [Phase 2 native list UX](roadmap/phase-02-native-list-ux.md),
+Current Phase 2 UI uses the [native list UX](roadmap/phase-02-native-list-ux.md),
 with [task checklists](../tasks/phase-02-native-list-ux.md) and Gate P2-UX before Phase 3.
-It replaces the row-box sidebar layout of the previous UX implementation.
+The [0.2.1 sidebar report](testing/phase-02-sidebar-performance-report.md) records
+the performance fix, direct row selection, viewport visibility and Edit/Back navigation.
+Remaining gate checks must be supported by their own live evidence.
 
 1. `product/product-definition.md`
 2. `product/terminology.md`
