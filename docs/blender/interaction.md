@@ -91,6 +91,31 @@ Ctrl+Shift+Click the edge selects the whole logical control containing it. If th
 edge belongs to several controls, the currently active list control wins; without
 an active matching row the command refuses to guess and asks the user to choose
 from the list. Agents can pass the canonical Source edge ID to the same operator.
+Shift belongs to the whole-control shortcut itself; it does not implicitly add.
+Use Add to Selection or the hover picker to accumulate whole controls.
+
+Pick Segment / Pick Control previews a magenta span without changing native
+selection. LMB commits; Shift/Add accumulates and Ctrl subtracts, keeping the tool
+active for repeated picks. RMB/Esc ends preview; already committed repeated picks
+remain selected. MMB/wheel/trackpad navigation passes through. A native command
+such as B, C, A, G/R/S or Tab ends picking and receives its normal input. A click
+outside the viewport or on empty space ends picking and passes to Blender.
+Sidebar invocation converts global mouse coordinates into the viewport's WINDOW
+region; UI-relative coordinates are not valid for projected picking.
+
+The cyan enabled-edge highlight is an optional draw-only layer, capped at 1.5 px
+in controller Edit. It never captures mouse input or selects vertices. Native
+orange selection remains authoritative; native selection-only changes invalidate
+the omitted-edge batches so deselected edges become cyan immediately. Turning
+Overlay off leaves native selection and temporary pick preview usable. DANP X-Ray,
+native viewport X-Ray and wireframe permit overlay/picking through Source; DANP
+X-Ray also temporarily sets owned controller wires in front and restores their
+previous display setting when disabled or unregistered. Opaque picking uses Source
+ray occlusion; overlapping visible projections still require visual review.
+Preview Hidden is a Source-only display option, not Reveal or editable geometry.
+Canonical proxy rebuild retains surviving controller coordinates and selection;
+newly revealed IDs sample Source and start unselected. Hidden handles do not keep
+an independent pose outside Source.
 H hides selected edges in edge mode, preserving other lines at shared endpoints;
 H in vertex mode hides nodes and all incident edges. Alt-H reveals all from current
 Source positions. Partial masks produce Partial eye state for every affected group.

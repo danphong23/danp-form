@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from types import SimpleNamespace
 
 import bmesh
 import bpy
@@ -44,6 +45,8 @@ _CONTROL_KEYMAPS = []
 _NETWORK_CACHE = {}
 _OVERLAY_CACHE = {}
 _XRAY_SHOW_IN_FRONT = {}
+_PICK_PREVIEW = {}
+_PICK_SESSION = 0
 VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
 
 bl_info = {
@@ -392,6 +395,7 @@ def _set_scene_context(context: bpy.types.Context, source: bpy.types.Object | No
     scene = context.scene
     scene.dan_form_source = source
     scene.dan_form_controller = controller
+    _update_overlay_display(scene, context)
 
 
 def _source_controller_pairs() -> list[tuple[bpy.types.Object, bpy.types.Object]]:
@@ -504,6 +508,7 @@ def _rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> No
     _SYNC_GUARD = True
     try:
         _OVERLAY_CACHE.clear()
+        _PICK_PREVIEW.clear()
         _rebuild_proxy_impl(source, controller)
         _PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
         _guard_proxy_topology(source, controller)
@@ -516,6 +521,9 @@ def _rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object) 
     vertex_ids, edge_ids = _effective_proxy_elements(source)
     vid_to_index, eid_to_index = _source_id_maps(source)
     proxy_mesh = controller.data
+    old_pose = _proxy_state(controller)
+    kept_positions = {item[0]: item[1] for item in old_pose[0]} if old_pose else {}
+    selected_ids = _proxy_selection_snapshot(controller) if controller.mode == "EDIT" and old_pose else (set(), set())
     old_active = bpy.context.view_layer.objects.active
     old_mode = old_active.mode if old_active is not None else "OBJECT"
     old_selected = [obj for obj in bpy.context.selected_objects]
@@ -526,7 +534,9 @@ def _rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object) 
     proxy_mesh.clear_geometry()
     source_vertices = _source_vertices(source)
     edge_vids = _source_edge_vids(source)
-    proxy_vertices = [tuple(source_vertices[vid_to_index[vid]].co) for vid in vertex_ids]
+    # Keep the pose of surviving handles. Newly revealed IDs sample Source;
+    # hiding a different control must not reset the user's visible edits.
+    proxy_vertices = [kept_positions.get(vid, tuple(source_vertices[vid_to_index[vid]].co)) for vid in vertex_ids]
     proxy_vertex_index = {vid: index for index, vid in enumerate(vertex_ids)}
     proxy_edges = []
     kept_edge_ids = []
@@ -568,6 +578,7 @@ def _rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object) 
         bpy.context.view_layer.objects.active = controller
         controller.select_set(True)
         bpy.ops.object.mode_set(mode="EDIT")
+        _select_proxy_ids(controller, *selected_ids)
 
 
 def _sync_proxy(source: bpy.types.Object, controller: bpy.types.Object) -> None:
@@ -870,6 +881,9 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
 
 @persistent
 def _refresh_runtime(_unused=None) -> None:
+    global _PICK_SESSION
+    _PICK_SESSION += 1
+    _PICK_PREVIEW.clear()
     _MAPPING_CACHE.clear()
     _UI_SIGNATURES.clear()
     _PROXY_SNAPSHOTS.clear()
@@ -945,7 +959,7 @@ def _overlay_geometry(context, overlay_mode, source, controller):
                 return {}
             matrix = controller.matrix_world
             positions = {int(vertex[proxy_vl]): matrix @ vertex.co for vertex in bm.verts}
-            edges = {int(edge[proxy_el]): tuple(int(vertex[proxy_vl]) for vertex in edge.verts) for edge in bm.edges}
+            edges = {int(edge[proxy_el]): tuple(int(vertex[proxy_vl]) for vertex in edge.verts) for edge in bm.edges if not edge.hide}
             # Let Blender's native Edit selection color sit above the cyan
             # enabled-control layer. Selected elements are omitted from the
             # custom batch instead of being painted cyan a second time.
@@ -997,12 +1011,20 @@ def _overlay_batches(context, overlay_mode, source, controller):
     from gpu_extras.batch import batch_for_shader
 
     scene = context.scene
+    # Selection-only changes do not reliably emit a geometry depsgraph update.
+    # Keep omitted native-selected elements synchronized after Box Select,
+    # clicking empty space and Reveal, without rereading coordinates on idle.
+    selection_token = None
+    if overlay_mode == "controller_edit":
+        bm = bmesh.from_edit_mesh(controller.data)
+        selection_token = (tuple(v.select for v in bm.verts),
+                           tuple((e.select, e.hide) for e in bm.edges))
     token = (context.window.as_pointer() if context.window else 0,
              source.as_pointer(), source.data.as_pointer(), source.mode,
              controller.as_pointer(), controller.data.as_pointer(), controller.mode,
              controller.get(PROXY_GENERATION_KEY), overlay_mode,
              source.get(CONTROLS_KEY), source.get(HIDDEN_VIDS_KEY), source.get(HIDDEN_EIDS_KEY),
-             scene.dan_form_selected_control, scene.dan_form_overlay_hidden,
+             scene.dan_form_selected_control, scene.dan_form_overlay_hidden, selection_token,
              tuple(tuple(row) for row in source.matrix_world),
              tuple(tuple(row) for row in controller.matrix_world))
     if _OVERLAY_CACHE.get("token") != token:
@@ -1016,8 +1038,9 @@ def _overlay_batches(context, overlay_mode, source, controller):
 
 def _update_overlay_display(scene: bpy.types.Scene, _context: bpy.types.Context | None = None) -> None:
     """Apply the user-facing X-Ray switch to both overlay depth and proxy wire display."""
-    controller = getattr(scene, "dan_form_controller", None)
-    if controller is not None:
+    for controller in scene.objects:
+        if controller.type != "MESH" or not controller.get(PROXY_GENERATION_KEY):
+            continue
         key = controller.as_pointer()
         if scene.dan_form_overlay_xray:
             if key not in _XRAY_SHOW_IN_FRONT:
@@ -1025,11 +1048,8 @@ def _update_overlay_display(scene: bpy.types.Scene, _context: bpy.types.Context 
             controller.show_in_front = True
         elif key in _XRAY_SHOW_IN_FRONT:
             controller.show_in_front = _XRAY_SHOW_IN_FRONT.pop(key)
-        else:
-            controller.show_in_front = False
-    for area in getattr(bpy.context.screen, "areas", ()):
-        if area.type == "VIEW_3D":
-            area.tag_redraw()
+    if bpy.context.window_manager is not None:
+        _tag_viewport_redraw(bpy.context)
 
 
 def _draw_control_overlay() -> None:
@@ -1039,8 +1059,7 @@ def _draw_control_overlay() -> None:
 
         context = bpy.context
         scene = context.scene
-        if not getattr(scene, "dan_form_overlay_enabled", True):
-            return
+        overlay_enabled = getattr(scene, "dan_form_overlay_enabled", True)
         overlay_mode = _overlay_mode(context)
         if overlay_mode == "none":
             return
@@ -1050,13 +1069,18 @@ def _draw_control_overlay() -> None:
         if overlay_mode == "source" and source.get(VIEWPORT_HIDDEN_KEY, False):
             return
         shader, batches = _overlay_batches(context, overlay_mode, source, controller)
-        xray = scene.dan_form_overlay_xray
+        if not overlay_enabled:
+            batches = {}
+        shading = context.space_data.shading
+        xray = scene.dan_form_overlay_xray or shading.show_xray or shading.type == "WIREFRAME"
         # POST_VIEW runs after the regular viewport draw.  Set the depth state
         # explicitly so the normal overlay follows the opaque mesh surface;
         # without this, lines can appear in front even when X-Ray is disabled.
+        previous_depth = gpu.state.depth_test_get()
+        previous_width = gpu.state.line_width_get()
         gpu.state.depth_test_set("NONE" if xray else "LESS_EQUAL")
         try:
-            width = scene.dan_form_overlay_width
+            width = min(scene.dan_form_overlay_width, 1.5) if overlay_mode == "controller_edit" else scene.dan_form_overlay_width
             for name, color, size in (
                 ("edges", (0.05, 0.75, 1.0, 0.95), width),
                 ("selected_edges", (1.0, 0.45, 0.05, 1.0), width + 1.0),
@@ -1073,10 +1097,19 @@ def _draw_control_overlay() -> None:
                 else:
                     gpu.state.point_size_set(float(size))
                 batch.draw(shader)
+            preview = _PICK_PREVIEW
+            if (preview.get("controller") == controller.as_pointer()
+                    and preview.get("area") == context.area.as_pointer()
+                    and preview.get("batch") is not None):
+                shader.bind()
+                shader.uniform_float("color", (1.0, 0.2, 0.8, 1.0))
+                gpu.state.line_width_set(3.0)
+                preview["batch"].draw(shader)
         finally:
-            # Leave Blender's normal viewport depth state in a predictable
-            # state for the next draw callback.
-            gpu.state.depth_test_set("LESS_EQUAL")
+            # Do not leak custom line/depth state into another draw callback.
+            gpu.state.depth_test_set(previous_depth)
+            gpu.state.line_width_set(previous_width)
+            gpu.state.point_size_set(1.0)
     except Exception:
         # Drawing must never break Blender's viewport; retry on next redraw.
         return
@@ -1341,7 +1374,8 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
         layout.prop(context.scene, "dan_form_overlay_xray", text="X-Ray")
-        layout.prop(context.scene, "dan_form_overlay_hidden", text="Show Hidden Controls")
+        if context.view_layer.objects.active == source:
+            layout.prop(context.scene, "dan_form_overlay_hidden", text="Preview Hidden Controls")
 
 
 class DANFORM_OT_create_control(bpy.types.Operator):
@@ -1733,14 +1767,14 @@ def _proxy_segment(controller, seed_id):
     vl = bm.verts.layers.int.get(PROXY_VID_ATTR)
     if el is None or vl is None:
         raise ValueError("PROXY_MAPPING_MISSING")
-    seed = next((e for e in bm.edges if int(e[el]) == seed_id), None)
+    seed = next((e for e in bm.edges if int(e[el]) == seed_id and not e.hide), None)
     if seed is None:
         raise ValueError("VISIBLE_CONTROL_EDGE_REQUIRED")
     edges = {seed}
     for start in seed.verts:
         vert, previous = start, seed
-        while len(vert.link_edges) == 2:
-            following = next(e for e in vert.link_edges if e != previous)
+        while len([e for e in vert.link_edges if not e.hide]) == 2:
+            following = next(e for e in vert.link_edges if e != previous and not e.hide)
             if following in edges:
                 break
             edges.add(following)
@@ -1753,7 +1787,7 @@ def _pick_controller_edge_id(context, event) -> int:
     from bpy_extras.view3d_utils import location_3d_to_region_2d
     from mathutils import Vector
 
-    _, controller = _context_source(context)
+    source, controller = _context_source(context)
     bm = bmesh.from_edit_mesh(controller.data)
     layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
     if layer is None:
@@ -1761,6 +1795,8 @@ def _pick_controller_edge_id(context, event) -> int:
     mouse = Vector((event.mouse_region_x, event.mouse_region_y))
     candidates = []
     for edge in bm.edges:
+        if edge.hide:
+            continue
         world = [controller.matrix_world @ vertex.co for vertex in edge.verts]
         screen = [location_3d_to_region_2d(context.region, context.region_data, point) for point in world]
         if any(point is None for point in screen):
@@ -1772,10 +1808,36 @@ def _pick_controller_edge_id(context, event) -> int:
         if distance <= 12.0:
             midpoint = world[0].lerp(world[1], factor)
             depth = -(context.region_data.view_matrix @ midpoint).z
+            if not _pick_point_visible(context, source, midpoint):
+                continue
             candidates.append((distance, depth, int(edge[layer])))
     if not candidates:
         raise ValueError("CONTROL_EDGE_NOT_FOUND")
     return min(candidates)[2]
+
+
+def _pick_point_visible(context, source, point) -> bool:
+    """Use the same opaque Source occlusion policy as the control overlay."""
+    if (context.scene.dan_form_overlay_xray or source is None
+            or not source.visible_get(view_layer=context.view_layer)
+            or context.space_data.shading.type == "WIREFRAME"
+            or context.space_data.shading.show_xray):
+        return True
+    from bpy_extras.view3d_utils import location_3d_to_region_2d, region_2d_to_origin_3d
+
+    screen = location_3d_to_region_2d(context.region, context.region_data, point)
+    if screen is None:
+        return False
+    # Clamp orthographic origins to the model's scale to avoid far-clip precision loss.
+    scale = max(source.dimensions.length, 1.0)
+    origin = region_2d_to_origin_3d(context.region, context.region_data, screen, clamp=scale * 4)
+    inv = source.matrix_world.inverted_safe()
+    local_origin, local_point = inv @ origin, inv @ point
+    ray = local_point - local_origin
+    if ray.length < 1e-8:
+        return True
+    hit, location, _normal, _index = source.ray_cast(local_origin, ray.normalized(), distance=ray.length)
+    return not hit or (location - local_point).length <= scale * 1e-4
 
 
 def _proxy_selection_snapshot(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
@@ -1829,15 +1891,48 @@ def _view3d_pick_edge(context: bpy.types.Context, event) -> int:
     region = next((item for item in area.regions if item.type == "WINDOW"), None)
     if region is None or area.spaces.active.region_3d is None:
         raise ValueError("VIEW_3D_REQUIRED")
+    # Modal events retain the invocation region (UI when started in sidebar).
+    # temp_override does not convert event.mouse_region_x/y into WINDOW space.
+    if hasattr(event, "mouse_x") and hasattr(event, "mouse_y"):
+        event = SimpleNamespace(mouse_region_x=event.mouse_x - region.x,
+                                mouse_region_y=event.mouse_y - region.y)
     with context.temp_override(area=area, region=region, region_data=area.spaces.active.region_3d):
         return _pick_controller_edge_id(context, event)
+
+
+def _apply_proxy_pick_selection(context, controller, vertices, edges, operation="SET") -> None:
+    if operation == "ADD":
+        _select_proxy_ids(controller, vertices, edges, add=True)
+        return
+    if operation == "SUBTRACT":
+        old_vertices, old_edges = _proxy_selection_snapshot(controller)
+        vertices, edges = old_vertices - vertices, old_edges - edges
+        if context.tool_settings.mesh_select_mode[1]:
+            bm = bmesh.from_edit_mesh(controller.data)
+            vl, el = bm.verts.layers.int[PROXY_VID_ATTR], bm.edges.layers.int[PROXY_EID_ATTR]
+            vertices.update(int(v[vl]) for e in bm.edges if int(e[el]) in edges for v in e.verts)
+    _select_proxy_ids(controller, vertices, edges)
+
+
+def _set_pick_preview(context, controller, edge_ids) -> None:
+    import gpu
+    from gpu_extras.batch import batch_for_shader
+
+    bm = bmesh.from_edit_mesh(controller.data)
+    layer = bm.edges.layers.int[PROXY_EID_ATTR]
+    positions = [controller.matrix_world @ v.co for e in bm.edges
+                 if int(e[layer]) in edge_ids and not e.hide for v in e.verts]
+    shader = gpu.shader.from_builtin("UNIFORM_COLOR")
+    _PICK_PREVIEW.update(controller=controller.as_pointer(), area=context.area.as_pointer(),
+                         batch=batch_for_shader(shader, "LINES", {"pos": positions}))
+    _tag_viewport_redraw(context)
 
 
 class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
     bl_idname = "dan_form.pick_selection_tool"
     bl_label = "Pick DANP Selection"
     bl_description = "Hover a control edge to preview a segment or whole-control selection; click to confirm"
-    bl_options = {"REGISTER", "UNDO", "BLOCKING"}
+    bl_options = {"REGISTER", "UNDO"}
     tool: EnumProperty(
         name="Tool",
         items=(
@@ -1849,12 +1944,25 @@ class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
     )
     add_to_selection: BoolProperty(name="Add to Selection", default=False, options={"HIDDEN"})
 
-    def _restore(self, context) -> None:
-        _, controller = _context_source(context)
-        if controller is not None and controller.mode == "EDIT":
-            _select_proxy_ids(controller, *self._initial_selection)
-        context.scene.dan_form_selected_control = self._initial_control_uuid
-        context.scene.dan_form_status = "Selection preview cancelled"
+    def _finish(self, context, cancelled=False) -> set[str]:
+        if self._session == _PICK_SESSION:
+            _PICK_PREVIEW.clear()
+            if self._area is not None:
+                self._area.header_text_set(None)
+        _tag_viewport_redraw(context)
+        context.scene.dan_form_status = "Pick stopped" if cancelled else "Selection confirmed"
+        return {"FINISHED"} if self._committed or not cancelled else {"CANCELLED"}
+
+    def _in_viewport(self, event) -> bool:
+        if self._area is None:
+            return False
+        x, y = event.mouse_x, event.mouse_y
+        for region in self._area.regions:
+            if region.type in {"UI", "TOOLS"} and region.width > 0 and region.height > 0:
+                if region.x <= x < region.x + region.width and region.y <= y < region.y + region.height:
+                    return False
+        region = next((r for r in self._area.regions if r.type == "WINDOW"), None)
+        return bool(region and region.x <= x < region.x + region.width and region.y <= y < region.y + region.height)
 
     def _preview(self, context, event) -> None:
         source, controller = _context_source(context)
@@ -1863,21 +1971,18 @@ class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
         try:
             edge_id = _view3d_pick_edge(context, event)
             target = _selection_target_for_edge(source, controller, edge_id, self.tool, context.scene)
-        except ValueError:
-            if self._last_target is not None:
-                self._restore(context)
-                self._last_target = None
-                self._last_edge_id = None
+        except ValueError as exc:
+            _PICK_PREVIEW.clear()
+            self._last_target = None
+            self._last_edge_id = None
+            if str(exc) == "CONTROL_EDGE_SHARED_SELECT_FROM_LIST":
+                context.scene.dan_form_status = "Cạnh chung: chọn control trong danh sách trước"
+            _tag_viewport_redraw(context)
             return
-        if edge_id == self._last_edge_id and target[:2] == self._last_target[:2]:
+        if self._last_target is not None and target == self._last_target:
             return
-        self._restore(context)
-        _select_proxy_ids(controller, target[0], target[1], add=self.add_to_selection)
-        if target[2]:
-            context.scene.dan_form_selected_control = target[2]
-        context.scene.dan_form_status = (
-            f"Preview {'segment' if self.tool == 'SEGMENT' else 'control'}: {len(target[1])} edges; click to confirm"
-        )
+        _set_pick_preview(context, controller, target[1])
+        context.scene.dan_form_status = f"Preview: {len(target[1])} edges; click to select"
         self._last_edge_id = edge_id
         self._last_target = target
         for area in context.screen.areas if context.screen else ():
@@ -1889,36 +1994,76 @@ class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
         return DANFORM_OT_topology_locked.poll(context)
 
     def invoke(self, context, event):
+        global _PICK_SESSION
         source, controller = _context_source(context)
         if source is None or controller is None:
             return {"CANCELLED"}
         self.add_to_selection = bool(getattr(event, "shift", False) or context.scene.dan_form_add_to_selection)
-        self._initial_selection = _proxy_selection_snapshot(controller)
-        self._initial_control_uuid = context.scene.dan_form_selected_control
+        _PICK_SESSION += 1
+        self._session = _PICK_SESSION
+        self._controller = controller.as_pointer()
+        self._generation = controller.get(PROXY_GENERATION_KEY)
+        self._area = context.area
+        self._committed = False
+        self._navigating = False
+        _PICK_PREVIEW.clear()
         self._last_edge_id = None
         self._last_target = None
         context.scene.dan_form_status = (
             f"Hover để xem trước {'đoạn' if self.tool == 'SEGMENT' else 'control'}, click để chọn; Esc để hủy"
         )
+        if self._area is not None:
+            self._area.header_text_set("DANP Pick: LMB chọn · Shift cộng · Ctrl bỏ chọn · RMB/Esc dừng · MMB/Wheel điều hướng")
         context.window_manager.modal_handler_add(self)
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
-        if event.type in {"ESC", "RIGHTMOUSE"}:
-            self._restore(context)
-            return {"CANCELLED"}
+        _, controller = _context_source(context)
+        if (self._session != _PICK_SESSION or controller is None or controller.mode != "EDIT"
+                or controller.as_pointer() != self._controller or controller.get(PROXY_GENERATION_KEY) != self._generation):
+            return self._finish(context, cancelled=True)
+        if event.type in {"ESC", "RIGHTMOUSE"} and event.value == "PRESS":
+            return self._finish(context, cancelled=True)
+        if event.type == "MIDDLEMOUSE":
+            self._navigating = event.value != "RELEASE"
+            _PICK_PREVIEW.clear()
+            self._last_target = None
+            return {"PASS_THROUGH"}
+        if event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE", "TRACKPADPAN", "TRACKPADZOOM", "MOUSEROTATE", "MOUSESMARTZOOM"}:
+            _PICK_PREVIEW.clear()
+            self._last_target = None
+            return {"PASS_THROUGH"}
         if event.type == "MOUSEMOVE":
+            if self._navigating or not self._in_viewport(event):
+                _PICK_PREVIEW.clear()
+                self._last_target = None
+                return {"PASS_THROUGH"}
             self._preview(context, event)
-            return {"RUNNING_MODAL"}
+            return {"PASS_THROUGH"}
         if event.type == "LEFTMOUSE" and event.value == "PRESS":
+            if not self._in_viewport(event):
+                return self._finish(context) | {"PASS_THROUGH"}
+            # Resolve again after zoom/pan or a click without a prior move.
+            self._last_target = None
+            self._preview(context, event)
             if self._last_target is None:
-                context.scene.dan_form_status = "Di chuột lên cạnh control trước khi click"
+                return self._finish(context) | {"PASS_THROUGH"}
+            operation = "SUBTRACT" if event.ctrl else ("ADD" if event.shift or self.add_to_selection else "SET")
+            _apply_proxy_pick_selection(context, controller, self._last_target[0], self._last_target[1], operation)
+            if self._last_target[2]:
+                context.scene.dan_form_selected_control = self._last_target[2]
+                _activate_ui_control(context.scene, self._last_target[2])
+            self._committed = True
+            _PICK_PREVIEW.clear()
+            self._last_target = None
+            if self.add_to_selection or event.shift or event.ctrl:
                 return {"RUNNING_MODAL"}
-            context.scene.dan_form_status = (
-                f"Selected {'segment' if self.tool == 'SEGMENT' else 'control'}"
-            )
-            return {"FINISHED"}
-        return {"RUNNING_MODAL"}
+            return self._finish(context)
+        # A, B, C, G/R/S, Tab, undo and other native commands retain their keys.
+        # End preview before dispatch, rather than stealing their mouse events.
+        if event.value == "PRESS" and event.type not in {"LEFT_SHIFT", "RIGHT_SHIFT", "LEFT_CTRL", "RIGHT_CTRL", "LEFT_ALT", "RIGHT_ALT", "LEFTMOUSE"}:
+            return self._finish(context) | {"PASS_THROUGH"}
+        return {"PASS_THROUGH"}
 
 
 class DANFORM_OT_select_control_at_cursor(bpy.types.Operator):
@@ -1939,7 +2084,8 @@ class DANFORM_OT_select_control_at_cursor(bpy.types.Operator):
         if context.region is None or context.region.type != "WINDOW" or context.region_data is None:
             return {"CANCELLED"}
         try:
-            self.extend = bool(getattr(event, "shift", False) or context.scene.dan_form_add_to_selection)
+            # Shift is part of this shortcut itself; it must not force Add.
+            self.extend = bool(self.extend or context.scene.dan_form_add_to_selection)
             self.edge_id = _pick_controller_edge_id(context, event)
             return self.execute(context)
         except ValueError as exc:
@@ -2255,7 +2401,8 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         display = setup.row(align=True)
         display.prop(scene, "dan_form_overlay_enabled", text="Overlay")
         display.prop(scene, "dan_form_overlay_xray", text="X-Ray")
-        display.prop(scene, "dan_form_overlay_hidden", text="Show Hidden")
+        if active == source:
+            display.prop(scene, "dan_form_overlay_hidden", text="Preview Hidden")
         if active == controller and controller.mode == "EDIT":
             pick_row = setup.row(align=True)
             segment = pick_row.operator(DANFORM_OT_pick_selection_tool.bl_idname, text="Pick Segment", icon="EDGESEL")
@@ -2266,7 +2413,8 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             selection_row = setup.row(align=True)
             selection_row.operator(DANFORM_OT_clear_selection.bl_idname, text="Clear", icon="X")
             selection_row.operator(DANFORM_OT_select_all_controls.bl_idname, text="All Controls", icon="SELECT_EXTEND")
-            setup.label(text="Hover để xem trước, click để xác nhận; Shift để cộng thêm", icon="INFO")
+            setup.label(text="LMB chọn · Shift cộng · Ctrl bỏ chọn", icon="INFO")
+            setup.label(text="RMB/Esc dừng · MMB/Wheel điều hướng")
         list_row = layout.row(align=True)
         list_row.enabled = active.mode in {"OBJECT", "EDIT"}
         list_row.template_list(
@@ -2361,15 +2509,17 @@ def register() -> None:
 
 
 def unregister() -> None:
+    global _PICK_SESSION
+    _PICK_SESSION += 1
+    _PICK_PREVIEW.clear()
     _unregister_control_keymaps()
     _unregister_topology_keymaps()
     _unregister_overlay()
-    for scene in bpy.data.scenes:
-        controller = getattr(scene, "dan_form_controller", None)
-        if controller is not None:
-            previous = _XRAY_SHOW_IN_FRONT.pop(controller.as_pointer(), None)
-            if previous is not None:
-                controller.show_in_front = previous
+    for controller in bpy.data.objects:
+        previous = _XRAY_SHOW_IN_FRONT.pop(controller.as_pointer(), None)
+        if previous is not None:
+            controller.show_in_front = previous
+    _XRAY_SHOW_IN_FRONT.clear()
     if _depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_depsgraph_update_post)
     for handlers in (bpy.app.handlers.undo_post, bpy.app.handlers.redo_post, bpy.app.handlers.load_post):

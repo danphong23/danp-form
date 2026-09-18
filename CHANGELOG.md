@@ -1,5 +1,17 @@
 # Design Changelog
 
+## 2026-09-18 — DANP Form 0.2.5 pick and visibility UX repair
+
+- Removed blocking pick input; hover no longer mutates selection. RMB/Esc cancels, navigation passes through, and native commands such as Box Select stop picking and receive their normal input.
+- Corrected sidebar-to-viewport coordinate conversion, opaque Source occlusion and native X-Ray/wireframe overlay depth.
+- Added Ctrl subtraction to repeat picking and corrected Shift being incorrectly interpreted as Add in the whole-control shortcut.
+- Included native selection/hide flags in cyan batch invalidation; clicking empty space and Hide/Show no longer leave stale black spans or require a list-row refresh.
+- Preserved surviving controller pose and selection during canonical rebuild; newly revealed handles sample Source and start unselected.
+- Capped controller Edit highlight at 1.5 px, kept preview usable with Overlay off, scoped Preview Hidden to Source, and restored all owned controllers' X-Ray display state on unregister.
+- Restored prior GPU depth and line width after drawing so the highlight does not leak these settings into other viewport callbacks.
+- Passed 197 live checks across five suites in the user's open Blender file, including 45 new input/visibility regressions. All 924 enabled character edge seeds resolved spans; idle batch access measured 0.772 ms median / 0.958 ms P95 including native selection scanning.
+- Computer Use event validation was interrupted by foreground window changes; synthetic modal event checks and native Box Select execution through MCP are not equivalent to physical mouse/keyboard dispatch. See the [audit](docs/testing/phase-02-pick-ux-audit.md).
+
 ## 2026-09-18 — DANP Form 0.2.4 selection setup and X-Ray
 
 - Added a compact Setup block in the sidebar with Hover Pick Segment, Hover Pick Control, Add to Selection, Clear, Select All Controls and visible Overlay/X-Ray/Show Hidden switches.

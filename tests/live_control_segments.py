@@ -74,7 +74,7 @@ def run():
             midpoint = controller.matrix_world @ ((mesh.vertices[9].co + mesh.vertices[10].co) * 0.5)
             screen = location_3d_to_region_2d(region,ctx.region_data,midpoint)
             event = SimpleNamespace(type='LEFTMOUSE',mouse_region_x=screen.x,mouse_region_y=screen.y)
-            whole_pick = SimpleNamespace(edge_id=0,report=lambda *_: None)
+            whole_pick = SimpleNamespace(edge_id=0,extend=False,report=lambda *_: None)
             whole_pick.execute = lambda context: a.DANFORM_OT_select_control_at_cursor.execute(whole_pick,context)
             check(a.DANFORM_OT_select_control_at_cursor.invoke(whole_pick,ctx,event) == {'FINISHED'}, 'viewport projection picks whole control')
             check(a._proxy_selection(controller)[1] == set(whole_control['edge_ids']), 'projected whole-control pick selects all mapped edges')

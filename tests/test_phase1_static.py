@@ -53,7 +53,7 @@ def test_phase2_contract_symbols() -> None:
         "bmesh.from_edit_mesh(controller.data)",
         "dan_form_overlay_enabled",
         'gpu.state.depth_test_set("NONE" if xray else "LESS_EQUAL")',
-        'gpu.state.depth_test_set("LESS_EQUAL")',
+        'gpu.state.depth_test_set(previous_depth)',
     ):
         assert symbol in source
 
