@@ -22,3 +22,19 @@ def test_phase1_contract_symbols() -> None:
         "matrix_parent_inverse",
     ):
         assert symbol in source
+
+
+def test_phase2_contract_symbols() -> None:
+    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    for symbol in (
+        "dan_form_vid",
+        "dan_form_eid",
+        "dan_form_proxy_vid",
+        "dan_form_proxy_eid",
+        "DANFORM_OT_create_control",
+        "DANFORM_OT_hide_selected",
+        "DANFORM_OT_reveal",
+        "_depsgraph_update_post",
+        "STALE_MAPPING",
+    ):
+        assert symbol in source
