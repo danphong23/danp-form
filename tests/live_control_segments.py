@@ -49,7 +49,13 @@ def run():
         check(tuple(map(len, a._effective_proxy_elements(model))) == (13,12), 'overlapping groups deduplicate graph')
         check(not bpy.ops.dan_form.select_segment.poll() and not bpy.ops.dan_form.reveal_controller.poll(), 'controller shortcuts do not intercept Source')
         bpy.ops.dan_form.focus_controller()
-        check(len(a._CONTROL_KEYMAPS) == 4, 'four scoped selection/visibility shortcuts')
+        check(len(a._CONTROL_KEYMAPS) == 5, 'five scoped selection/visibility shortcuts')
+        whole_control = controls[-1]
+        check(bpy.ops.dan_form.select_control_at_cursor(edge_id=eids[0]) == {'FINISHED'}, 'canonical edge selects whole control')
+        check(a._proxy_selection(controller)[1] == set(whole_control['edge_ids']), 'whole-control shortcut selects every mapped edge')
+        ctx.scene.dan_form_selected_control = ''
+        check(bpy.ops.dan_form.select_control_at_cursor(edge_id=eids[0]) == {'CANCELLED'}, 'shared edge never guesses a control')
+        ctx.scene.dan_form_selected_control = whole_control['control_uuid']
         check(a._proxy_segment(controller,eids[0]) == ({vids[0],vids[1],vids[2]},set(eids[:2])), 'span stops at shared junction')
         check(a._proxy_segment(controller,eids[2])[1] == set(eids[2:4]), 'seed chooses one branch at junction')
         check(a._proxy_segment(controller,eids[8])[1] == set(eids[8:]), 'uncut closed loop selects fully')
@@ -62,6 +68,10 @@ def run():
             midpoint = controller.matrix_world @ ((mesh.vertices[9].co + mesh.vertices[10].co) * 0.5)
             screen = location_3d_to_region_2d(region,ctx.region_data,midpoint)
             event = SimpleNamespace(type='LEFTMOUSE',mouse_region_x=screen.x,mouse_region_y=screen.y)
+            whole_pick = SimpleNamespace(edge_id=0,report=lambda *_: None)
+            whole_pick.execute = lambda context: a.DANFORM_OT_select_control_at_cursor.execute(whole_pick,context)
+            check(a.DANFORM_OT_select_control_at_cursor.invoke(whole_pick,ctx,event) == {'FINISHED'}, 'viewport projection picks whole control')
+            check(a._proxy_selection(controller)[1] == set(whole_control['edge_ids']), 'projected whole-control pick selects all mapped edges')
             check(a.DANFORM_OT_select_segment.invoke(fake,ctx,event) == {'FINISHED'}, 'viewport projection pick executes span')
             check(fake.edge_id == eids[8], 'projected midpoint resolves canonical edge ID')
             check(a._proxy_selection(controller)[1] == set(eids[8:]), 'projected loop pick selects complete loop')

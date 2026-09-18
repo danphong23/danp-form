@@ -52,6 +52,8 @@ Không tạo thêm object/geometry hay đổi theme Blender để làm nổi con
 - [x] Computer Use: vào Edit, bỏ selection vẫn thấy control cyan; chọn một
       điểm/đoạn/loop thấy selection rõ; kiểm tra Ctrl+Alt+Click và Shift cộng đoạn
       nếu công cụ hỗ trợ chord chuột; báo NOT RUN nếu chưa thực hiện được.
+- [x] Controller Edit có Ctrl+Shift+Click để chọn toàn bộ control dưới con trỏ;
+      cạnh dùng chung ưu tiên control đang active, nếu không thì từ chối đoán.
 - [ ] Computer Use: G/R/S preview và cancel trên fixture thuộc test; không dùng
       biến dạng Source làm tiêu chí, vì writeback/deformation thuộc phase 4.
 - [x] Test H/Alt-H, mắt Partial/Hidden/On, Hide/Show All, Back to Model. Chụp

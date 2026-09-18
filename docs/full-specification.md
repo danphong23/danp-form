@@ -1021,6 +1021,10 @@ or endpoints (degree other than two); Shift adds the span. A closed uninterrupte
 loop selects fully. Names/overlapping groups do not split the graph. The list menu
 or F3 uses a single selected/active edge; agents can pass `edge_id` to
 `dan_form.select_segment`. Overlapping projected edges require visual review.
+Ctrl+Shift+Click the edge selects the whole logical control containing it. If the
+edge belongs to several controls, the currently active list control wins; without
+an active matching row the command refuses to guess and asks the user to choose
+from the list. Agents can pass the canonical Source edge ID to the same operator.
 H hides selected edges in edge mode, preserving other lines at shared endpoints;
 H in vertex mode hides nodes and all incident edges. Alt-H reveals all from current
 Source positions. Partial masks produce Partial eye state for every affected group.
@@ -2851,7 +2855,7 @@ checks, including native topology edits/recovery and full removal. The existing
 [sidebar regression](../../tests/live_sidebar_regression.py) checks, with Source
 definitions/masks/coordinates and controller pose/selection restored. Another 34
 [segment/visibility checks](../../tests/live_control_segments.py) passed on removable
-crossing-lines and closed-loop fixtures. Final total: 143 checks, covering span stops,
+crossing-lines and closed-loop fixtures. Final total: 145 checks, covering span stops,
 additive selection, edge/node Hide intent, partial eyes, selective reveal, live
 Controller Edit hide/reveal highlight updates, scoped keys
 and Hide/Show All even on an empty controller in Edit Mode.

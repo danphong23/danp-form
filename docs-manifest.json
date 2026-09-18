@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "0a7f1618037370b870b87a38cabb3bc1df7bf7163964ea9783c3182cb62988f9",
-    "bytes": 6059
+    "sha256": "8b47d8b0d538d0e00cb0516cb30c9ab9280c310a5a80eada23d47d75687d33a9",
+    "bytes": 6213
   },
   {
     "path": "CONTRIBUTING.md",
@@ -56,8 +56,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "e3fd2028301ed25ba30e1eb20176b0573f5e0d4ad74b0bb6b272e6b0a3a1e7bd",
-    "bytes": 8092
+    "sha256": "72825d4f78b75737bd0f336a4f9ef7fba52349a53ada3bd8aa61a340457a5150",
+    "bytes": 8418
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -171,8 +171,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "a82f0e35b6d7b0e203accaa9ceac5b7f49c3edf377a0499780ac78f32e507a28",
-    "bytes": 164991
+    "sha256": "b9fc7d6ee1e7b3c74d193090931c0cd5c2e8abe374b7ce7e20c14ea914bd9d0c",
+    "bytes": 165317
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -251,7 +251,7 @@
   },
   {
     "path": "docs/testing/phase-02-edit-performance-report.md",
-    "sha256": "4c315ad33e0bceb9938010d7aea48b5513da57407cbbddd8238acc2e55210c65",
+    "sha256": "203cf2d9b7049ecd01ad65a9ef1adfdc4f8a76419df6c6eae8d07c68bd3f0759",
     "bytes": 8249
   },
   {
@@ -306,12 +306,12 @@
   },
   {
     "path": "tasks/phase-02-edit-readability.md",
-    "sha256": "8adb7e5b808547fc43565f6868a2b83199eac3957b9402dcd3b6142f6ce785ae",
-    "bytes": 5253
+    "sha256": "450cdb5d7cdaa9ca69a1089f8a8e42df74cec664846c0870943e44bc06a19c20",
+    "bytes": 5442
   },
   {
     "path": "tasks/phase-02-native-list-ux.md",
-    "sha256": "fa404640f126799d6f55e2c6bb81983b402d589079dba23bba2b19883df7aa01",
+    "sha256": "b4a911bc0689a5b67f4863e81d957376135bfa7720a8605e5a4f49668a90ee36",
     "bytes": 7068
   },
   {

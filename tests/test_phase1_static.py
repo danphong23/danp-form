@@ -39,6 +39,8 @@ def test_phase2_contract_symbols() -> None:
         "_context_source",
         "DANFORM_OT_rename_control",
         "DANFORM_OT_select_control",
+        "DANFORM_OT_select_control_at_cursor",
+        "_pick_controller_edge_id",
         "DANFORM_OT_delete_control",
         "_draw_control_overlay",
         "controller_edit",

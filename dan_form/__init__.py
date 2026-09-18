@@ -1312,6 +1312,7 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
         layout.separator()
         layout.operator("dan_form.reveal", text="Reveal All", icon="HIDE_OFF")
         layout.operator("dan_form.hide_selected", text="Hide Selected", icon="HIDE_ON")
+        layout.operator("dan_form.select_control_at_cursor", text="Select Whole Control Under Cursor", icon="OUTLINER_OB_MESH")
         layout.operator("dan_form.select_segment", text="Select Segment Between Junctions", icon="EDGESEL")
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
@@ -1722,6 +1723,96 @@ def _proxy_segment(controller, seed_id):
     return ({int(v[vl]) for e in edges for v in e.verts}, {int(e[el]) for e in edges})
 
 
+def _pick_controller_edge_id(context, event) -> int:
+    """Resolve the nearest mapped proxy edge under a View3D mouse position."""
+    from bpy_extras.view3d_utils import location_3d_to_region_2d
+    from mathutils import Vector
+
+    _, controller = _context_source(context)
+    bm = bmesh.from_edit_mesh(controller.data)
+    layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+    if layer is None:
+        raise ValueError("PROXY_MAPPING_MISSING")
+    mouse = Vector((event.mouse_region_x, event.mouse_region_y))
+    candidates = []
+    for edge in bm.edges:
+        world = [controller.matrix_world @ vertex.co for vertex in edge.verts]
+        screen = [location_3d_to_region_2d(context.region, context.region_data, point) for point in world]
+        if any(point is None for point in screen):
+            continue
+        a, b = screen
+        delta = b - a
+        factor = max(0.0, min(1.0, (mouse - a).dot(delta) / delta.length_squared)) if delta.length_squared else 0.0
+        distance = (mouse - (a + factor * delta)).length
+        if distance <= 12.0:
+            midpoint = world[0].lerp(world[1], factor)
+            depth = -(context.region_data.view_matrix @ midpoint).z
+            candidates.append((distance, depth, int(edge[layer])))
+    if not candidates:
+        raise ValueError("CONTROL_EDGE_NOT_FOUND")
+    return min(candidates)[2]
+
+
+class DANFORM_OT_select_control_at_cursor(bpy.types.Operator):
+    bl_idname = "dan_form.select_control_at_cursor"
+    bl_label = "Select Control Under Cursor"
+    bl_description = "Ctrl+Shift+Click a control edge to select the whole mapped control"
+    bl_options = {"REGISTER", "UNDO"}
+    edge_id: IntProperty(name="Source Edge ID", default=0, min=0)
+
+    @classmethod
+    def poll(cls, context):
+        return DANFORM_OT_topology_locked.poll(context)
+
+    def invoke(self, context, event):
+        if event.type != "LEFTMOUSE":
+            return self.execute(context)
+        if context.region is None or context.region.type != "WINDOW" or context.region_data is None:
+            return {"CANCELLED"}
+        try:
+            self.edge_id = _pick_controller_edge_id(context, event)
+            return self.execute(context)
+        except ValueError as exc:
+            self.report({"INFO"}, str(exc))
+            return {"CANCELLED"}
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if source is None or controller is None:
+            return {"CANCELLED"}
+        edge_id = self.edge_id
+        if not edge_id:
+            bm = bmesh.from_edit_mesh(controller.data)
+            layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+            active = bm.select_history.active
+            if isinstance(active, bmesh.types.BMEdge) and layer is not None:
+                edge_id = int(active[layer])
+            else:
+                selected = [edge for edge in bm.edges if edge.select]
+                if len(selected) == 1 and layer is not None:
+                    edge_id = int(selected[0][layer])
+        candidates = [control for control in _controls(source) if edge_id in {int(value) for value in control.get("edge_ids", [])}]
+        active_uuid = context.scene.dan_form_selected_control
+        selected = next((control for control in candidates if control.get("control_uuid") == active_uuid), None)
+        if selected is None and len(candidates) == 1:
+            selected = candidates[0]
+        if selected is None:
+            if not candidates:
+                self.report({"INFO"}, "CONTROL_EDGE_NOT_IN_DEFINITION")
+            else:
+                self.report({"WARNING"}, "CONTROL_EDGE_SHARED_SELECT_FROM_LIST")
+            return {"CANCELLED"}
+        effective_vertices, effective_edges = _control_effective(source, selected)
+        if not effective_vertices and not effective_edges:
+            self.report({"INFO"}, "CONTROL_HIDDEN")
+            return {"CANCELLED"}
+        _select_proxy_ids(controller, effective_vertices, effective_edges)
+        context.scene.dan_form_selected_control = selected.get("control_uuid", "")
+        context.scene.dan_form_status = f"Selected {selected.get('name', 'Control')}"
+        _sync_context_ui_list(context)
+        return {"FINISHED"}
+
+
 class DANFORM_OT_select_segment(bpy.types.Operator):
     bl_idname = "dan_form.select_segment"
     bl_label = "Select Segment Between Junctions"
@@ -1739,32 +1830,11 @@ class DANFORM_OT_select_segment(bpy.types.Operator):
             return self.execute(context)
         if context.region is None or context.region.type != "WINDOW" or context.region_data is None:
             return {"CANCELLED"}
-        from bpy_extras.view3d_utils import location_3d_to_region_2d
-        from mathutils import Vector
-        _, controller = _context_source(context)
-        bm = bmesh.from_edit_mesh(controller.data)
-        layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
-        if layer is None:
+        try:
+            self.edge_id = _pick_controller_edge_id(context, event)
+        except ValueError as exc:
+            self.report({"INFO"}, str(exc))
             return {"CANCELLED"}
-        mouse = Vector((event.mouse_region_x, event.mouse_region_y))
-        candidates = []
-        for edge in bm.edges:
-            world = [controller.matrix_world @ v.co for v in edge.verts]
-            screen = [location_3d_to_region_2d(context.region, context.region_data, p) for p in world]
-            if any(p is None for p in screen):
-                continue
-            a, b = screen
-            delta = b - a
-            factor = max(0.0, min(1.0, (mouse - a).dot(delta) / delta.length_squared)) if delta.length_squared else 0.0
-            distance = (mouse - (a + factor * delta)).length
-            if distance <= 12.0:
-                midpoint = world[0].lerp(world[1], factor)
-                depth = -(context.region_data.view_matrix @ midpoint).z
-                candidates.append((distance, depth, int(edge[layer])))
-        if not candidates:
-            self.report({"INFO"}, "Click closer to a control edge")
-            return {"CANCELLED"}
-        self.edge_id = min(candidates)[2]
         context.tool_settings.mesh_select_mode = (False, True, False)
         return self.execute(context)
 
@@ -1813,6 +1883,7 @@ def _register_control_keymaps():
     for operator, key, modifiers in (
         ("dan_form.hide_selected", "H", {}),
         ("dan_form.reveal_controller", "H", {"alt": True}),
+        ("dan_form.select_control_at_cursor", "LEFTMOUSE", {"ctrl": True, "shift": True}),
         ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True}),
         ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True, "shift": True}),
     ):
@@ -2021,6 +2092,7 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
     DANFORM_OT_topology_locked,
+    DANFORM_OT_select_control_at_cursor,
     DANFORM_OT_select_segment,
     DANFORM_OT_reveal_controller,
     DANFORM_OT_toggle_viewport_controls,
