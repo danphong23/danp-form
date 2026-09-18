@@ -45,6 +45,11 @@ rare display/maintenance actions belong in the list menu.
 With X-Ray off, the overlay uses the normal depth test and is occluded by the opaque
 mesh. X-Ray explicitly disables that test when the user needs to inspect controls
 through the model.
+Controller Edit also exposes a compact Setup block. Pick Segment and Pick Control
+start a hover preview in the viewport; the preview commits on click and Esc cancels
+it. Add to Selection or Shift-click accumulates multiple spans/controls, while Clear
+and All Controls provide explicit reset and bulk selection. The same tools are
+available from Ctrl+Alt+S and Ctrl+Alt+C.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
 events, context, masks, selected row and object transforms invalidate the relevant
 display; idle redraw only draws existing buffers. Topology/ID caches contain no

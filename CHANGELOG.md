@@ -1,5 +1,12 @@
 # Design Changelog
 
+## 2026-09-18 — DANP Form 0.2.4 selection setup and X-Ray
+
+- Added a compact Setup block in the sidebar with Hover Pick Segment, Hover Pick Control, Add to Selection, Clear, Select All Controls and visible Overlay/X-Ray/Show Hidden switches.
+- Hover tools preview the resolved segment/control under the pointer, commit on click, cancel with Esc, and accept Shift or Add to Selection for multi-selection.
+- Added Ctrl+Alt+S and Ctrl+Alt+C modal shortcuts for segment/control hover picking.
+- X-Ray now also enables the controller's in-front wire display, so hidden control edges are visible through the model; turning it off restores normal depth behavior.
+
 ## 2026-09-18 — DANP Form 0.2.3 performance and control selection
 
 - Replaced repeated per-vertex ID/coordinate reads with bulk BMesh/Mesh access and cached Source edge connectivity.

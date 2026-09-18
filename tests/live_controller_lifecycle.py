@@ -15,6 +15,7 @@ class LayoutRecorder:
         return LayoutRecorder(self.records, self.alert)
 
     column = row
+    box = row
 
     def operator(self, identifier, **kwargs):
         self.records.append((identifier, kwargs.get('text'), self.alert))

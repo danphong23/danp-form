@@ -25,7 +25,7 @@ lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao n
 theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
 hay deactivate riêng.
 
-Bộ này gồm specification và addon prototype Phase 1/2. Bản 0.2.3 dùng tên DANP
+Bộ này gồm specification và addon prototype Phase 1/2. Bản 0.2.4 dùng tên DANP
 Form; model có Init/Remove, controller chỉ sửa vị trí các điểm đã có. Biến dạng
 Source từ controller thuộc Phase 4, chưa triển khai. Lộ trình đã chốt:
 

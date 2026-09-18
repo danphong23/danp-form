@@ -28,7 +28,7 @@ controls/sync; patch visualization; Edit Mode deformation/proportional; human an
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).
 
-Version 0.2.3 displays DANP Form, offers model Init/Remove and keeps controller
+Version 0.2.4 displays DANP Form, offers model Init/Remove and keeps controller
 topology fixed. Controller-to-Source deformation is still a Phase 4 task.
 Existing `dan_form` extension/operator/data IDs remain compatible.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the

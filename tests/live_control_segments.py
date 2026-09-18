@@ -49,8 +49,14 @@ def run():
         check(tuple(map(len, a._effective_proxy_elements(model))) == (13,12), 'overlapping groups deduplicate graph')
         check(not bpy.ops.dan_form.select_segment.poll() and not bpy.ops.dan_form.reveal_controller.poll(), 'controller shortcuts do not intercept Source')
         bpy.ops.dan_form.focus_controller()
-        check(len(a._CONTROL_KEYMAPS) == 5, 'five scoped selection/visibility shortcuts')
+        check(len(a._CONTROL_KEYMAPS) == 7, 'seven scoped selection/visibility shortcuts')
         whole_control = controls[-1]
+        check(bpy.ops.dan_form.clear_selection() == {'FINISHED'}, 'setup Clear selection')
+        check(a._proxy_selection_snapshot(controller) == (set(), set()), 'setup Clear empties proxy selection')
+        check(bpy.ops.dan_form.select_all_controls() == {'FINISHED'}, 'setup Select All Controls')
+        all_vertices, all_edges = a._effective_proxy_elements(model)
+        selected_vertices, selected_edges = a._proxy_selection_snapshot(controller)
+        check(selected_vertices == set(all_vertices) and selected_edges == set(all_edges), 'setup Select All covers enabled graph')
         check(bpy.ops.dan_form.select_control_at_cursor(edge_id=eids[0]) == {'FINISHED'}, 'canonical edge selects whole control')
         check(a._proxy_selection(controller)[1] == set(whole_control['edge_ids']), 'whole-control shortcut selects every mapped edge')
         ctx.scene.dan_form_selected_control = ''

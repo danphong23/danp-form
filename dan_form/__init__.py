@@ -9,7 +9,7 @@ import uuid
 import bmesh
 import bpy
 from bpy.app.handlers import persistent
-from bpy.props import BoolProperty, CollectionProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
+from bpy.props import BoolProperty, CollectionProperty, EnumProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
 from mathutils import Matrix
 
 
@@ -43,12 +43,13 @@ _TOPOLOGY_KEYMAPS = []
 _CONTROL_KEYMAPS = []
 _NETWORK_CACHE = {}
 _OVERLAY_CACHE = {}
+_XRAY_SHOW_IN_FRONT = {}
 VIEWPORT_HIDDEN_KEY = "dan_form_controls_viewport_hidden"
 
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 2, 3),
+    "version": (0, 2, 4),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -1013,6 +1014,24 @@ def _overlay_batches(context, overlay_mode, source, controller):
     return _OVERLAY_CACHE["shader"], _OVERLAY_CACHE["batches"]
 
 
+def _update_overlay_display(scene: bpy.types.Scene, _context: bpy.types.Context | None = None) -> None:
+    """Apply the user-facing X-Ray switch to both overlay depth and proxy wire display."""
+    controller = getattr(scene, "dan_form_controller", None)
+    if controller is not None:
+        key = controller.as_pointer()
+        if scene.dan_form_overlay_xray:
+            if key not in _XRAY_SHOW_IN_FRONT:
+                _XRAY_SHOW_IN_FRONT[key] = bool(controller.show_in_front)
+            controller.show_in_front = True
+        elif key in _XRAY_SHOW_IN_FRONT:
+            controller.show_in_front = _XRAY_SHOW_IN_FRONT.pop(key)
+        else:
+            controller.show_in_front = False
+    for area in getattr(bpy.context.screen, "areas", ()):
+        if area.type == "VIEW_3D":
+            area.tag_redraw()
+
+
 def _draw_control_overlay() -> None:
     """Draw cached Source/Object or live Controller Edit control buffers."""
     try:
@@ -1317,8 +1336,11 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
         layout.operator("dan_form.hide_selected", text="Hide Selected", icon="HIDE_ON")
         layout.operator("dan_form.select_control_at_cursor", text="Select Whole Control Under Cursor", icon="OUTLINER_OB_MESH")
         layout.operator("dan_form.select_segment", text="Select Segment Between Junctions", icon="EDGESEL")
+        layout.operator("dan_form.pick_selection_tool", text="Hover Pick Segment", icon="EYEDROPPER")
+        layout.operator("dan_form.pick_selection_tool", text="Hover Pick Control", icon="EYEDROPPER").tool = "CONTROL"
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
+        layout.prop(context.scene, "dan_form_overlay_xray", text="X-Ray")
         layout.prop(context.scene, "dan_form_overlay_hidden", text="Show Hidden Controls")
 
 
@@ -1756,12 +1778,156 @@ def _pick_controller_edge_id(context, event) -> int:
     return min(candidates)[2]
 
 
+def _proxy_selection_snapshot(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
+    """Capture exact proxy selection flags without applying edge-mode filtering."""
+    bm = bmesh.from_edit_mesh(controller.data)
+    vid_layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
+    eid_layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+    if vid_layer is None or eid_layer is None:
+        raise ValueError("PROXY_MAPPING_MISSING")
+    return (
+        {int(vertex[vid_layer]) for vertex in bm.verts if vertex.select},
+        {int(edge[eid_layer]) for edge in bm.edges if edge.select},
+    )
+
+
+def _control_for_edge(source: bpy.types.Object, edge_id: int, scene: bpy.types.Scene | None = None) -> dict:
+    candidates = [
+        control for control in _controls(source)
+        if edge_id in {int(value) for value in control.get("edge_ids", [])}
+    ]
+    active_uuid = getattr(scene or bpy.context.scene, "dan_form_selected_control", "")
+    selected = next((control for control in candidates if control.get("control_uuid") == active_uuid), None)
+    if selected is None and len(candidates) == 1:
+        selected = candidates[0]
+    if selected is None:
+        if not candidates:
+            raise ValueError("CONTROL_EDGE_NOT_IN_DEFINITION")
+        raise ValueError("CONTROL_EDGE_SHARED_SELECT_FROM_LIST")
+    return selected
+
+
+def _selection_target_for_edge(source: bpy.types.Object, controller: bpy.types.Object, edge_id: int, tool: str, scene: bpy.types.Scene | None = None) -> tuple[set[int], set[int], str]:
+    """Resolve a hover-picked edge into a segment or whole-control selection."""
+    if tool == "SEGMENT":
+        vertices, edges = _proxy_segment(controller, edge_id)
+        return vertices, edges, ""
+    control = _control_for_edge(source, edge_id, scene)
+    vertices, edges = _control_effective(source, control)
+    if not vertices and not edges:
+        raise ValueError("CONTROL_HIDDEN")
+    return vertices, edges, control.get("control_uuid", "")
+
+
+def _view3d_pick_edge(context: bpy.types.Context, event) -> int:
+    """Pick in the View3D window even when the modal tool starts from the sidebar."""
+    area = context.area if context.area and context.area.type == "VIEW_3D" else None
+    if area is None and context.screen is not None:
+        area = next((item for item in context.screen.areas if item.type == "VIEW_3D"), None)
+    if area is None:
+        raise ValueError("VIEW_3D_REQUIRED")
+    region = next((item for item in area.regions if item.type == "WINDOW"), None)
+    if region is None or area.spaces.active.region_3d is None:
+        raise ValueError("VIEW_3D_REQUIRED")
+    with context.temp_override(area=area, region=region, region_data=area.spaces.active.region_3d):
+        return _pick_controller_edge_id(context, event)
+
+
+class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
+    bl_idname = "dan_form.pick_selection_tool"
+    bl_label = "Pick DANP Selection"
+    bl_description = "Hover a control edge to preview a segment or whole-control selection; click to confirm"
+    bl_options = {"REGISTER", "UNDO", "BLOCKING"}
+    tool: EnumProperty(
+        name="Tool",
+        items=(
+            ("SEGMENT", "Segment", "Select the visible span between junctions"),
+            ("CONTROL", "Control", "Select the whole logical control"),
+        ),
+        default="SEGMENT",
+        options={"HIDDEN"},
+    )
+    add_to_selection: BoolProperty(name="Add to Selection", default=False, options={"HIDDEN"})
+
+    def _restore(self, context) -> None:
+        _, controller = _context_source(context)
+        if controller is not None and controller.mode == "EDIT":
+            _select_proxy_ids(controller, *self._initial_selection)
+        context.scene.dan_form_selected_control = self._initial_control_uuid
+        context.scene.dan_form_status = "Selection preview cancelled"
+
+    def _preview(self, context, event) -> None:
+        source, controller = _context_source(context)
+        if source is None or controller is None:
+            return
+        try:
+            edge_id = _view3d_pick_edge(context, event)
+            target = _selection_target_for_edge(source, controller, edge_id, self.tool, context.scene)
+        except ValueError:
+            if self._last_target is not None:
+                self._restore(context)
+                self._last_target = None
+                self._last_edge_id = None
+            return
+        if edge_id == self._last_edge_id and target[:2] == self._last_target[:2]:
+            return
+        self._restore(context)
+        _select_proxy_ids(controller, target[0], target[1], add=self.add_to_selection)
+        if target[2]:
+            context.scene.dan_form_selected_control = target[2]
+        context.scene.dan_form_status = (
+            f"Preview {'segment' if self.tool == 'SEGMENT' else 'control'}: {len(target[1])} edges; click to confirm"
+        )
+        self._last_edge_id = edge_id
+        self._last_target = target
+        for area in context.screen.areas if context.screen else ():
+            if area.type == "VIEW_3D":
+                area.tag_redraw()
+
+    @classmethod
+    def poll(cls, context):
+        return DANFORM_OT_topology_locked.poll(context)
+
+    def invoke(self, context, event):
+        source, controller = _context_source(context)
+        if source is None or controller is None:
+            return {"CANCELLED"}
+        self.add_to_selection = bool(getattr(event, "shift", False) or context.scene.dan_form_add_to_selection)
+        self._initial_selection = _proxy_selection_snapshot(controller)
+        self._initial_control_uuid = context.scene.dan_form_selected_control
+        self._last_edge_id = None
+        self._last_target = None
+        context.scene.dan_form_status = (
+            f"Hover để xem trước {'đoạn' if self.tool == 'SEGMENT' else 'control'}, click để chọn; Esc để hủy"
+        )
+        context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        if event.type in {"ESC", "RIGHTMOUSE"}:
+            self._restore(context)
+            return {"CANCELLED"}
+        if event.type == "MOUSEMOVE":
+            self._preview(context, event)
+            return {"RUNNING_MODAL"}
+        if event.type == "LEFTMOUSE" and event.value == "PRESS":
+            if self._last_target is None:
+                context.scene.dan_form_status = "Di chuột lên cạnh control trước khi click"
+                return {"RUNNING_MODAL"}
+            context.scene.dan_form_status = (
+                f"Selected {'segment' if self.tool == 'SEGMENT' else 'control'}"
+            )
+            return {"FINISHED"}
+        return {"RUNNING_MODAL"}
+
+
 class DANFORM_OT_select_control_at_cursor(bpy.types.Operator):
     bl_idname = "dan_form.select_control_at_cursor"
     bl_label = "Select Control Under Cursor"
     bl_description = "Ctrl+Shift+Click a control edge to select the whole mapped control"
     bl_options = {"REGISTER", "UNDO"}
     edge_id: IntProperty(name="Source Edge ID", default=0, min=0)
+    extend: BoolProperty(name="Add to Selection", default=False)
 
     @classmethod
     def poll(cls, context):
@@ -1773,6 +1939,7 @@ class DANFORM_OT_select_control_at_cursor(bpy.types.Operator):
         if context.region is None or context.region.type != "WINDOW" or context.region_data is None:
             return {"CANCELLED"}
         try:
+            self.extend = bool(getattr(event, "shift", False) or context.scene.dan_form_add_to_selection)
             self.edge_id = _pick_controller_edge_id(context, event)
             return self.execute(context)
         except ValueError as exc:
@@ -1794,22 +1961,19 @@ class DANFORM_OT_select_control_at_cursor(bpy.types.Operator):
                 selected = [edge for edge in bm.edges if edge.select]
                 if len(selected) == 1 and layer is not None:
                     edge_id = int(selected[0][layer])
-        candidates = [control for control in _controls(source) if edge_id in {int(value) for value in control.get("edge_ids", [])}]
-        active_uuid = context.scene.dan_form_selected_control
-        selected = next((control for control in candidates if control.get("control_uuid") == active_uuid), None)
-        if selected is None and len(candidates) == 1:
-            selected = candidates[0]
-        if selected is None:
-            if not candidates:
-                self.report({"INFO"}, "CONTROL_EDGE_NOT_IN_DEFINITION")
+        try:
+            selected = _control_for_edge(source, edge_id, context.scene)
+        except ValueError as exc:
+            if str(exc) == "CONTROL_EDGE_SHARED_SELECT_FROM_LIST":
+                self.report({"WARNING"}, str(exc))
             else:
-                self.report({"WARNING"}, "CONTROL_EDGE_SHARED_SELECT_FROM_LIST")
+                self.report({"INFO"}, str(exc))
             return {"CANCELLED"}
         effective_vertices, effective_edges = _control_effective(source, selected)
         if not effective_vertices and not effective_edges:
             self.report({"INFO"}, "CONTROL_HIDDEN")
             return {"CANCELLED"}
-        _select_proxy_ids(controller, effective_vertices, effective_edges)
+        _select_proxy_ids(controller, effective_vertices, effective_edges, add=self.extend)
         context.scene.dan_form_selected_control = selected.get("control_uuid", "")
         context.scene.dan_form_status = f"Selected {selected.get('name', 'Control')}"
         _sync_context_ui_list(context)
@@ -1864,6 +2028,41 @@ class DANFORM_OT_select_segment(bpy.types.Operator):
             return {"CANCELLED"}
 
 
+class DANFORM_OT_clear_selection(bpy.types.Operator):
+    bl_idname = "dan_form.clear_selection"
+    bl_label = "Clear Selection"
+    bl_description = "Clear the current controller selection without changing control definitions"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return DANFORM_OT_topology_locked.poll(context)
+
+    def execute(self, context):
+        _, controller = _context_source(context)
+        _select_proxy_ids(controller, set(), set())
+        context.scene.dan_form_status = "Controller selection cleared"
+        return {"FINISHED"}
+
+
+class DANFORM_OT_select_all_controls(bpy.types.Operator):
+    bl_idname = "dan_form.select_all_controls"
+    bl_label = "Select All Controls"
+    bl_description = "Select every currently enabled control element"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return DANFORM_OT_topology_locked.poll(context)
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        vertices, edges = _effective_proxy_elements(source)
+        _select_proxy_ids(controller, vertices, edges)
+        context.scene.dan_form_status = f"Selected all controls: {len(edges)} edges"
+        return {"FINISHED"}
+
+
 class DANFORM_OT_reveal_controller(bpy.types.Operator):
     bl_idname = "dan_form.reveal_controller"
     bl_label = "Reveal Hidden Controls"
@@ -1886,11 +2085,15 @@ def _register_control_keymaps():
     for operator, key, modifiers in (
         ("dan_form.hide_selected", "H", {}),
         ("dan_form.reveal_controller", "H", {"alt": True}),
+        ("dan_form.pick_selection_tool", "S", {"ctrl": True, "alt": True}),
+        ("dan_form.pick_selection_tool", "C", {"ctrl": True, "alt": True}),
         ("dan_form.select_control_at_cursor", "LEFTMOUSE", {"ctrl": True, "shift": True}),
         ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True}),
         ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True, "shift": True}),
     ):
         item = km.keymap_items.new(operator, key, "PRESS", head=True, **modifiers)
+        if operator == "dan_form.pick_selection_tool":
+            item.properties.tool = "SEGMENT" if key == "S" else "CONTROL"
         if operator == "dan_form.select_segment":
             item.properties.extend = modifiers.get("shift", False)
         _CONTROL_KEYMAPS.append((km, item))
@@ -2047,6 +2250,23 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
         hidden = not bool(_effective_proxy_elements(source)[0])
         navigation.operator(DANFORM_OT_toggle_viewport_controls.bl_idname, text="Show Controls" if hidden else "Hide Controls", icon="HIDE_ON" if hidden else "HIDE_OFF")
+        setup = layout.box()
+        setup.label(text="Setup", icon="TOOL_SETTINGS")
+        display = setup.row(align=True)
+        display.prop(scene, "dan_form_overlay_enabled", text="Overlay")
+        display.prop(scene, "dan_form_overlay_xray", text="X-Ray")
+        display.prop(scene, "dan_form_overlay_hidden", text="Show Hidden")
+        if active == controller and controller.mode == "EDIT":
+            pick_row = setup.row(align=True)
+            segment = pick_row.operator(DANFORM_OT_pick_selection_tool.bl_idname, text="Pick Segment", icon="EDGESEL")
+            segment.tool = "SEGMENT"
+            control = pick_row.operator(DANFORM_OT_pick_selection_tool.bl_idname, text="Pick Control", icon="OUTLINER_OB_MESH")
+            control.tool = "CONTROL"
+            setup.prop(scene, "dan_form_add_to_selection", text="Add to Selection")
+            selection_row = setup.row(align=True)
+            selection_row.operator(DANFORM_OT_clear_selection.bl_idname, text="Clear", icon="X")
+            selection_row.operator(DANFORM_OT_select_all_controls.bl_idname, text="All Controls", icon="SELECT_EXTEND")
+            setup.label(text="Hover để xem trước, click để xác nhận; Shift để cộng thêm", icon="INFO")
         list_row = layout.row(align=True)
         list_row.enabled = active.mode in {"OBJECT", "EDIT"}
         list_row.template_list(
@@ -2095,8 +2315,11 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
     DANFORM_OT_topology_locked,
+    DANFORM_OT_pick_selection_tool,
     DANFORM_OT_select_control_at_cursor,
     DANFORM_OT_select_segment,
+    DANFORM_OT_clear_selection,
+    DANFORM_OT_select_all_controls,
     DANFORM_OT_reveal_controller,
     DANFORM_OT_toggle_viewport_controls,
     DANFORM_OT_focus_source,
@@ -2122,14 +2345,16 @@ def register() -> None:
     bpy.types.Scene.dan_form_ui_source_uuid = StringProperty(name="UI Source UUID", default="")
     bpy.types.Scene.dan_form_overlay_enabled = BoolProperty(name="Control Overlay", default=True)
     bpy.types.Scene.dan_form_overlay_hidden = BoolProperty(name="Show Hidden Controls", default=False)
-    bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False)
+    bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False, update=_update_overlay_display)
     bpy.types.Scene.dan_form_overlay_width = FloatProperty(name="Line Width", default=3.0, min=1.0, max=8.0)
+    bpy.types.Scene.dan_form_add_to_selection = BoolProperty(name="Add to Selection", default=False)
     if _depsgraph_update_post not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(_depsgraph_update_post)
     for handlers in (bpy.app.handlers.undo_post, bpy.app.handlers.redo_post, bpy.app.handlers.load_post):
         if _refresh_runtime not in handlers:
             handlers.append(_refresh_runtime)
     _refresh_runtime()
+    _update_overlay_display(bpy.context.scene)
     _register_overlay()
     _register_topology_keymaps()
     _register_control_keymaps()
@@ -2139,6 +2364,12 @@ def unregister() -> None:
     _unregister_control_keymaps()
     _unregister_topology_keymaps()
     _unregister_overlay()
+    for scene in bpy.data.scenes:
+        controller = getattr(scene, "dan_form_controller", None)
+        if controller is not None:
+            previous = _XRAY_SHOW_IN_FRONT.pop(controller.as_pointer(), None)
+            if previous is not None:
+                controller.show_in_front = previous
     if _depsgraph_update_post in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_depsgraph_update_post)
     for handlers in (bpy.app.handlers.undo_post, bpy.app.handlers.redo_post, bpy.app.handlers.load_post):
@@ -2156,6 +2387,7 @@ def unregister() -> None:
         "dan_form_overlay_xray",
         "dan_form_overlay_hidden",
         "dan_form_overlay_enabled",
+        "dan_form_add_to_selection",
         "dan_form_selected_control",
         "dan_form_ui_source_uuid",
         "dan_form_control_index",
