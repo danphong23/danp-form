@@ -80,8 +80,10 @@ def begin(source, controller, deps, operation: str, controller_rest=None) -> dic
     return session
 
 
-def update(source, controller, deps, session, profile="LINEAR", radius=0.0) -> dict | None:
-    targets = _controller_targets(controller)
+def update(source, controller, deps, session, profile="LINEAR", radius=0.0,
+           targets=None) -> dict | None:
+    if targets is None:
+        targets = _controller_targets(controller)
     if not targets:
         return None
     # Controller and Source share local coordinates by construction
@@ -137,7 +139,11 @@ def finalize_active(source, controller, deps) -> bool:
         return False
     try:
         if session.get("had_delta"):
-            update(source, controller, deps)
+            # Selection may already have moved to the next control.  The
+            # previous session must be committed from its own last sample,
+            # never from the new selection.
+            update(source, controller, deps,
+                   targets=session.get("last_targets", {}))
             commit(source, deps)
         else:
             cancel(source, controller, deps)
