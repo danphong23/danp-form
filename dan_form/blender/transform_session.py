@@ -122,6 +122,33 @@ def cancel(source, controller, deps) -> None:
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
 
 
+def finalize_active(source, controller, deps) -> bool:
+    """Close an active native session before another command changes context.
+
+    Blender can end a native transform implicitly when focus moves to the
+    sidebar or when another transform starts.  In that case the proxy may
+    already be back at its modal rest pose even though the Source preview is
+    still valid.  Treat a session with a real delta as committed; only an
+    untouched session is a cancellation.
+    """
+    key = source.as_pointer()
+    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
+    if session is None:
+        return False
+    try:
+        if session.get("had_delta"):
+            update(source, controller, deps)
+            commit(source, deps)
+        else:
+            cancel(source, controller, deps)
+    except (ValueError, RuntimeError, KeyError):
+        # Do not leave a half-open transaction blocking the next command.
+        runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
+        deps.transactions.pop(key, None)
+        raise
+    return True
+
+
 def native_transform_active(context: bpy.types.Context) -> bool:
     return _has_native_transform(context)
 
@@ -141,4 +168,4 @@ def bind(api) -> None:
     _source_positions = api._source_positions
 
 
-__all__ = ["bind", "begin", "update", "commit", "cancel", "native_transform_active", "controller_targets", "controller_positions"]
+__all__ = ["bind", "begin", "update", "commit", "cancel", "finalize_active", "native_transform_active", "controller_targets", "controller_positions"]

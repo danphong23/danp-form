@@ -141,6 +141,12 @@ def _ui_control_index_update(scene, context: bpy.types.Context) -> None:
     control = _control(source, items[index].control_uuid)
     if control is None:
         return
+    if controller is not None:
+        try:
+            _transform_session.finalize_active(source, controller, _workflow_dependencies())
+        except (ValueError, RuntimeError, KeyError):
+            scene.dan_form_status = "Không thể chốt thao tác điều khiển trước khi đổi control"
+            return
     scene.dan_form_selected_control = control["control_uuid"]
     _ACTIVE_CONTROL_UUIDS[items[index].source_uuid] = control["control_uuid"]
     active = context.view_layer.objects.active
@@ -406,6 +412,8 @@ class DANFORM_OT_select_control(bpy.types.Operator):
             return {"CANCELLED"}
         active = context.view_layer.objects.active
         try:
+            if controller is not None:
+                _transform_session.finalize_active(source, controller, _workflow_dependencies())
             vertex_ids = {int(value) for value in control.get("vertex_ids", [])}
             edge_ids = {int(value) for value in control.get("edge_ids", [])}
             context.scene.dan_form_selected_control = self.control_uuid
@@ -724,11 +732,13 @@ class DANFORM_OT_native_begin(bpy.types.Operator):
         # safe to discard that empty ownership on the next native command.
         existing = _NATIVE_TRANSFORM_SESSIONS.get(key)
         if existing is not None:
-            if existing.get("had_delta"):
-                context.scene.dan_form_status = "Finish or cancel the active transform first"
+            try:
+                _transform_session.finalize_active(
+                    source, controller, _workflow_dependencies()
+                )
+            except (ValueError, RuntimeError, KeyError) as exc:
+                self.report({"ERROR"}, str(exc))
                 return {"CANCELLED"}
-            _DANP_TRANSACTIONS.pop(key, None)
-            _NATIVE_TRANSFORM_SESSIONS.pop(key, None)
         try:
             session = _transform_session.begin(
                 source, controller, _workflow_dependencies(), f"MACRO_{self.operation}"
