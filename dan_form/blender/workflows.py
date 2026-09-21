@@ -147,51 +147,110 @@ def deform_cancel(source: bpy.types.Object, controller: bpy.types.Object, deps) 
 
 def mutate_masks(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[int], reveal: bool, deps) -> bool:
     deps.validate_source_topology(source)
-    hidden_vids = deps.hidden(source, HIDDEN_VIDS_KEY)
-    hidden_eids = deps.hidden(source, HIDDEN_EIDS_KEY)
-    before = (hidden_vids.copy(), hidden_eids.copy())
-    if reveal and not vertex_ids and not edge_ids:
-        hidden_vids.clear()
-        hidden_eids.clear()
-    elif reveal:
-        hidden_vids.difference_update(vertex_ids)
-        hidden_eids.difference_update(edge_ids)
-        edge_vids = deps.source_edge_vids(source)
-        for edge_id in edge_ids:
-            hidden_vids.difference_update(edge_vids.get(edge_id, ()))
-    else:
-        hidden_vids.update(vertex_ids)
-        hidden_eids.update(edge_ids)
-    changed = before != (hidden_vids, hidden_eids)
+    definitions = deps.controls(source)
+    before = repr(definitions)
+    for control in definitions:
+        members = set(int(value) for value in control.get("vertex_ids", []))
+        edges = set(int(value) for value in control.get("edge_ids", []))
+        hidden_vertices = set(int(value) for value in control.get("hidden_vertex_ids", []))
+        hidden_edges = set(int(value) for value in control.get("hidden_edge_ids", []))
+        if reveal and not vertex_ids and not edge_ids:
+            control["enabled"] = True
+            hidden_vertices.clear()
+            hidden_edges.clear()
+        elif reveal:
+            hidden_vertices.difference_update(vertex_ids.intersection(members))
+            hidden_edges.difference_update(edge_ids.intersection(edges))
+            edge_vids = deps.source_edge_vids(source)
+            for edge_id in edge_ids:
+                hidden_vertices.difference_update(edge_vids.get(edge_id, ()))
+        else:
+            hidden_vertices.update(vertex_ids.intersection(members))
+            hidden_edges.update(edge_ids.intersection(edges))
+        control["hidden_vertex_ids"] = sorted(hidden_vertices)
+        control["hidden_edge_ids"] = sorted(hidden_edges)
+    changed = before != repr(definitions)
     if changed:
-        deps.json_set(source, HIDDEN_VIDS_KEY, sorted(hidden_vids))
-        deps.json_set(source, HIDDEN_EIDS_KEY, sorted(hidden_eids))
+        deps.json_set(source, CONTROLS_KEY, definitions)
+        # Clear legacy shared masks if an old file reaches this path before its
+        # explicit initialization migration.
+        deps.json_set(source, HIDDEN_VIDS_KEY, [])
+        deps.json_set(source, HIDDEN_EIDS_KEY, [])
         update_revision(source)
     return changed
 
 
 def mutate_control_visibility(source: bpy.types.Object, control: dict, reveal: bool, deps) -> bool:
-    edge_ids, node_ids = deps.control_intent(source, control)
+    definitions = deps.controls(source)
+    target = next((item for item in definitions
+                   if item.get("control_uuid") == control.get("control_uuid")), None)
+    if target is None:
+        return False
+    before = repr(target)
+    was_enabled = bool(target.get("enabled", True))
+    target["enabled"] = bool(reveal)
+    target.setdefault("hidden_vertex_ids", [])
+    target.setdefault("hidden_edge_ids", [])
+    # An enabled definition whose every member is masked is a legacy/partial
+    # hide result.  Clicking its eye is an explicit reveal, so clear those
+    # masks.  A definition disabled by the eye retains its partial masks and
+    # restores them when enabled again.
+    if reveal and was_enabled:
+        target["hidden_vertex_ids"] = []
+        target["hidden_edge_ids"] = []
+    if repr(target) != before:
+        deps.json_set(source, CONTROLS_KEY, definitions)
+        update_revision(source)
+        return True
+    return False
+
+
+def mutate_control_masks(source: bpy.types.Object, control: dict, vertex_ids: set[int],
+                         edge_ids: set[int], reveal: bool, deps) -> bool:
+    """Hide/reveal selected membership only inside one control definition."""
+    definitions = deps.controls(source)
+    target = next((item for item in definitions
+                   if item.get("control_uuid") == control.get("control_uuid")), None)
+    if target is None:
+        return False
+    members = set(int(value) for value in target.get("vertex_ids", []))
+    edges = set(int(value) for value in target.get("edge_ids", []))
+    hidden_vertices = set(int(value) for value in target.get("hidden_vertex_ids", []))
+    hidden_edges = set(int(value) for value in target.get("hidden_edge_ids", []))
+    before = (hidden_vertices.copy(), hidden_edges.copy())
     if reveal:
-        return mutate_masks(source, node_ids, edge_ids, reveal=True, deps=deps)
-    return mutate_masks(source, node_ids, edge_ids, reveal=False, deps=deps)
+        hidden_vertices.difference_update(vertex_ids.intersection(members))
+        hidden_edges.difference_update(edge_ids.intersection(edges))
+    else:
+        hidden_vertices.update(vertex_ids.intersection(members))
+        hidden_edges.update(edge_ids.intersection(edges))
+    target["hidden_vertex_ids"] = sorted(hidden_vertices)
+    target["hidden_edge_ids"] = sorted(hidden_edges)
+    changed = before != (hidden_vertices, hidden_edges)
+    if changed:
+        deps.json_set(source, CONTROLS_KEY, definitions)
+        update_revision(source)
+    return changed
 
 
 def prune_masks_after_remove(source: bpy.types.Object, deps) -> None:
-    defined_edges: set[int] = set()
-    defined_nodes: set[int] = set()
-    for control in deps.controls(source):
-        edges, nodes = deps.control_intent(source, control)
-        defined_edges.update(edges)
-        defined_nodes.update(nodes)
+    definitions = deps.controls(source)
     edge_vids = deps.source_edge_vids(source)
-    for control in deps.controls(source):
-        for edge_id in control.get("edge_ids", []):
-            defined_nodes.update(edge_vids.get(int(edge_id), ()))
-    hidden_vids = deps.hidden(source, HIDDEN_VIDS_KEY) & defined_nodes
-    hidden_eids = deps.hidden(source, HIDDEN_EIDS_KEY) & defined_edges
-    deps.json_set(source, HIDDEN_VIDS_KEY, sorted(hidden_vids))
-    deps.json_set(source, HIDDEN_EIDS_KEY, sorted(hidden_eids))
+    for control in definitions:
+        members = set(int(value) for value in control.get("vertex_ids", []))
+        edges = set(int(value) for value in control.get("edge_ids", []))
+        endpoints = {vid for eid in edges for vid in edge_vids.get(eid, ())}
+        allowed = members | endpoints
+        control["hidden_vertex_ids"] = sorted(
+            set(int(value) for value in control.get("hidden_vertex_ids", [])) & allowed
+        )
+        control["hidden_edge_ids"] = sorted(
+            set(int(value) for value in control.get("hidden_edge_ids", [])) & edges
+        )
+        control["enabled"] = bool(control.get("enabled", True))
+    deps.json_set(source, CONTROLS_KEY, definitions)
+    deps.json_set(source, HIDDEN_VIDS_KEY, [])
+    deps.json_set(source, HIDDEN_EIDS_KEY, [])
 
 
 def sync_scene(scene: bpy.types.Scene, deps) -> None:

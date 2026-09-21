@@ -56,8 +56,8 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 raise ValueError("SOURCE_NOT_EDITABLE")
             controller = _find_controller(source)
             if controller is None:
-                _source_uuid(source)
                 _ensure_source_ids(source)
+                _source_uuid(source)
                 mesh = bpy.data.meshes.new(f"DANPFORM_CTRL_{source.name}")
                 mesh.from_pydata([], [], [])
                 mesh.update()
@@ -70,6 +70,7 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 controller.hide_render = True
                 _rebuild_proxy(source, controller)
             else:
+                _migrate_control_schema(source)
                 _validate_source_topology(source)
                 _guard_proxy_topology(source, controller)
             source["dan_form_controller_name"] = controller.name
@@ -181,7 +182,11 @@ class DANFORM_UL_controls(bpy.types.UIList):
             icon="HIDE_ON" if item.state == "Hidden" else "HIDE_OFF",
         )
         toggle.control_uuid = item.control_uuid
-        toggle.reveal = item.state in {"Hidden", "Partial"}
+        # The eye toggles the whole definition.  A Partial definition is
+        # still enabled; hiding it keeps its partial masks so a second click
+        # restores the same effective membership.  A fully masked definition
+        # is revealed explicitly by ``mutate_control_visibility``.
+        toggle.reveal = item.state == "Hidden"
         row.prop(item, "control_name", text="", emboss=False)
         if item.state == "Partial":
             row.label(text="~")
@@ -337,6 +342,9 @@ class DANFORM_OT_create_control(bpy.types.Operator):
                 "name": name,
                 "vertex_ids": sorted(vertex_ids),
                 "edge_ids": sorted(edge_ids),
+                "enabled": True,
+                "hidden_vertex_ids": [],
+                "hidden_edge_ids": [],
             }
             side = self.side.strip().upper()
             region = self.region.strip().upper()
@@ -535,7 +543,13 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
                 vertex_ids.difference_update(endpoints)
             else:
                 edge_ids.clear()
-            changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=False)
+            active_control = _active_control(context, source)
+            if active_control is not None:
+                changed = _mutate_control_masks(
+                    source, active_control, vertex_ids, edge_ids, reveal=False
+                )
+            else:
+                changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=False)
             if changed:
                 _rebuild_proxy(source, controller)
                 context.scene.dan_form_status = f"Hidden {len(vertex_ids)}V/{len(edge_ids)}E"
@@ -699,129 +713,6 @@ class DANFORM_OT_topology_locked(bpy.types.Operator):
     def execute(self, context):
         self.report({"INFO"}, self.bl_description)
         return {"FINISHED"}
-
-
-class DANFORM_OT_native_begin(bpy.types.Operator):
-    """Capture one immutable rest before Blender's native transform starts."""
-
-    bl_idname = "dan_form.native_begin"
-    bl_label = "Begin DANP Native Transform"
-    bl_options = {"INTERNAL"}
-    operation: EnumProperty(
-        name="Operation",
-        items=(("MOVE", "Move", ""), ("ROTATE", "Rotate", ""), ("SCALE", "Scale", "")),
-        default="MOVE",
-        options={"HIDDEN"},
-    )
-
-    @classmethod
-    def poll(cls, context):
-        source, controller = _context_source(context)
-        return (
-            source is not None and controller is not None
-            and context.view_layer.objects.active == controller
-            and controller.mode == "EDIT"
-        )
-
-    def execute(self, context):
-        source, controller = _context_source(context)
-        if source is None or controller is None:
-            return {"CANCELLED"}
-        key = source.as_pointer()
-        # A zero-length cancelled macro may not emit a geometry update.  It is
-        # safe to discard that empty ownership on the next native command.
-        existing = _NATIVE_TRANSFORM_SESSIONS.get(key)
-        if existing is not None:
-            try:
-                _transform_session.finalize_active(
-                    source, controller, _workflow_dependencies()
-                )
-            except (ValueError, RuntimeError, KeyError) as exc:
-                self.report({"ERROR"}, str(exc))
-                return {"CANCELLED"}
-        try:
-            session = _transform_session.begin(
-                source, controller, _workflow_dependencies(), f"MACRO_{self.operation}"
-            )
-            session["managed_by_macro"] = True
-            context.scene.dan_form_status = f"Native {self.operation} preview"
-            return {"FINISHED"}
-        except (ValueError, RuntimeError, KeyError) as exc:
-            self.report({"ERROR"}, str(exc))
-            return {"CANCELLED"}
-
-
-class DANFORM_OT_native_finish(bpy.types.Operator):
-    """Commit the macro only after Blender's native transform confirms."""
-
-    bl_idname = "dan_form.native_finish"
-    bl_label = "Finish DANP Native Transform"
-    bl_options = {"INTERNAL"}
-
-    def execute(self, context):
-        source, controller = _context_source(context)
-        if source is None or controller is None:
-            return {"CANCELLED"}
-        key = source.as_pointer()
-        session = _NATIVE_TRANSFORM_SESSIONS.get(key)
-        if session is None:
-            return {"CANCELLED"}
-        try:
-            _transform_session.update(
-                source, controller, _workflow_dependencies(), session,
-                profile=getattr(context.scene, "dan_form_proportional_profile", "LINEAR"),
-                radius=float(getattr(context.scene, "dan_form_proportional_radius", 0.0)),
-            )
-            _transform_session.commit(source, _workflow_dependencies())
-            context.scene.dan_form_status = "Native Controller transform committed"
-            _tag_viewport_redraw(context)
-            return {"FINISHED"}
-        except (ValueError, RuntimeError, KeyError) as exc:
-            try:
-                _transform_session.cancel(source, controller, _workflow_dependencies())
-            except (ValueError, RuntimeError):
-                pass
-            self.report({"ERROR"}, str(exc))
-            return {"CANCELLED"}
-
-
-class DANFORM_OT_native_begin_move(DANFORM_OT_native_begin):
-    bl_idname = "dan_form.native_begin_move"
-    bl_label = "Begin DANP Move"
-    def execute(self, context):
-        self.operation = "MOVE"
-        return super().execute(context)
-
-
-class DANFORM_OT_native_begin_rotate(DANFORM_OT_native_begin):
-    bl_idname = "dan_form.native_begin_rotate"
-    bl_label = "Begin DANP Rotate"
-    def execute(self, context):
-        self.operation = "ROTATE"
-        return super().execute(context)
-
-
-class DANFORM_OT_native_begin_scale(DANFORM_OT_native_begin):
-    bl_idname = "dan_form.native_begin_scale"
-    bl_label = "Begin DANP Scale"
-    def execute(self, context):
-        self.operation = "SCALE"
-        return super().execute(context)
-
-
-class DANFORM_OT_native_move(bpy.types.Macro):
-    bl_idname = "dan_form.native_move"
-    bl_label = "DANP Move"
-
-
-class DANFORM_OT_native_rotate(bpy.types.Macro):
-    bl_idname = "dan_form.native_rotate"
-    bl_label = "DANP Rotate"
-
-
-class DANFORM_OT_native_scale(bpy.types.Macro):
-    bl_idname = "dan_form.native_scale"
-    bl_label = "DANP Scale"
 
 
 class DANFORM_OT_deform(bpy.types.Operator):
@@ -1441,37 +1332,6 @@ def _unregister_control_keymaps():
     _CONTROL_KEYMAPS.clear()
 
 
-def _configure_native_transform_macros():
-    """Compose Begin → Blender Transform → Finish macro sequences."""
-    definitions = (
-        (DANFORM_OT_native_move, DANFORM_OT_native_begin_move.bl_idname, "transform.translate"),
-        (DANFORM_OT_native_rotate, DANFORM_OT_native_begin_rotate.bl_idname, "transform.rotate"),
-        (DANFORM_OT_native_scale, DANFORM_OT_native_begin_scale.bl_idname, "transform.resize"),
-    )
-    for macro, begin_operator, transform_operator in definitions:
-        if getattr(macro, "_danp_configured", False):
-            continue
-        macro.define(begin_operator)
-        macro.define(transform_operator)
-        macro.define(DANFORM_OT_native_finish.bl_idname)
-        macro._danp_configured = True
-
-
-def _register_native_transform_keymaps():
-    config = bpy.context.window_manager.keyconfigs.addon
-    if config is None:
-        return
-    _configure_native_transform_macros()
-    km = config.keymaps.new(name="Mesh", space_type="EMPTY")
-    for operator, key in (
-        ("dan_form.native_move", "G"),
-        ("dan_form.native_rotate", "R"),
-        ("dan_form.native_scale", "S"),
-    ):
-        item = km.keymap_items.new(operator, key, "PRESS", head=True)
-        _CONTROL_KEYMAPS.append((km, item))
-
-
 class DANFORM_OT_toggle_viewport_controls(bpy.types.Operator):
     bl_idname = "dan_form.toggle_viewport_controls"
     bl_label = "Hide/Show Controls"
@@ -1720,14 +1580,6 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
     DANFORM_OT_topology_locked,
-    DANFORM_OT_native_begin,
-    DANFORM_OT_native_finish,
-    DANFORM_OT_native_begin_move,
-    DANFORM_OT_native_begin_rotate,
-    DANFORM_OT_native_begin_scale,
-    DANFORM_OT_native_move,
-    DANFORM_OT_native_rotate,
-    DANFORM_OT_native_scale,
     DANFORM_OT_deform,
     DANFORM_OT_cancel_deform,
     DANFORM_OT_pick_selection_tool,
@@ -1753,9 +1605,6 @@ __all__ = [
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",
     "DANFORM_OT_delete_control", "DANFORM_OT_hide_selected", "DANFORM_OT_reveal",
     "DANFORM_OT_remove_controller", "DANFORM_OT_remove", "DANFORM_OT_topology_locked",
-    "DANFORM_OT_native_begin", "DANFORM_OT_native_finish", "DANFORM_OT_native_begin_move",
-    "DANFORM_OT_native_begin_rotate", "DANFORM_OT_native_begin_scale", "DANFORM_OT_native_move",
-    "DANFORM_OT_native_rotate", "DANFORM_OT_native_scale", "_register_native_transform_keymaps",
     "DANFORM_OT_deform", "DANFORM_OT_cancel_deform", "DANFORM_OT_pick_selection_tool",
     "DANFORM_OT_select_control_at_cursor", "DANFORM_OT_select_segment", "DANFORM_OT_clear_selection",
     "DANFORM_OT_select_all_controls", "DANFORM_OT_reveal_controller", "DANFORM_OT_toggle_viewport_controls",

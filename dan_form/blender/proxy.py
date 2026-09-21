@@ -43,9 +43,7 @@ def rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object, d
     vertex_ids, edge_ids = deps.effective_proxy_elements(source)
     vid_to_index, eid_to_index = deps.source_id_maps(source)
     proxy_mesh = controller.data
-    old_pose = proxy_state(controller)
-    kept_positions = {item[0]: item[1] for item in old_pose[0]} if old_pose else {}
-    selected_ids = deps.proxy_selection_snapshot(controller) if controller.mode == "EDIT" and old_pose else (set(), set())
+    selected_ids = deps.proxy_selection_snapshot(controller) if controller.mode == "EDIT" else (set(), set())
     old_active = bpy.context.view_layer.objects.active
     old_mode = old_active.mode if old_active is not None else "OBJECT"
     old_selected = [obj for obj in bpy.context.selected_objects]
@@ -56,9 +54,9 @@ def rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object, d
     proxy_mesh.clear_geometry()
     source_vertices = deps.source_vertices(source)
     edge_vids = deps.source_edge_vids(source)
-    # Keep the pose of surviving handles. Newly revealed IDs sample Source;
-    # hiding a different control must not reset the user's visible edits.
-    proxy_vertices = [kept_positions.get(vid, tuple(source_vertices[vid_to_index[vid]].co)) for vid in vertex_ids]
+    # Source owns every coordinate, including surviving and newly revealed IDs.
+    # A rebuilt proxy must never revive an older, possibly stale edit pose.
+    proxy_vertices = [tuple(source_vertices[vid_to_index[vid]].co) for vid in vertex_ids]
     proxy_vertex_index = {vid: index for index, vid in enumerate(vertex_ids)}
     proxy_edges = []
     kept_edge_ids = []
@@ -220,5 +218,4 @@ def guard_proxy_topology(source, controller, deps) -> bool:
     runtime.PROXY_SNAPSHOTS[key] = snapshot
     bpy.context.scene.dan_form_status = "Controller chỉ chỉnh vị trí; tạo/xóa đường trên model"
     return True
-
 

@@ -1,5 +1,17 @@
 # Design Changelog
 
+## 2026-09-21 — DANP Form 0.5.21 Source and Undo cleanup
+
+- Rebuild every Controller coordinate from Source while retaining selection;
+  a stale Controller pose can no longer survive a rebuild.
+- Reject malformed control definitions, masks, IDs and unsupported schemas
+  before migration or Source ID writes instead of silently discarding records.
+- Remove the unused custom Box Select and G/R/S macros; native Blender Edit
+  transforms remain the active interaction.
+- Match multi-step native Undo/Redo against Controller poses, including cases
+  where Blender has already restored Source, and rebuild derived caches.
+- Add live regressions for proxy rebuild and three-step Undo/Redo history.
+
 ## 2026-09-19 — DANP Form 0.5.18 transform-field ownership
 
 - A patch with one incident control now receives that control's full

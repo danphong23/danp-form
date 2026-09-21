@@ -15,7 +15,7 @@ import sys
 
 
 def _addon():
-    return sys.modules.get("bl_ext.user_default.dan_form") or sys.modules.get("dan_form")
+    return sys.modules.get("dan_form") or sys.modules.get("bl_ext.user_default.dan_form")
 
 
 def _max_delta(left, right, ids=None):
@@ -117,9 +117,20 @@ def run():
               "commit records paired Source undo state")
         source_post = {key: value.copy() for key, value in record["source_post"].items()}
 
+        # An unrelated Undo (for example Hide/Reveal) leaves the proxy at its
+        # post-transform pose.  The paired restore must not mistake that step
+        # for a transform Undo.
+        lifecycle._restore_native_undo_records("UNDO")
+        check(_max_delta(source_post, addon._source_positions(source)) <= 1e-7,
+              "unrelated undo does not rewind the latest transform")
+
+        # A real native transform Undo restores the controller pose first;
+        # mirror that state before invoking the deferred Source repair.
+        _restore_controller(controller, controller_before, addon)
         lifecycle._restore_native_undo_records("UNDO")
         check(_max_delta(source_before, addon._source_positions(source)) <= 1e-7,
               "paired undo restores Source exactly")
+        _restore_controller(controller, record["controller_post"], addon)
         lifecycle._restore_native_undo_records("REDO")
         check(_max_delta(source_post, addon._source_positions(source)) <= 1e-7,
               "paired redo restores Source exactly")

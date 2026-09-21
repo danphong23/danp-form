@@ -26,6 +26,16 @@ def control_effective(
     valid_edges: set[int] | None = None,
 ):
     """Return effective vertices and edges after canonical masks."""
+    if not bool(control.get("enabled", True)):
+        return set(), set()
+    # Version 3 keeps masks on the definition that owns the membership.  The
+    # optional arguments remain for reading legacy data during migration.
+    hidden_vertices = set(hidden_vertices) | {
+        int(value) for value in control.get("hidden_vertex_ids", [])
+    }
+    hidden_edges = set(hidden_edges) | {
+        int(value) for value in control.get("hidden_edge_ids", [])
+    }
     edge_ids, explicit_nodes = control_intent(control, edge_vids, valid_edges)
     effective_edges = set()
     effective_vertices = set(explicit_nodes) - set(hidden_vertices)

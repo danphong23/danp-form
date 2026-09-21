@@ -33,18 +33,37 @@ def test_phase4_operator_and_ui_are_registered():
     assert 'dan_form_proportional_profile' in SOURCE
 
 
-def test_native_grs_is_wrapped_by_explicit_begin_finish_macros():
+def test_native_grs_uses_blender_edit_transform_without_legacy_macros():
     operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
     session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
-    assert 'bl_idname = "dan_form.native_begin"' in operators
-    assert 'bl_idname = "dan_form.native_finish"' in operators
-    assert 'bl_idname = "dan_form.native_move"' in operators
-    assert 'bl_idname = "dan_form.native_rotate"' in operators
-    assert 'bl_idname = "dan_form.native_scale"' in operators
-    assert "macro.define(transform_operator)" in operators
-    assert "managed_by_macro" in session
+    assert 'bl_idname = "dan_form.native_begin"' not in operators
+    assert 'bl_idname = "dan_form.select_box"' not in operators
+    assert "managed_by_macro" not in session
+    assert "_observe_native_controller_transform" in lifecycle
     assert "NATIVE_TRANSFORM_SESSIONS" in session
     assert 'text="Apply Move"' not in operators
     assert "dan_form_proportional_profile" in lifecycle
     assert "dan_form_proportional_radius" in lifecycle
+
+
+def test_native_session_commits_original_targets_before_selection_changes():
+    lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
+    session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
+    assert "live_targets = _transform_session.controller_targets(controller)" in lifecycle
+    assert "set(live_targets) != set(transaction.get(\"selected\", ()))" in lifecycle
+    assert "finalize_active(source, controller, deps)" in lifecycle
+    assert "update(source, controller, deps, session," in session
+    assert "targets=session.get(\"last_targets\", {})" in session
+    assert "rest_targets = {vertex_id: rest[vertex_id]" in session
+
+
+def test_native_undo_keeps_history_and_resyncs_proxy():
+    lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
+    session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
+    assert "setdefault(key, {}).setdefault(\"history\", [])" in session
+    assert '"controller_pre"' in session
+    assert "for item in reversed(history)" in lifecycle
+    assert "controller_pose_matches" in lifecycle
+    assert "_sync_proxy(source, controller)" in lifecycle
+    assert "_OVERLAY_CACHE.clear()" in lifecycle

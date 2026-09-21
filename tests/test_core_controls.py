@@ -58,3 +58,49 @@ def test_revealed_edge_restores_endpoints_and_edge():
 
     assert vertices == [1, 2]
     assert edges == [10]
+
+
+def test_overlapping_controls_keep_shared_geometry_when_one_definition_hides_it():
+    controls = [
+        {
+            "control_uuid": "a",
+            "edge_ids": [10],
+            "vertex_ids": [1, 2],
+            "hidden_vertex_ids": [1],
+        },
+        {
+            "control_uuid": "b",
+            "edge_ids": [10],
+            "vertex_ids": [1, 2],
+            "hidden_vertex_ids": [],
+        },
+    ]
+
+    vertices, edges = MODULE.effective_elements(
+        controls,
+        {1, 2},
+        {10: (1, 2)},
+        hidden_vertices=set(),
+        hidden_edges=set(),
+    )
+
+    assert vertices == [1, 2]
+    assert edges == [10]
+
+
+def test_disabled_definition_releases_only_its_membership():
+    controls = [
+        {"control_uuid": "a", "edge_ids": [10], "vertex_ids": [1, 2], "enabled": False},
+        {"control_uuid": "b", "edge_ids": [], "vertex_ids": [2], "enabled": True},
+    ]
+
+    vertices, edges = MODULE.effective_elements(
+        controls,
+        {1, 2},
+        {10: (1, 2)},
+        hidden_vertices=set(),
+        hidden_edges=set(),
+    )
+
+    assert vertices == [2]
+    assert edges == []

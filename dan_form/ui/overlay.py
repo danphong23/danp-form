@@ -135,14 +135,21 @@ def _overlay_geometry(context, overlay_mode, source, controller):
     # every endpoint makes dense contours (especially fingers) into solid blobs.
     point_ids = set()
     for control in _controls(source):
-        point_ids.update(_control_intent(source, control)[1])
-    # Canonical node masks apply to explicit point handles as well as to the
-    # network edges.  Keep the raw IDs only for the explicit "Show Hidden"
-    # preview; otherwise a hidden point must not be resurrected as a dot.
-    hidden_point_ids = _hidden(source, HIDDEN_VIDS_KEY)
-    if not scene.dan_form_overlay_hidden:
-        point_ids.difference_update(hidden_point_ids)
-    selected_point_ids = _control_intent(source, selected_control)[1] if selected_control else set()
+        _edge_ids, explicit_nodes = _control_intent(source, control)
+        if not bool(control.get("enabled", True)):
+            continue
+        hidden_nodes = {
+            int(value) for value in control.get("hidden_vertex_ids", [])
+        }
+        if scene.dan_form_overlay_hidden:
+            point_ids.update(explicit_nodes)
+        else:
+            point_ids.update(explicit_nodes - hidden_nodes)
+    selected_point_ids = set()
+    if selected_control and bool(selected_control.get("enabled", True)):
+        selected_point_ids = _control_intent(source, selected_control)[1] - {
+            int(value) for value in selected_control.get("hidden_vertex_ids", [])
+        }
     source_edge_segments = None
     if overlay_mode in {"controller", "controller_edit"}:
         mesh = controller.data
@@ -406,7 +413,10 @@ def _draw_control_overlay() -> None:
             gpu.state.point_size_set(1.0)
             gpu.state.blend_set(previous_blend)
     except Exception:
-        # Drawing must never break Blender's viewport; retry on next redraw.
+        # Drawing must never break Blender's viewport.  Drop stale batches so
+        # a failed evaluated-mesh read cannot leave an old line floating away
+        # from the Source until an unrelated redraw happens.
+        _OVERLAY_CACHE.clear()
         return
 
 

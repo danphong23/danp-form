@@ -70,10 +70,6 @@ def begin(source, controller, deps, operation: str, controller_rest=None) -> dic
         # the lifecycle cache; falling back to the live pose is retained for
         # explicit API/EXEC_DEFAULT calls.
         "controller_rest": controller_rest or _controller_positions(controller),
-        # A macro-backed native transform owns its own finish/cancel path.
-        # The legacy observer path may still be used by direct API/MCP calls,
-        # but must never be confused with the user-facing modal operation.
-        "managed_by_macro": str(operation).startswith("MACRO_"),
         "had_delta": False,
     }
     runtime.NATIVE_TRANSFORM_SESSIONS[key] = session
@@ -93,7 +89,14 @@ def update(source, controller, deps, session, profile="LINEAR", radius=0.0,
                             radius, targets=targets, sync_controller=False)
     session["last_targets"] = targets
     rest = session.get("controller_rest", {})
-    session["had_delta"] = session.get("had_delta", False) or not _positions_close(targets, rest)
+    # ``targets`` only contains the selected vertices.  Comparing it with the
+    # complete controller rest pose makes every partial selection look moved,
+    # even when Blender confirmed a zero-distance transform.  Compare the same
+    # persistent-ID domain so an untouched session can be cancelled cleanly.
+    rest_targets = {vertex_id: rest[vertex_id] for vertex_id in targets if vertex_id in rest}
+    session["had_delta"] = session.get("had_delta", False) or not _positions_close(
+        targets, rest_targets
+    )
     return result
 
 
@@ -102,17 +105,27 @@ def commit(source, deps) -> None:
     tx = deps.transactions.get(key)
     session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
     if tx is not None:
-        if session is not None and str(session.get("operation", "")).startswith(("NATIVE", "MACRO")):
-            runtime.NATIVE_UNDO_RECORDS[key] = {
+        if session is not None and session.get("operation") == "NATIVE":
+            record = {
                 "source": key,
+                "source_uuid": source.get(SOURCE_UUID_KEY),
                 "controller": session["controller"],
                 "source_pre": {int(vid): position.copy() for vid, position in tx["p0"].items()},
                 "source_post": {int(vid): position.copy() for vid, position in _source_positions(source).items()},
+                "controller_pre": {
+                    int(vid): position.copy()
+                    for vid, position in session.get("controller_rest", {}).items()
+                },
                 "controller_post": _controller_positions(
                     next((obj for obj in bpy.data.objects if obj.as_pointer() == session["controller"]), source)
                 ),
                 "state": "committed",
             }
+            history = runtime.NATIVE_UNDO_RECORDS.setdefault(key, {}).setdefault("history", [])
+            history.append(record)
+            # Keep the newest record fields at the top level for existing
+            # diagnostics while retaining every committed step for Undo/Redo.
+            runtime.NATIVE_UNDO_RECORDS[key].update(record)
         _deform_commit(source)
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
 
@@ -142,7 +155,7 @@ def finalize_active(source, controller, deps) -> bool:
             # Selection may already have moved to the next control.  The
             # previous session must be committed from its own last sample,
             # never from the new selection.
-            update(source, controller, deps,
+            update(source, controller, deps, session,
                    targets=session.get("last_targets", {}))
             commit(source, deps)
         else:

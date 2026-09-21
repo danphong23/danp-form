@@ -16,6 +16,11 @@ from ..constants import *
 from . import transform_session as _transform_session
 from .workflows import update_revision
 
+NATIVE_POLL_INTERVAL = 0.05
+# Blender's native transform has no add-on confirm callback. In contexts that
+# do not expose the active operator, wait for one second without mesh updates.
+NATIVE_QUIET_POLLS = 20
+
 
 def bind(api) -> None:
     for name in dir(api):
@@ -46,9 +51,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                 _guard_proxy_topology(source, controller)
                 if (controller_changed and controller.mode == "EDIT"
                         and _controller_pose_changed(source, controller, previous_proxy_snapshot)):
-                    # Blender restores the proxy to C0 when the user presses
-                    # RMB/Esc.  This is true for both the legacy macro path
-                    # and the native observer path.  Detect it before calling
+                    # Blender restores the proxy to C0 on RMB/Esc. Detect it before calling
                     # update(); otherwise the timer can commit a cancelled
                     # preview or start the next mouse sample from a deformed
                     # Source pose (the cumulative-shrink bug).
@@ -71,14 +74,16 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                 # the final sync on commit or cancel.
                 if source_changed and source.as_pointer() not in runtime.NATIVE_TRANSFORM_SESSIONS:
                     _sync_proxy(source, controller)
-            except (KeyError, ValueError):
+            except (KeyError, ValueError) as exc:
                 # A stale topology is reported by the next explicit command;
                 # the depsgraph callback must never escape into Blender.
-                pass
+                if str(exc).startswith("CONTROL_DATA_INVALID"):
+                    bpy.context.scene.dan_form_status = f"Error: {exc}"
         active_source, _ = _context_source(bpy.context)
         _sync_ui_list(bpy.context.scene, active_source)
-    except (AttributeError, RuntimeError, ValueError):
-        pass
+    except (AttributeError, RuntimeError, ValueError) as exc:
+        if str(exc).startswith("CONTROL_DATA_INVALID") and bpy.context.scene is not None:
+            bpy.context.scene.dan_form_status = f"Error: {exc}"
     finally:
         runtime.SYNC_GUARD = False
 
@@ -129,6 +134,23 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
             )
             session["idle_polls"] = 0
             session["timer_registered"] = False
+        else:
+            # A user can confirm a native transform and immediately select a
+            # different vertex before the quiet timer closes the observer
+            # session.  The transaction's selected ID set belongs to the
+            # previous transform; feeding the new set into it produces
+            # TARGET_INVALID and cancellation restores the old Source pose.
+            # Commit the old preview from its immutable last targets first.
+            live_targets = _transform_session.controller_targets(controller)
+            transaction = session.get("transaction") or {}
+            if set(live_targets) != set(transaction.get("selected", ())):
+                _transform_session.finalize_active(source, controller, deps)
+                session = _transform_session.begin(
+                    source, controller, deps, "NATIVE",
+                    controller_rest=_rest_from_proxy_snapshot(previous_snapshot),
+                )
+                session["idle_polls"] = 0
+                session["timer_registered"] = False
         scene = bpy.context.scene
         _transform_session.update(
             source,
@@ -147,7 +169,7 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
             session["timer_registered"] = True
             bpy.app.timers.register(
                 lambda source_ptr=key: _native_transform_timer(source_ptr),
-                first_interval=0.05,
+                first_interval=NATIVE_POLL_INTERVAL,
             )
     except (ValueError, RuntimeError, KeyError):
         runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
@@ -183,6 +205,15 @@ def _native_transform_timer(source_ptr):
         return None
     try:
         current = _transform_session.controller_positions(controller)
+        # Selection can change without a geometry depsgraph update.  If it did
+        # change before the timer's quiet window elapsed, close the previous
+        # operation now; the next transform will create a fresh transaction.
+        live_targets = _transform_session.controller_targets(controller)
+        transaction = session.get("transaction") or {}
+        if set(live_targets) != set(transaction.get("selected", ())):
+            _transform_session.finalize_active(source, controller, _workflow_dependencies())
+            bpy.context.scene.dan_form_status = "Native Controller transform committed"
+            return None
         # A cancelled modal transform restores the proxy to its immutable
         # rest pose.  Handle this before the native-operator probe so a
         # context with an empty WindowManager.operators list cannot turn the
@@ -193,20 +224,9 @@ def _native_transform_timer(source_ptr):
             _transform_session.cancel(source, controller, _workflow_dependencies())
             bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
             return None
-        if session.get("managed_by_macro"):
-            # The macro's Finish step owns Confirm.  The timer is only a
-            # cancellation safety net for a native operator that restores C0
-            # without producing a second usable callback (not a commit path).
-            session["idle_polls"] = int(session.get("idle_polls", 0)) + 1
-            if (_transform_session._positions_close(current, session.get("controller_rest", {}))
-                    and (session.get("had_delta") or session["idle_polls"] >= 10)):
-                _transform_session.cancel(source, controller, _workflow_dependencies())
-                bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
-                return None
-            return 0.05
         if _transform_session.native_transform_active(bpy.context):
             session["idle_polls"] = 0
-            return 0.05
+            return NATIVE_POLL_INTERVAL
         session["idle_polls"] = int(session.get("idle_polls", 0)) + 1
         # Some headless/MCP contexts do not expose the native operator in
         # WindowManager.Operators.  Require a few quiet polls so a single
@@ -216,8 +236,8 @@ def _native_transform_timer(source_ptr):
         # need several timer ticks to restore the proxy to its rest pose.
         # A longer quiet window prevents committing an intermediate preview
         # that would later survive cancel and require Undo to remove.
-        if session["idle_polls"] < 20:
-            return 0.05
+        if session["idle_polls"] < NATIVE_QUIET_POLLS:
+            return NATIVE_POLL_INTERVAL
         scene = bpy.context.scene
         _transform_session.update(
             source,
@@ -242,6 +262,14 @@ def _refresh_runtime(_unused=None, direction=None) -> None:
     runtime.PICK_SESSION += 1
     runtime.NATIVE_TRANSFORM_SESSIONS.clear()
     runtime.DANP_TRANSACTIONS.clear()
+    # Undo/Redo may restore definitions, masks or coordinates.  Derived data
+    # must be rebuilt from the restored Source rather than reused by identity.
+    _MAPPING_CACHE.clear()
+    _NETWORK_CACHE.clear()
+    _PATCH_CACHE.clear()
+    _PATCH_OVERLAY_CACHE.clear()
+    _FACE_CACHE.clear()
+    _OVERLAY_CACHE.clear()
     # Undo/redo handlers run inside Blender's undo stack.  Defer Source mesh
     # writeback until the handler has returned; writing BMesh data re-entrantly
     # from undo_post can deadlock or invalidate the active edit mesh.
@@ -279,10 +307,12 @@ def _load_post(_unused=None) -> None:
     _OVERLAY_CACHE.clear()
     try:
         for source, controller in _source_controller_pairs():
+            _migrate_control_schema(source)
             _guard_proxy_topology(source, controller)
         _sync_context_ui_list(bpy.context)
-    except (AttributeError, RuntimeError, ValueError):
-        pass
+    except (AttributeError, RuntimeError, ValueError) as exc:
+        if str(exc).startswith("CONTROL_DATA_INVALID") and bpy.context.scene is not None:
+            bpy.context.scene.dan_form_status = f"Error: {exc}"
 
 
 def _update_revision(source: bpy.types.Object) -> None:
@@ -300,27 +330,86 @@ def _restore_native_undo_records(direction: str):
     try:
         for source_ptr, record in list(runtime.NATIVE_UNDO_RECORDS.items()):
             source = next((obj for obj in bpy.data.objects if obj.as_pointer() == source_ptr), None)
+            if source is None and record.get("source_uuid"):
+                matches = [obj for obj in bpy.data.objects
+                           if obj.get(SOURCE_UUID_KEY) == record["source_uuid"]]
+                source = matches[0] if len(matches) == 1 else None
             if source is None:
                 runtime.NATIVE_UNDO_RECORDS.pop(source_ptr, None)
                 continue
+            if source.as_pointer() != source_ptr:
+                runtime.NATIVE_UNDO_RECORDS[source.as_pointer()] = runtime.NATIVE_UNDO_RECORDS.pop(source_ptr)
             try:
                 source_now = _source_positions(source)
-                source_post = record.get("source_post", {})
-                source_pre = record.get("source_pre", {})
-                if direction == "UNDO" and record.get("state") == "committed" and _positions_close(source_now, source_post):
+                history = record.get("history", [])
+                controllers = {obj.as_pointer(): obj for obj in bpy.data.objects}
+
+                def controller_for(item):
+                    controller = controllers.get(item.get("controller"))
+                    if controller is not None:
+                        return controller
+                    matches = [obj for obj in bpy.data.objects
+                               if obj.get(CONTROLLER_KEY) == source.get(SOURCE_UUID_KEY)]
+                    return matches[0] if len(matches) == 1 else None
+
+                def controller_pose_matches(item, expected_key):
+                    controller = controller_for(item)
+                    expected = item.get(expected_key, {})
+                    if controller is None or not expected:
+                        return False
+                    try:
+                        return _positions_close(
+                            _transform_session.controller_positions(controller),
+                            expected,
+                        )
+                    except (AttributeError, KeyError, RuntimeError, ValueError):
+                        return False
+
+                candidate = None
+                if direction == "UNDO":
+                    candidate = next(
+                        (item for item in reversed(history)
+                         if item.get("state") == "committed"
+                         and (_positions_close(source_now, item.get("source_post", {}))
+                              or _positions_close(source_now, item.get("source_pre", {})))
+                         and controller_pose_matches(item, "controller_pre")),
+                        None,
+                    )
+                elif direction == "REDO":
+                    candidate = next(
+                        (item for item in reversed(history)
+                         if item.get("state") == "undone"
+                         and (_positions_close(source_now, item.get("source_pre", {}))
+                              or _positions_close(source_now, item.get("source_post", {})))
+                         and controller_pose_matches(item, "controller_post")),
+                        None,
+                    )
+                source_post = candidate.get("source_post", {}) if candidate else {}
+                source_pre = candidate.get("source_pre", {}) if candidate else {}
+                if direction == "UNDO" and candidate is not None and candidate.get("state") == "committed":
                     runtime.SYNC_GUARD = True
                     try:
-                        _write_source_positions(source, source_pre)
+                        if not _positions_close(source_now, source_pre):
+                            _write_source_positions(source, source_pre)
+                        controller = controller_for(candidate)
+                        if controller is not None:
+                            _sync_proxy(source, controller)
                     finally:
                         runtime.SYNC_GUARD = False
-                    record["state"] = "undone"
-                elif direction == "REDO" and record.get("state") == "undone" and _positions_close(source_now, source_pre):
+                    candidate["state"] = "undone"
+                    record.update(candidate)
+                elif direction == "REDO" and candidate is not None and candidate.get("state") == "undone":
                     runtime.SYNC_GUARD = True
                     try:
-                        _write_source_positions(source, source_post)
+                        if not _positions_close(source_now, source_post):
+                            _write_source_positions(source, source_post)
+                        controller = controller_for(candidate)
+                        if controller is not None:
+                            _sync_proxy(source, controller)
                     finally:
                         runtime.SYNC_GUARD = False
-                    record["state"] = "committed"
+                    candidate["state"] = "committed"
+                    record.update(candidate)
             except (AttributeError, KeyError, RuntimeError, ValueError):
                 continue
     finally:

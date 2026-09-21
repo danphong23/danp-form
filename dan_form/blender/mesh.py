@@ -9,7 +9,7 @@ import bpy
 
 from .. import runtime
 from ..constants import *
-from ..storage import controls, hidden, json_set
+from ..storage import controls, hidden, json_set, migrate_control_schema, validate_control_storage
 
 def _is_valid_source(obj: bpy.types.Object | None) -> bool:
     return (
@@ -53,6 +53,7 @@ def _ensure_attribute(mesh: bpy.types.Mesh, name: str, domain: str):
 def _ensure_source_ids(source: bpy.types.Object) -> None:
     if not _is_valid_source(source):
         raise ValueError("SOURCE_NOT_EDITABLE")
+    validate_control_storage(source)
     mesh = source.data
     runtime.MAPPING_CACHE.pop(source.as_pointer(), None)
     current_fingerprint = _topology_fingerprint(source)
@@ -130,6 +131,7 @@ def _ensure_source_ids(source: bpy.types.Object) -> None:
     source[TOPOLOGY_KEY] = current_fingerprint
     if NETWORK_REVISION_KEY not in source:
         source[NETWORK_REVISION_KEY] = 0
+    migrate_control_schema(source, _source_edge_vids(source))
     json_set(source, CONTROLS_KEY, controls(source))
     json_set(source, HIDDEN_VIDS_KEY, sorted(hidden(source, HIDDEN_VIDS_KEY)))
     json_set(source, HIDDEN_EIDS_KEY, sorted(hidden(source, HIDDEN_EIDS_KEY)))
@@ -201,5 +203,3 @@ def _source_co(source: bpy.types.Object, vertex_index: int):
         bm.verts.ensure_lookup_table()
         return bm.verts[vertex_index].co
     return source.data.vertices[vertex_index].co
-
-

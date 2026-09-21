@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "5a26e80952ff4880e3ef30aef96c50bf539c531676fb97247f4c3d4233f6b8e3",
-    "bytes": 21466
+    "sha256": "d7123899f47ed5dbea79d147ab770bd2834bc70efaa1edaf69fddf83ceb7b626",
+    "bytes": 22163
   },
   {
     "path": "CONTRIBUTING.md",
@@ -181,8 +181,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "1d85ff714d08c05b6d9ed63a71440ebcd59aab41080fe7def004b5e5215fe7c4",
-    "bytes": 197837
+    "sha256": "4f4067d24fc0a98d3ee766283b7c10baae15bcb1ec8adcbc961bc8dafaf2c058",
+    "bytes": 227139
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -215,6 +215,11 @@
     "bytes": 882
   },
   {
+    "path": "docs/roadmap/clean-architecture-upgrade.md",
+    "sha256": "45dce0d4f40d2f0796f4a86d241cfb7b899eeaa8d345163918b98fb76d402c12",
+    "bytes": 27189
+  },
+  {
     "path": "docs/roadmap/development-contract.md",
     "sha256": "08bda0fe2d6b56af2d3a08acbffbb0b22c97cf7b0ba6c92206a565f3e495935b",
     "bytes": 4950
@@ -243,6 +248,11 @@
     "path": "docs/testing/blender-integration-cases.md",
     "sha256": "05e8b34bb051961e4ed28156092773f69b3bfc439a45fbad44d8d43676c9cc60",
     "bytes": 4109
+  },
+  {
+    "path": "docs/testing/cleanup-2026-09-21.md",
+    "sha256": "2587fb260bca5c8e4e92b9cc2afcd1e0510ada0efbfc0e355cf0115ece99e777",
+    "bytes": 1987
   },
   {
     "path": "docs/testing/documentation-audit.md",

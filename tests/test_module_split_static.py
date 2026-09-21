@@ -36,7 +36,7 @@ def test_facade_uses_extracted_boundaries() -> None:
     source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
     for symbol in (
         "from . import runtime as _runtime",
-        "from .storage import json_get as _json_get",
+        "from .storage import controls as _controls",
         "from .core.controls import effective_elements as _core_effective_elements",
         "from .core.patches import partition_faces as _core_partition_faces",
         "from .blender.mesh import _source_id_maps as _source_id_maps",

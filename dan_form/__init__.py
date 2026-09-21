@@ -19,8 +19,8 @@ from . import runtime as _runtime
 from .storage import control as _control
 from .storage import controls as _controls
 from .storage import hidden as _hidden
-from .storage import json_get as _json_get
 from .storage import json_set as _json_set
+from .storage import migrate_control_schema as _storage_migrate_control_schema
 from .storage import source_uuid as _source_uuid
 from .core.controls import control_effective as _core_control_effective
 from .core.controls import control_intent as _core_control_intent
@@ -64,6 +64,7 @@ from .blender.workflows import deform_commit as _workflow_deform_commit
 from .blender.workflows import deform_update as _workflow_deform_update
 from .blender.workflows import write_source_positions as _workflow_write_source_positions
 from .blender.workflows import mutate_control_visibility as _workflow_mutate_control_visibility
+from .blender.workflows import mutate_control_masks as _workflow_mutate_control_masks
 from .blender.workflows import mutate_masks as _workflow_mutate_masks
 from .blender.workflows import prune_masks_after_remove as _workflow_prune_masks_after_remove
 from .blender.workflows import sync_scene as _workflow_sync_scene
@@ -125,7 +126,7 @@ _NATIVE_UNDO_RECORDS = _runtime.NATIVE_UNDO_RECORDS
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 20),
+    "version": (0, 5, 21),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -166,6 +167,15 @@ def _workflow_dependencies() -> _WorkflowDeps:
         json_set=_json_set,
         source_controller_pairs=_source_controller_pairs,
     )
+
+
+def _migrate_control_schema(source: bpy.types.Object) -> list[dict]:
+    """Run storage migration with the current Source edge-ID map when available."""
+    try:
+        edge_vids = _source_edge_vids(source)
+    except (KeyError, RuntimeError, ValueError):
+        edge_vids = None
+    return _storage_migrate_control_schema(source, edge_vids)
 
 def _control_state(source: bpy.types.Object, control: dict) -> tuple[str, int, int]:
     effective_vertices, effective_edges = _control_effective(source, control)
@@ -440,6 +450,13 @@ def _mutate_masks(source: bpy.types.Object, vertex_ids: set[int], edge_ids: set[
 
 def _mutate_control_visibility(source: bpy.types.Object, control: dict, reveal: bool) -> bool:
     return _workflow_mutate_control_visibility(source, control, reveal, _workflow_dependencies())
+
+
+def _mutate_control_masks(source: bpy.types.Object, control: dict,
+                          vertex_ids: set[int], edge_ids: set[int], reveal: bool) -> bool:
+    return _workflow_mutate_control_masks(
+        source, control, vertex_ids, edge_ids, reveal, _workflow_dependencies()
+    )
 
 
 def _prune_masks_after_remove(source: bpy.types.Object) -> None:

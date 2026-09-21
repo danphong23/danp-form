@@ -6,7 +6,7 @@ modules.
 """
 
 ADDON_ID = "dan_form"
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 SOURCE_UUID_KEY = "dan_form_source_uuid"
 CONTROLLER_KEY = "dan_form_controller"
 SCHEMA_KEY = "dan_form_schema_version"
