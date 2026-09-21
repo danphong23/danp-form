@@ -6,8 +6,17 @@ import bmesh
 import bpy
 
 
+def _addon_module():
+    candidates = [module for name, module in sys.modules.items()
+                  if (name == "dan_form" or name.endswith(".dan_form"))
+                  and hasattr(module, "_context_source")]
+    if len(candidates) != 1:
+        raise RuntimeError("DANP Form module is not uniquely loaded")
+    return candidates[0]
+
+
 def run():
-    addon = sys.modules['bl_ext.user_default.dan_form']
+    addon = _addon_module()
     ctx = bpy.context
     original = ctx.view_layer.objects.active
     if original is not None and original.mode != 'OBJECT':
@@ -102,7 +111,7 @@ def run():
 
         check(bpy.ops.dan_form.set_control_visibility(control_uuid=point_control['control_uuid'], reveal=False) == {'FINISHED'}, 'hide shared point')
         hidden_data = geometry()
-        check(len(hidden_data['edges']) == 4 and not hidden_data['points'], 'canonical node mask changes visible network')
+        check(len(hidden_data['edges']) == 4 and not hidden_data['points'], f"canonical node mask changes visible network (edges={len(hidden_data['edges'])}, points={len(hidden_data['points'])})")
         hidden_batches = batches()
         ctx.scene.dan_form_overlay_hidden = True
         check(len(geometry()['edges']) == 8 and batches() is not hidden_batches, 'Show Hidden refreshes display without changing masks')

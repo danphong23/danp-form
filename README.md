@@ -22,14 +22,18 @@ Enabled unselected control geometry holds its position. Hide a whole line or por
 to release its constraints and patch cuts; reveal it on the newly deformed Source.
 See docs/product/leg-control-examples.md and ADR-008 for junction/partial-hide behavior.
 
-This repository contains the redesigned specification and the Phase 1/2 prototype
-add-on. Development follows the accepted five-phase roadmap: bootstrap;
+This repository contains the redesigned specification and the Phase 1–4 prototype
+add-on. The current deformation baseline uses transform ownership: a patch with
+one incident control follows that control's G/R/S transform; shared patches blend
+selected transforms against unselected stationary controls. Development follows
+the accepted five-phase roadmap: bootstrap;
 controls/sync; patch visualization; Edit Mode deformation/proportional; human and
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).
 
-Version 0.3.1 displays DANP Form, offers model Init/Remove and keeps controller
-topology fixed. Controller-to-Source deformation is still a Phase 4 task.
+Version 0.5.17 displays DANP Form, offers model Init/Remove and keeps controller
+topology fixed. Controller-to-Source deformation is implemented as a replaceable
+Phase 4 baseline; live release gates and agent parity remain Phase 5 work.
 Existing `dan_form` extension/operator/data IDs remain compatible.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
 [performance report](docs/testing/phase-02-edit-performance-report.md).

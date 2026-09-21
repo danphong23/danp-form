@@ -286,6 +286,12 @@ patches, subject to proportional and hard constraints. Paths follow member-face
 edges; they may branch. Do not assign one exclusive vertex chain to each control
 vertex or infer horizontal/vertical/anatomical directions from control names.
 
+An incident control supplies a transform field, not merely an averaged boundary
+displacement. If a patch has one incident control, that control owns the whole
+patch. If it has several incident controls, their transforms are blended across
+the patch; an enabled unselected control contributes the identity transform and
+is a hard stationary boundary.
+
 Patch visualization visibility is display-only. All patches remain available to
 scope/solve regardless of overlay toggles; DANP Form control Hide changes actual
 partition as described below.
@@ -562,6 +568,12 @@ Validate editable Source, mapping and supported topology; sync proxy from curren
 Resolve selection once and freeze enabled network, selected Source IDs, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 
+For native Controller Edit `G/R/S`, capture happens in the DANP macro's Begin step,
+before Blender's transform operator receives its first mouse delta. Blender's native
+transform remains responsible for axis locks, numeric input, snapping and modal input;
+DANP only observes the absolute Controller pose against the captured rest and writes
+the Source preview. The macro's Finish step is the only native Confirm path.
+
 Capture immutable P0 for every vertex in potential operation scope: all patches incident
 to resolved selection, even when the initial transform is zero. Capture proxy start state
 and enabled hard constraints. Never change coordinates outside this captured scope.
@@ -594,6 +606,11 @@ With unchanged topology/identity, cancel restores exact P0/proxy start state, re
 ownership and creates no meaningful undo entry. Confirm with a result identical to start
 returns NO_CHANGE instead of claiming an edit. Update/commit/cancel after closure returns
 OPERATION_CLOSED without writes.
+
+The native timer is cancellation-only for macro-managed sessions. It must never commit a
+non-zero preview merely because Blender's operator list is temporarily empty while the
+user pauses the mouse. A Controller pose restored to its captured C0 is treated as Cancel;
+native Confirm is handled exclusively by the macro Finish step.
 
 ## Structural state/ownership
 
@@ -1160,6 +1177,20 @@ recomputes the enabled network/patch caches and resamples proxy; it writes no So
 coordinates. It is a separate structural command, outside an active transform.
 
 An agent may skip mouse simulation by providing numeric transforms/targets, but must not bypass target expansion, patch scope, proportional placement, or operation-rest semantics.
+UI and agent transforms resolve through the same canonical operation input:
+`MOVE`, `ROTATE` or `SCALE`, Source-local/world space, pivot, absolute
+translation/rotation/scale and proportional settings. The core then resolves
+selected Source IDs to absolute targets from Operation Rest and applies the same
+control-owned transform field used by Controller Edit.
+
+## Selection identity rule
+
+The selection primitive is `dan_form.blender.selection._source_selection` and is
+shared by the UI `+` operator and the agent facade. It refreshes BMesh lookup
+tables but records `VID_ATTR`/`EID_ATTR` persistent IDs. BMesh vertex/edge indices
+are transient diagnostics only; agents must never persist or submit them as
+control membership. After topology changes, re-read the selection snapshot and
+the topology fingerprint before issuing another command.
 
 ---
 
@@ -1234,6 +1265,41 @@ Simplify/refine and sparse-span APIs are optional extension capabilities. Advert
 what the installed build supports; unsupported capability requests return a clear
 error rather than silently succeeding. Reference-based testing in phase 5 supplies
 ordinary targets, with no additional mesh-write API or reference solver.
+
+## Blender facade (current build)
+
+When running inside Blender, external agents should import `dan_form.agent` and
+use the facade instead of editing `dan_form_controls` or indexing `mesh.vertices`
+directly:
+
+```python
+from dan_form.agent import (
+    inspect_source_selection, create_control_from_current_selection,
+    begin_operation, update_operation, commit_operation, cancel_operation,
+)
+
+selection = inspect_source_selection()
+# persistent_vertex_ids / persistent_edge_ids are canonical; mesh_*_indices are
+# diagnostics only and may change after topology operations.
+result = create_control_from_current_selection(
+    name="Shoulder Base (Left)", side="LEFT", region="SHOULDER_BASE"
+)
+
+# Controller Edit must be active for the transaction facade.
+begin_operation()
+update_operation((0.02, 0.0, 0.0), radius=0.0)
+commit_operation()       # or cancel_operation()
+```
+
+`create_control_from_current_selection` calls the same registered operator as the
+Sidebar `+` button. It returns the canonical control definition, a persistent-ID
+selection snapshot, and validation data. Stable failures include
+`NO_ACTIVE_SOURCE`, `SOURCE_EDIT_MODE_REQUIRED`, `NO_SOURCE_SELECTION`,
+`SOURCE_ID_LAYERS_MISSING`, `STALE_MAPPING`, and `CONTROL_CREATE_FAILED`.
+Display names are normalized to a deterministic suffix when a duplicate is
+requested; agents should use `control_uuid` as identity and should include
+`side` (`LEFT`, `RIGHT`, or `CENTER`) and a semantic `region` when known.
+Agents must re-query after rebuilds and must never write the control JSON directly.
 
 ---
 
@@ -1904,8 +1970,9 @@ None is selected by product definition alone. The prototype matrix in `../testin
 
 # Kế hoạch phát triển DANP Form
 
-**Trạng thái: 5 phase đã thống nhất; đã có mã/bản cài Phase 1–2; bổ sung kế hoạch
-nâng cấp UX Phase 2 trước Phase 3. Gate chỉ pass khi có bằng chứng test tương ứng.**
+**Trạng thái: 5 phase đã thống nhất; Phase 1–4 đã có mã/bản cài và baseline live;
+đợt nâng cấp transform ownership đang được kiểm chứng trước Phase 5. Gate chỉ pass
+khi có bằng chứng test tương ứng.**
 
 Mục tiêu là chỉnh model template qua các đường control nằm trên mesh thật. Các đường
 đang bật chia patch và giữ phần không chọn đứng yên. Khi điều chỉnh control được chọn,
@@ -1925,10 +1992,10 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 Mỗi phase cung cấp một bản thử được, ghi rõ tính năng đã hoạt động và giới hạn còn
 lại. Không đánh dấu phase hoàn thành chỉ vì đã có giao diện hoặc tài liệu.
 
-Phase 2 đã hoàn tất phần native list và UX live. Phase 3 hiện đã có patch graph,
-incident lookup và lớp Show Patches display-only; bằng chứng nằm trong
-[Phase 3 report](../testing/phase-03-patch-report.md). Bước tiếp theo sau Gate P3
-là Phase 4 deformation/proportional; không đưa solver vào Phase 3.
+Phase 2 đã hoàn tất phần native list và UX live. Phase 3 đã có patch graph,
+incident lookup và lớp Show Patches display-only. Phase 4 hiện có transaction,
+native G/R/S và transform-field baseline; ADR-011 chốt ownership của patch.
+Bước tiếp theo là hoàn tất quality/lifecycle/parity evidence trước Phase 5.
 
 ## Những quy tắc đã chốt
 
@@ -3160,6 +3227,27 @@ bằng 0. Đây là baseline có thể thay thế; chưa đóng băng solver nâ
 
 ## Kiểm tra trực tiếp
 
+### Regression gate lặp lại được trên Blender MCP
+
+Ngoài các phiên fit tham chiếu dưới đây, `tests/live_deformation_regression.py`
+được chạy trên đúng phiên Blender đang mở sau khi nạp lại extension 0.5.0. Fixture
+tạm gồm hai quad và một controller thật; nó tạo control qua sidebar operator,
+chọn hai đỉnh biên trong Controller Edit, chạy preview Smooth/proportional,
+Cancel để khôi phục tuyệt đối, rồi chạy `dan_form.deform` để Commit. Kết quả:
+
+- 10/10 kiểm tra đạt;
+- target của hai đỉnh chọn nhận đúng delta;
+- Cancel khôi phục Source và đồng bộ lại Controller;
+- Commit qua Blender operator giữ các đỉnh bật nhưng không chọn đứng yên;
+- fixture được xóa và Source, mode, selection của file người dùng được phục hồi;
+- file vẫn dirty như trước và không được lưu.
+
+`tests/live_reference_workflow.py` bổ sung cùng gate trên model đang mở: Blender
+được chuyển thật qua Front Orthographic, Right/Side Orthographic và Perspective;
+mỗi hướng đều chạy preview rồi Cancel, kiểm tra trạng thái viewport đúng, khôi
+phục tọa độ chính xác, và cuối cùng Hide/Reveal lại vùng control. 15/15 kiểm tra
+đạt; view, active object và mode được phục hồi.
+
 File đang mở: `Project/2. toon/girl_chibi_1.blend`, Blender 5.2.1 LTS,
 MCP kết nối đúng phiên. File đã dirty từ trước; không lưu đè.
 
@@ -3235,3 +3323,195 @@ Fit hiện nhận các mốc/target từ facade số; chưa tự đọc toàn b�
 target tự động. Modal chuột G/R/S
 đầy đủ và rotation/scale pivot UI sẽ được hoàn thiện sau khi baseline này được
 review trên các fixture limb hai loop và các trường hợp junction/ẩn-reveal.
+
+---
+
+<!-- source: docs/architecture/module-boundaries.md -->
+
+# Module boundaries
+
+The add-on is being split without changing the Source/Controller contract or
+the `dan_form.*` operator IDs.  Persistent Source data remains authoritative;
+runtime caches and transaction buffers are disposable.
+
+## Current extraction boundary
+
+- `constants.py` owns storage keys, attribute names and extension identifiers.
+- `runtime.py` owns process-local caches, guards, transaction handles and
+  callback state.  It never becomes a second geometry store.
+- `storage.py` owns JSON-backed control definitions, masks and Source UUID
+  helpers.  It does not calculate patches or write viewport UI state.
+- `core/controls.py` owns pure effective-control and mask resolution over
+  persistent IDs.
+- `core/patches.py` owns pure face-graph partitioning; Blender code only adapts
+  Mesh/BMesh data into face records and caches the returned runtime result.
+- `core/graph.py` and `core/proportional.py` own the replaceable graph-distance
+  and attenuation candidates used by the existing deformation facade.
+- `blender/context.py` resolves the active Source/controller pair without
+  trusting stale scene pointers.
+- `blender/proxy.py` owns controller rebuild, Source-to-proxy sync and topology
+  recovery. It receives mapping/selection functions through `ProxyDeps` rather
+  than importing the facade.
+- `blender/workflows.py` owns deformation transactions, mask mutation and
+  Source writeback. It receives mesh/proxy/UI-independent callbacks through
+  `WorkflowDeps`.
+- `registration.py` owns Blender class/property/handler/keymap registration;
+  `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
+  invalidation. The root facade only passes itself as the compatibility API
+  object.
+- `operators.py` owns Blender operators, picking helpers, UIList and sidebar
+  classes. Its `bind()` hook injects facade adapters only after package import.
+- `ui/overlay.py` owns viewport drawing and display-only patch batches. It has
+  the same bind boundary and never changes Source geometry.
+- `__init__.py` remains a small compatibility facade while the remaining Blender
+  adapters, core geometry and UI modules are extracted incrementally. Lifecycle
+  callbacks are no longer defined in the facade.
+
+Existing scripts and live regression checks can continue to use the old private
+facade names during the migration. New modules must import runtime state through
+the runtime module so assignments cannot silently diverge from the shared state.
+
+## Target boundary
+
+`core` will receive IDs, connectivity, masks, coordinates and targets rather
+than Blender objects. `blender` will adapt Mesh/BMesh, Source storage, proxy
+sync and context. Operators and UI will only resolve user input and present
+results. Agent and human commands will enter the same workflow primitives.
+
+The extension package has `__init__.py` at its root, so packaging copies the
+complete contents of the source package beside it. This is required for relative
+imports and for future `core`, `blender`, `operators` and `ui` subpackages.
+
+## Compatibility rules
+
+Persistent keys, Source IDs, operator IDs, controller parenting and undo-visible
+behavior stay unchanged during extraction. A refactor is accepted only when the
+static suite, package contents and the existing open-Blender regression workflow
+remain usable. Numerical interpolation changes are a separate task.
+
+---
+
+<!-- source: docs/testing/phase-02-stability-report.md -->
+
+# Phase 2 — Stability baseline and live UI verification
+
+**Date:** 2026-09-19  
+**Status:** PASS for the scoped fixes in DANP Form 0.5.0
+
+This report records checks performed through Blender MCP on the open character
+test file. It is evidence for the current source/package state, not a claim
+that the remaining Phase 2–5 gates are complete.
+
+## Fixture
+
+- Source: `girl chibi 1`
+- Controller: `DANPFORM_CTRL_girl chibi 1`
+- Source mode during checks: Edit Mode
+- Source modifier: Subdivision, visible in Edit Mode, On Cage
+- Definitions before and after the checks: 23
+- The `.blend` file was not saved by the verification run.
+
+## Regression fixes verified
+
+### Effective network and bulk visibility
+
+The pure control resolver no longer adds raw edge endpoints as standalone
+points after an edge is hidden. On the live Source:
+
+1. Hide All changed `242 effective edges / 242 effective vertices` to `0 / 0`.
+2. The controller rebuilt to `0 vertices / 0 edges`.
+3. Show All restored `252 / 252` and rebuilt the complete controller.
+4. Source object and Edit Mode remained unchanged.
+5. The original state (`10 hidden edges`, `242 effective edges`) was restored.
+
+The round trip is covered by `tests/test_core_controls.py` and a live MCP
+operator check.
+
+### Source-backed overlay
+
+Control identity remains on the base Source BMesh, while the display adapter
+uses the evaluated child-edge chain carrying the same persistent ID. This keeps
+the colored control coincident with Blender's visible Subdivision cage without
+allowing evaluated topology to redefine the control. Missing IDs fall back to
+the exact base edge, never a nearest neighbor.
+
+The repeatable check is `tests/live_overlay_alignment.py`.
+
+### Definition actions and context
+
+On the installed extension, using the actual sidebar context:
+
+- `+` created a temporary definition from the current Source selection.
+- `−` removed it and returned to the original definition count.
+- Sync stored exactly the current Source vertex/edge IDs.
+- `−` also worked from Controller Edit Mode.
+- All temporary data was restored after the check.
+
+### Package and lifecycle hygiene
+
+- Extension package rebuilt as version `0.5.0`.
+- Previous `User Default` package uninstalled before installation.
+- ZIP contains no `__pycache__`, old monolithic `dan_form.py`, or viewport flag.
+- Registration now tolerates Blender restricted install context.
+- Duplicate handler instances are removed by module/name before registration.
+- Final live session has one DANP Form module and one handler per lifecycle role.
+
+## Current completion evidence
+
+The later gates are now covered by repeatable MCP checks on the same open file:
+
+- `tests/live_deformation_regression.py`: temporary two-quad fixture, real
+  Controller Edit selection, Smooth/proportional preview, exact Cancel restore,
+  and Commit through `dan_form.deform` — 10/10 checks.
+- `tests/live_reference_workflow.py`: real Front Orthographic, Right/Side
+  Orthographic and Perspective viewport transitions, preview/Cancel in each
+  direction, then Hide/Reveal — 15/15 checks.
+- `tests/live_overlay_alignment.py`: exact ID-preserving evaluated edge
+  alignment while a viewport Subdivision modifier is enabled.
+- `tests/live_controller_lifecycle.py` and `tests/live_sidebar_regression.py`:
+  lifecycle, Source/Controller context, `+`/Sync/`−`, Hide/Show and handler
+  hygiene — PASS after the final package reload.
+
+The source/package audit also passes: the ZIP contains 21 current modules, no
+`__pycache__`, no old monolithic `dan_form.py`, no obsolete viewport flag, and
+no duplicate runtime module or lifecycle handler remains in Blender. Automatic
+pixel-to-target image fitting is intentionally outside the accepted plan; the
+agent/user supplies reviewed targets from the reference image.
+
+---
+
+<!-- source: docs/decisions/ADR-011-transform-field-ownership.md -->
+
+# ADR-011 — Patch ownership uses control transforms
+
+**Status:** Accepted for the deformation upgrade, 2026-09-19
+
+## Decision
+
+An enabled Source patch is controlled by the enabled control definitions incident
+to its boundary. A patch with one incident control receives that control's
+operation transform over its full captured scope. A patch with multiple incident
+controls blends their transforms within the patch. Selected controls provide
+their absolute transform from Operation Rest; enabled unselected controls provide
+the identity transform and are hard stationary constraints. Hidden controls are
+not incident controls.
+
+The canonical operation representation is shared by Blender UI and agents:
+operation type, pivot, coordinate space, absolute targets and proportional
+settings. A target mapping may represent an arbitrary free deformation, but it
+must not silently change the ownership rules above.
+
+## Consequences
+
+- Translation, rotation and scale use the same patch-local ownership semantics.
+- A single control no longer loses rotation or scale through averaging its
+  boundary displacement vectors.
+- Names, list order and logical grouping remain selection/storage conveniences;
+  the effective Source IDs and patch incidence determine geometry.
+- Patches outside the captured incident scope remain unchanged and are never
+  written back.
+- Evaluated modifier bleed is measured separately from the Source-base contract;
+  a modifier-aware boundary policy requires separate evidence.
+
+The transform fit is a replaceable numerical candidate. It must pass the exact
+target, stationary-boundary, scope, cancel and parity gates before release.

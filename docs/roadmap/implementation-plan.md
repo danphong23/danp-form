@@ -1,7 +1,8 @@
 # Kế hoạch phát triển DANP Form
 
-**Trạng thái: 5 phase đã thống nhất; đã có mã/bản cài Phase 1–2; bổ sung kế hoạch
-nâng cấp UX Phase 2 trước Phase 3. Gate chỉ pass khi có bằng chứng test tương ứng.**
+**Trạng thái: 5 phase đã thống nhất; Phase 1–4 đã có mã/bản cài và baseline live;
+đợt nâng cấp transform ownership đang được kiểm chứng trước Phase 5. Gate chỉ pass
+khi có bằng chứng test tương ứng.**
 
 Mục tiêu là chỉnh model template qua các đường control nằm trên mesh thật. Các đường
 đang bật chia patch và giữ phần không chọn đứng yên. Khi điều chỉnh control được chọn,
@@ -21,10 +22,10 @@ phần bên trong patch liên quan biến dạng theo hình dạng hiện tại 
 Mỗi phase cung cấp một bản thử được, ghi rõ tính năng đã hoạt động và giới hạn còn
 lại. Không đánh dấu phase hoàn thành chỉ vì đã có giao diện hoặc tài liệu.
 
-Phase 2 đã hoàn tất phần native list và UX live. Phase 3 hiện đã có patch graph,
-incident lookup và lớp Show Patches display-only; bằng chứng nằm trong
-[Phase 3 report](../testing/phase-03-patch-report.md). Bước tiếp theo sau Gate P3
-là Phase 4 deformation/proportional; không đưa solver vào Phase 3.
+Phase 2 đã hoàn tất phần native list và UX live. Phase 3 đã có patch graph,
+incident lookup và lớp Show Patches display-only. Phase 4 hiện có transaction,
+native G/R/S và transform-field baseline; ADR-011 chốt ownership của patch.
+Bước tiếp theo là hoàn tất quality/lifecycle/parity evidence trước Phase 5.
 
 ## Những quy tắc đã chốt
 

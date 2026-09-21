@@ -9,8 +9,17 @@ import bmesh
 import bpy
 
 
+def _addon_module():
+    candidates = [module for name, module in sys.modules.items()
+                  if (name == "dan_form" or name.endswith(".dan_form"))
+                  and hasattr(module, "_context_source")]
+    if len(candidates) != 1:
+        raise RuntimeError("DANP Form module is not uniquely loaded")
+    return candidates[0]
+
+
 def run():
-    addon = sys.modules['bl_ext.user_default.dan_form']
+    addon = _addon_module()
     context = bpy.context
     source, controller = addon._context_source(context)
     if source is None or controller is None or not addon._controls(source):
@@ -21,7 +30,7 @@ def run():
     original_mode = active.mode
     selected_objects = list(context.selected_objects)
     source_keys = (addon.CONTROLS_KEY, addon.HIDDEN_VIDS_KEY, addon.HIDDEN_EIDS_KEY,
-                   addon.NETWORK_REVISION_KEY, addon.VIEWPORT_HIDDEN_KEY)
+                   addon.NETWORK_REVISION_KEY)
     snapshot = {key: source.get(key) for key in source_keys}
     proxy_generation = controller.get(addon.PROXY_GENERATION_KEY)
     viewport_hidden = controller.hide_get(view_layer=context.view_layer)
@@ -135,8 +144,14 @@ def run():
         bpy.ops.dan_form.focus_controller()
         check(not bpy.ops.dan_form.create_control.poll(), 'controller rejects definition creation')
         check(not bpy.ops.dan_form.sync_control.poll(), 'controller rejects membership Sync')
-        check(not bpy.ops.dan_form.delete_control.poll(), 'controller rejects definition deletion')
-        check(addon._controls(source) == controls, 'controller restrictions preserve Source definitions')
+        bpy.ops.dan_form.focus_source()
+        definition_count = len(addon._controls(source))
+        check(bpy.ops.dan_form.create_control() == {'FINISHED'}, 'temporary definition for controller deletion')
+        temporary_uuid = addon._controls(source)[-1]['control_uuid']
+        bpy.ops.dan_form.focus_controller()
+        check(bpy.ops.dan_form.delete_control.poll(), 'controller accepts definition deletion')
+        check(bpy.ops.dan_form.delete_control(control_uuid=temporary_uuid) == {'FINISHED'}, 'controller deletes definition')
+        check(len(addon._controls(source)) == definition_count, 'controller deletion preserves remaining definitions')
         bpy.ops.dan_form.focus_source()
 
         # Regression: Sync must persist the changed list, not serialize a fresh unchanged list.

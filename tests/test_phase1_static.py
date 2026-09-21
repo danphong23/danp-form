@@ -6,13 +6,17 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1]
 
 
+def package_source() -> str:
+    return "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "dan_form").rglob("*.py"))
+
+
 def test_manifest_and_package_exist() -> None:
     assert (ROOT / "blender_manifest.toml").is_file()
     assert (ROOT / "dan_form" / "__init__.py").is_file()
 
 
 def test_phase1_contract_symbols() -> None:
-    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    source = package_source()
     for symbol in (
         "DANFORM_OT_initialize",
         "DANFORM_OT_remove_controller",
@@ -25,7 +29,7 @@ def test_phase1_contract_symbols() -> None:
 
 
 def test_phase2_contract_symbols() -> None:
-    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    source = package_source()
     for symbol in (
         "dan_form_vid",
         "dan_form_eid",
@@ -64,7 +68,7 @@ def test_phase2_ux_documents_exist() -> None:
 
 
 def test_native_control_list_contract_symbols() -> None:
-    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    source = package_source()
     for symbol in (
         "DANFORM_PG_ControlItem",
         "DANFORM_UL_controls",
@@ -81,7 +85,7 @@ def test_native_control_list_contract_symbols() -> None:
 
 
 def test_phase3_patch_contract_symbols() -> None:
-    source = (ROOT / "dan_form" / "__init__.py").read_text(encoding="utf-8")
+    source = package_source()
     for symbol in (
         "_source_face_records",
         "_patch_partition",

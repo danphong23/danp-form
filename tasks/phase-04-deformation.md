@@ -1,7 +1,8 @@
 # Phase 4 — Biến dạng trong Edit Mode và proportional
 
 **Đầu vào:** Gates P1–P3 pass. **Đầu ra:** chỉnh controller làm Source biến dạng
-trong patch liên quan, confirm/cancel/undo ổn định. Gates P4, B, C, D.
+trong patch liên quan, với transform ownership theo ADR-011; confirm/cancel/undo
+ổn định. Gates P4, B, C, D.
 
 ## Đọc bắt buộc
 
@@ -24,7 +25,9 @@ trong patch liên quan, confirm/cancel/undo ổn định. Gates P4, B, C, D.
   Source. Capture P0 và union mọi incident patch của selection kể cả target ban
   đầu identity. Mỗi update reset captured scope về P0, tính affected hiện tại;
   outside scope giữ nguyên. Closed/busy/stale generation lỗi rõ; no-op vẫn cleanup.
-- **P4.3 — Nội suy nhỏ và profiles:** thử candidate hiện có trên fixtures trước UI
+- **P4.3 — Transform field và profiles:** patch một control nhận toàn bộ G/R/S;
+  patch nhiều control blend transform với control không chọn là identity anchor.
+  Thử candidate hiện có trên fixtures trước UI
   modal; dedup control samples theo Source ID. Hard-project selected targets và
   stationary enabled controls. Whole Patch và finite radius; thử attenuation đều,
   linear/smooth để người dùng so sánh. “Đều” là profile attenuation, không cam kết

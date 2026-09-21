@@ -7,6 +7,11 @@ if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -F
 if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
 New-Item -ItemType Directory -Path $stage | Out-Null
 Copy-Item -LiteralPath (Join-Path $addonRoot 'blender_manifest.toml') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $addonRoot 'dan_form/__init__.py') -Destination (Join-Path $stage '__init__.py')
+# The extension archive has __init__.py at its root.  Copy the complete Python
+# package contents beside it so relative imports (constants, runtime and future
+# core/blender/ui packages) are present in the installed extension as well.
+Copy-Item -Path (Join-Path $addonRoot 'dan_form/*') -Destination $stage -Recurse -Force
+Get-ChildItem -LiteralPath $stage -Directory -Filter '__pycache__' -Recurse -Force |
+    Remove-Item -Recurse -Force
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath
 Write-Output "Packaged $zipPath"

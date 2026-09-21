@@ -1,5 +1,200 @@
 # Design Changelog
 
+## 2026-09-19 — DANP Form 0.5.18 transform-field ownership
+
+- A patch with one incident control now receives that control's full
+  translation/rotation/scale transform instead of averaged boundary
+  displacement vectors.
+- Shared patches blend incident control transforms; enabled unselected controls
+  contribute identity and remain hard stationary anchors.
+- Added pure rotation/scale, shared-anchor and live Source scope regressions.
+- Recorded the contract in ADR-011 and synchronized the consolidated docs/hashes.
+
+## 2026-09-19 — DANP Form 0.5.17 shared-patch agreement
+
+- Validate all patch-local interpolation candidates for a shared free vertex
+  before Source writeback; conflicting candidates now reject with
+  `TARGET_CONFLICT` instead of depending on patch iteration order.
+- Added a pure regression for shared-vertex conflict rejection.
+
+## 2026-09-19 — DANP Form 0.5.15 transform axis and patch interpolation
+
+- Replaced averaged patch displacement with patch-local inverse-distance
+  interpolation from selected and stationary Source-backed control vertices.
+- A selected boundary now propagates its non-uniform G/R/S targets into every
+  incident patch while adjacent enabled controls remain exact anchors.
+- Added pure regression coverage for a moving boundary and non-uniform loop
+  targets; no modifier, topology or Source/Controller identity behavior changed.
+- Suspended the topology-lock keymap while Blender's native transform modal is
+  active, so the first axis key after G/R/S is no longer consumed by the guard.
+
+## 2026-09-19 — DANP Form 0.5.16 target validation
+
+- Preserve explicit target mappings, including an intentionally empty mapping,
+  so invalid target counts are rejected instead of silently becoming a delta move.
+- Added no-op, finite-radius scope and target-validation regressions.
+
+## 2026-09-19 — DANP Form 0.5.13 native proportional workflow
+
+- Native Controller Edit G/R/S now use the scene's Profile and Radius values
+  during live preview and commit.
+- Removed the Apply Move dialog button from the main Controller panel; the
+  exact deformation operator remains registered for API/agent calls.
+
+## 2026-09-19 — DANP Form 0.5.12 pose comparison type fix
+
+- Proxy snapshot coordinates are converted to mathutils vectors before pose
+  comparison, preventing the lifecycle guard from swallowing a valid native
+  transform because of tuple/vector subtraction.
+
+## 2026-09-19 — DANP Form 0.5.11 pose baseline initialization
+
+- The first Controller Edit transform after addon reload now compares against
+  the Source pose when no proxy snapshot exists, so it cannot be silently
+  dropped.
+- Entering Controller Edit establishes a valid proxy snapshot before native
+  selection and transform events begin.
+
+## 2026-09-19 — DANP Form 0.5.10 transform-observer filtering
+
+- Controller Edit dependency-graph updates are now compared against the last
+  valid proxy pose before starting a native transform session.
+- Selection-only updates and topology recovery no longer create phantom native
+  transactions or stale undo records.
+
+## 2026-09-19 — DANP Form 0.5.9 View3D modal-area correction
+
+- Modal pick tools now resolve and retain the actual View3D area when launched
+  from the sidebar, keeping hover hit-testing, header text and outside-click
+  exit behavior in the same coordinate space as the viewport.
+
+## 2026-09-19 — DANP Form 0.5.8 pick-overlay UX correction
+
+- Pick previews now bind to the actual View3D area even when the tool is
+  launched from the sidebar, so hover feedback is drawn in the viewport.
+- Clicking outside the viewport now exits the pick tool as a cancelled action
+  and no longer reports a false “Selection confirmed” status.
+
+## 2026-09-19 — DANP Form 0.5.7 functional-control baseline
+
+- Revalidated list selection, definition deletion, Hide/Show, Sync, Source /
+  Controller navigation, topology protection, native transform preview,
+  adjacent-control pinning, commit, cancel and paired Source undo/redo on the
+  open ``girl_chibi_1.blend`` test file.
+- Removing a controller or the complete DANP binding now discards its runtime
+  transform session, transaction and undo record, preventing stale state from
+  accumulating in long Blender sessions.
+- Updated live regressions to match the intended Controller workflow: valid
+  coordinate edits deform Source, while rejected topology edits preserve the
+  accepted pose and current model geometry.
+
+## 2026-09-19 — DANP Form 0.5.6 direction-aware undo/redo
+
+- Undo and redo now use separate persistent handlers and defer only the
+  matching Source restore until Blender leaves its undo stack callback.
+- Direction-aware records remove the previous heuristic based on Controller
+  pose, so Controller mode changes during undo cannot prevent Source pairing.
+
+## 2026-09-19 — DANP Form 0.5.5 deferred undo restoration
+
+- Native undo/redo Source pairing is now deferred through a short Blender app
+  timer instead of writing mesh data re-entrantly inside ``undo_post``.
+- The restore path updates only Source; Blender already owns the Controller
+  undo pose. This avoids edit-mesh recursion while retaining one logical
+  operation across both domains.
+
+## 2026-09-19 — DANP Form 0.5.4 native undo pairing
+
+- Native Controller transforms now retain a runtime Source pre/post record.
+  Blender's undo/redo callbacks pair the native proxy pose with the matching
+  Source deformation, so one Ctrl+Z or Ctrl+Shift+Z restores both domains.
+- The record is runtime-only and is discarded on unregister; it never changes
+  persistent control identity or topology metadata.
+
+## 2026-09-19 — DANP Form 0.5.3 native transform safety
+
+- Removed the nested DANP modal wrapper around Blender's transform operator.
+  Controller Edit now receives native G/R/S directly, so Confirm/Cancel,
+  axis constraints, numeric input, snapping and Blender's undo stack remain
+  under one native operator.
+- Source deformation is observed from Controller Edit geometry by a runtime
+  transaction/timer bridge; the proxy is never written back while the native
+  transform is active. This avoids re-entrant BMesh writes that could crash
+  Blender during ``transform_modal``.
+- Replaced the invalid Blender 5.2 ``TRANSFORM_MOVE`` UI icon with a stable
+  built-in icon.
+
+## 2026-09-19 — DANP Form 0.5.2 native Controller Edit transform bridge
+
+- G/R/S in Controller Edit now delegates the actual interaction to Blender's
+  native transform operator, preserving axis locks, numeric entry, snapping,
+  live mouse preview and cancel behavior.
+- A single Source-backed deformation transaction is updated from the live
+  controller target positions and committed/cancelled as one operation; the
+  proxy is not overwritten during the preview.
+- Source overlay evaluation now honors the active modifier's On Cage state:
+  disabled cage stays on the exact base edge, enabled cage follows the
+  evaluated edge segments carrying the same persistent ID.
+
+## 2026-09-19 — DANP Form 0.5.1 Source-mesh control baseline
+
+- Source control identity remains on the live base BMesh, while the overlay
+  resolves the same persistent edge ID to Blender's evaluated visible edge
+  chain; it never selects a nearest neighboring edge.
+- Sidebar definition delete passes the selected row UUID explicitly and is
+  available from Source and Controller contexts; Sync and creation remain
+  Source-only.
+- Updated the live overlay and lifecycle checks to verify exact base-edge
+  endpoints with a viewport Subdivision modifier enabled.
+
+## 2026-09-19 — DANP Form 0.5.0 stability baseline
+
+- Fixed bulk Hide/Show so hidden edge endpoints are not resurrected as orphaned
+  control vertices; the empty-network round trip is now idempotent in Blender.
+- Source overlays use persistent base-edge IDs and leave modifier evaluation
+  outside the control identity contract.
+- Controller-side Delete now uses the same active-definition action as Source
+  Edit, and extension registration tolerates Blender's restricted install
+  context without duplicating handlers.
+- Removed the obsolete viewport-hidden Source flag from runtime and package
+  data; display overlay and canonical Hide/Reveal remain separate states.
+
+## 2026-09-19 — Edit Mode control workflow regression fix
+
+- Fixed Init in Source Edit Mode assigning zero to every persistent vertex and
+  edge ID in the live BMesh. A selected loop now retains every distinct member
+  through Create, Sync, list selection and Delete instead of collapsing to
+  `1V/1E` and selecting the whole mesh.
+- Moved mutable UI-sync and pick-session guards onto the shared runtime module
+  so callbacks from extracted operator modules observe the same state as the
+  facade and registration lifecycle.
+- Revalidated the real sidebar buttons in the open character test file: a
+  20-edge loop created a `20V/20E` control, Sync replaced it with a `16V/16E`
+  loop, and creating another active control retained its `10V/10E` membership.
+
+## 2026-09-19 — Module extraction foundation
+
+- Moved persistent identifiers into `dan_form/constants.py`.
+- Moved runtime-only caches and transaction state into `dan_form/runtime.py`.
+- Moved JSON-backed Source definitions and mask helpers into `dan_form/storage.py`.
+- Moved effective control resolution, patch partitioning, graph distance and
+  proportional attenuation into Blender-independent `dan_form/core` modules;
+  the facade still adapts persistent IDs and cache ownership.
+- Moved proxy rebuild, Source-to-controller sync and topology recovery into
+  `dan_form/blender/proxy.py` with explicit adapter dependencies.
+- Moved add-on registration, Scene properties and handler/keymap lifecycle into
+  `dan_form/registration.py`; the root facade retains the public entry points.
+- Moved operators, picking, UIList/sidebar classes and viewport overlay drawing
+  into `operators.py` and `ui/overlay.py` with explicit facade binding.
+- Moved deformation transactions, mask mutation and Source writeback into
+  `dan_form/blender/workflows.py` with explicit `WorkflowDeps` adapters.
+- Kept compatibility names in the facade while existing live regression scripts
+  are migrated to their owning modules.
+- Updated extension packaging to include the complete package contents, not only
+  the facade `__init__.py`.
+- Recorded the boundary and compatibility contract in
+  `docs/architecture/module-boundaries.md`.
+
 ## 2026-09-18 — DANP Form 0.3.1 patch mode-switch performance
 
 - Fixed Object Mode patch face extraction from an O(face × edge) scan to an O(face + edge) lookup table.
@@ -102,3 +297,14 @@
 - Moved reference fitting and advanced interpolation methods to extensions.
 - Replaced production-ready claims with prototype and evidence gates.
 - Rebuilt `full-specification.md` from modular documents.
+## 2026-09-19 — DANP Form 0.5.19 native transform transaction lifecycle
+
+- Added macro-backed Controller Edit `G/R/S` operations with an explicit Begin → native Blender transform → Finish sequence.
+- Captured Source/Controller rest before the first native transform delta; preview writes remain absolute to that rest.
+- Removed timer-based native commit for the user-facing path; Confirm is now owned by the macro Finish step and Cancel restores the captured rest.
+- Added cancellation safety for native transforms that restore the controller pose without a usable operator-stack callback.
+## 2026-09-20 — DANP Form 0.5.20 selection-safe control creation
+
+- Refresh BMesh lookup indices before reading Source selection.
+- Allow agent/API callers to provide a control name at creation time.
+- Keep persistent DANP vertex/edge layers authoritative across proxy rebuilds.

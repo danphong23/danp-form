@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "dd95bd127e29972b643366365bb98c45910cf263c263ddb7f7970577fc1551f1",
-    "bytes": 10209
+    "sha256": "5a26e80952ff4880e3ef30aef96c50bf539c531676fb97247f4c3d4233f6b8e3",
+    "bytes": 21466
   },
   {
     "path": "CONTRIBUTING.md",
@@ -16,13 +16,13 @@
   },
   {
     "path": "docs/agent/api-contract.md",
-    "sha256": "81976fb569f0334d4025ea1c6cf6fef1c32a4354d81051fd1d9973c54a04cfcb",
-    "bytes": 3939
+    "sha256": "90e9606561013a5b7a0701d8cc603bce3633af032ba0aca9edf91abedac059f0",
+    "bytes": 5496
   },
   {
     "path": "docs/agent/shared-primitives.md",
-    "sha256": "ec27460003abc2f0d221fd8afb59342c9440b6b91092aba04f524659b2f7e6b1",
-    "bytes": 997
+    "sha256": "19cd81cfacb4dcce9ff4950c3d94478070d5217675a200cb524bf696503609ea",
+    "bytes": 1840
   },
   {
     "path": "docs/architecture/data-model.md",
@@ -38,6 +38,11 @@
     "path": "docs/architecture/mapping-and-sync.md",
     "sha256": "e92ade198fbdbc08660aa31b4c769b8685cbf92020f9a08045e7997d3256b09b",
     "bytes": 3614
+  },
+  {
+    "path": "docs/architecture/module-boundaries.md",
+    "sha256": "04fc05e371748afcff31503461e19c037f167103e50b2ba21f3b163161c1ce89",
+    "bytes": 3369
   },
   {
     "path": "docs/architecture/multi-template.md",
@@ -81,13 +86,13 @@
   },
   {
     "path": "docs/core/operation-semantics.md",
-    "sha256": "03e33da9ef71ef33a864115bbdd98b3b4882b297a667b400769b95e0898c9c60",
-    "bytes": 3486
+    "sha256": "d2b1be3948b84f8118c77be662085873f80249b546317dd3ea446f23d23c7cc8",
+    "bytes": 4228
   },
   {
     "path": "docs/core/patch-model.md",
-    "sha256": "e9916d7e40686faa2e8cd2a5b931e1f29f395217fb465fe68db4956821022ee8",
-    "bytes": 3158
+    "sha256": "827ebe455e1a6b9c0ee0e54b73aaa1697caf80ce3f96d3d1f9bcd3b051e0510b",
+    "bytes": 3505
   },
   {
     "path": "docs/core/proportional.md",
@@ -155,6 +160,11 @@
     "bytes": 2274
   },
   {
+    "path": "docs/decisions/ADR-011-transform-field-ownership.md",
+    "sha256": "246b6d2f4520bc644c2ecdf5f4f2b009769b2910f4a15af157b3493991bf6f7d",
+    "bytes": 1658
+  },
+  {
     "path": "docs/decisions/open-decisions.md",
     "sha256": "e68f6baf67f3e4c5d65c2d2876560f72c10383bc57a39ae04a27ca7e21cf5da8",
     "bytes": 2305
@@ -171,8 +181,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "1ae3a087d71de241565825de2b9744581fd9db67e38c6ed9821c0f18c804b502",
-    "bytes": 183909
+    "sha256": "1d85ff714d08c05b6d9ed63a71440ebcd59aab41080fe7def004b5e5215fe7c4",
+    "bytes": 197837
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -211,8 +221,8 @@
   },
   {
     "path": "docs/roadmap/implementation-plan.md",
-    "sha256": "5d12877b427a4234cf0542b2521e79285e35220cf6e73d66698b3c486346cd91",
-    "bytes": 6928
+    "sha256": "01f502602041223e313f89e0730964da9b5065a0999ef75ae39ec19d41c12b22",
+    "bytes": 6975
   },
   {
     "path": "docs/roadmap/phase-02-native-list-ux.md",
@@ -265,6 +275,11 @@
     "bytes": 5705
   },
   {
+    "path": "docs/testing/phase-02-stability-report.md",
+    "sha256": "6688e2375ed46a5e1375328a6d43a92074eee70353c6a4c7a973a56824275ed3",
+    "bytes": 3801
+  },
+  {
     "path": "docs/testing/phase-02-ux-live-report.md",
     "sha256": "e443ef927ade35c753fe38e8fcb2bd22645ee36f89e63e244df07f90f55ede8d",
     "bytes": 2522
@@ -276,8 +291,8 @@
   },
   {
     "path": "docs/testing/phase-04-deformation-report.md",
-    "sha256": "e09fd5dd922a812009bb0938e692171d52b55dfd1b43dfef688cb8c14e73c5fb",
-    "bytes": 5999
+    "sha256": "1d45669cb1769ab51635523508e8ab3e20dd8333a513642e60de2778d4c7e533",
+    "bytes": 7358
   },
   {
     "path": "docs/testing/previous-design-review.md",
@@ -296,13 +311,13 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "b6200668cf50b77f2eed2f89871fa54c08d8b3cb4d502d015cb702e5410aeefc",
-    "bytes": 2852
+    "sha256": "8add9841ae5a1bc024864ee969c3a683d8f690c58dc84387903aad8e09537ce9",
+    "bytes": 2967
   },
   {
     "path": "README.md",
-    "sha256": "27283ae1ddb536ec759c2353f103f8f34057873c8edf48d67e7cf8f1e1fc8db4",
-    "bytes": 3495
+    "sha256": "c21e6ac6856b347379accb753fd0aed0a72fb5235a9fc9982363dc930c2ea126",
+    "bytes": 3792
   },
   {
     "path": "SECURITY.md",
@@ -341,8 +356,8 @@
   },
   {
     "path": "tasks/phase-04-deformation.md",
-    "sha256": "fac635823ac8999498945d712396e0f2b1fe7be8d49c7e73782a93c1789ba309",
-    "bytes": 4579
+    "sha256": "9e15da65676e757192e8ce8d4cc671800bafd1e2c627fd52e3fc358fe03f3285",
+    "bytes": 4752
   },
   {
     "path": "tasks/phase-05-user-agent-validation.md",

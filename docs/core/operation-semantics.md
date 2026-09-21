@@ -8,6 +8,12 @@ Validate editable Source, mapping and supported topology; sync proxy from curren
 Resolve selection once and freeze enabled network, selected Source IDs, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 
+For native Controller Edit `G/R/S`, capture happens in the DANP macro's Begin step,
+before Blender's transform operator receives its first mouse delta. Blender's native
+transform remains responsible for axis locks, numeric input, snapping and modal input;
+DANP only observes the absolute Controller pose against the captured rest and writes
+the Source preview. The macro's Finish step is the only native Confirm path.
+
 Capture immutable P0 for every vertex in potential operation scope: all patches incident
 to resolved selection, even when the initial transform is zero. Capture proxy start state
 and enabled hard constraints. Never change coordinates outside this captured scope.
@@ -40,6 +46,11 @@ With unchanged topology/identity, cancel restores exact P0/proxy start state, re
 ownership and creates no meaningful undo entry. Confirm with a result identical to start
 returns NO_CHANGE instead of claiming an edit. Update/commit/cancel after closure returns
 OPERATION_CLOSED without writes.
+
+The native timer is cancellation-only for macro-managed sessions. It must never commit a
+non-zero preview merely because Blender's operator list is temporarily empty while the
+user pauses the mouse. A Controller pose restored to its captured C0 is treated as Cancel;
+native Confirm is handled exclusively by the macro Finish step.
 
 ## Structural state/ownership
 

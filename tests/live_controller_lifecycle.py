@@ -6,6 +6,15 @@ import bmesh
 import bpy
 
 
+def _addon_module():
+    candidates = [module for name, module in sys.modules.items()
+                  if (name == "dan_form" or name.endswith(".dan_form"))
+                  and hasattr(module, "_context_source")]
+    if len(candidates) != 1:
+        raise RuntimeError("DANP Form module is not uniquely loaded")
+    return candidates[0]
+
+
 class LayoutRecorder:
     def __init__(self, records, alert=False):
         self.records = records
@@ -38,7 +47,7 @@ class LayoutRecorder:
 
 
 def run():
-    addon = sys.modules['bl_ext.user_default.dan_form']
+    addon = _addon_module()
     ctx = bpy.context
     original = ctx.view_layer.objects.active
     if original is not None and original.mode != 'OBJECT':
@@ -92,7 +101,8 @@ def run():
         check(any(r[0] == 'dan_form.sync_control' for r in panel_records()), 'Sync visible only in model Edit')
         check(bpy.ops.dan_form.focus_controller() == {'FINISHED'}, 'enter Controller Edit')
         records = panel_records()
-        check(not any(r[0] in {'dan_form.sync_control', 'dan_form.create_control', 'dan_form.delete_control'} for r in records), 'controller panel has no Sync or plus/minus')
+        check(not any(r[0] in {'dan_form.sync_control', 'dan_form.create_control', 'dan_form.deform'} for r in records), 'controller panel has no Sync, plus or dialog deform')
+        check(any(r[0] == 'dan_form.delete_control' for r in records), 'controller panel exposes definition delete')
         menu_records = []
         addon.DANFORM_MT_control_menu.draw(SimpleNamespace(layout=LayoutRecorder(menu_records)), ctx)
         check(not any(r[0] == 'dan_form.sync_control' for r in menu_records), 'controller menu also omits Sync')
@@ -107,6 +117,8 @@ def run():
         ctx.view_layer.update()
         accepted_pose = pose()
         check(any(co[0] == 0.125 for co in accepted_pose[0].values()), 'coordinate edits remain allowed')
+        accepted_source_coordinates = [tuple(v.co) for v in mesh.vertices]
+        check(accepted_source_coordinates != coordinates, 'valid controller coordinate edit deforms Source')
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.duplicate()
         ctx.view_layer.update()
@@ -142,7 +154,7 @@ def run():
         bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=True)
         ctx.view_layer.update()
         check(pose() == accepted_pose, 'missing mapping layer recovered')
-        check(coordinates == [tuple(v.co) for v in mesh.vertices], 'controller protection never changes Source coordinates')
+        check(accepted_source_coordinates == [tuple(v.co) for v in mesh.vertices], 'rejected topology edits do not add Source deformation')
         check(connectivity == [tuple(e.vertices) for e in mesh.edges], 'controller protection never changes Source connectivity')
         check(bpy.context.view_layer.objects.active == controller and controller.mode == 'EDIT', 'protection retains controller Edit context')
         check(len(addon._TOPOLOGY_KEYMAPS) == 16, 'all topology shortcuts registered once')
@@ -161,11 +173,17 @@ def run():
         old_mesh_name = controller.data.name
         check(bpy.ops.dan_form.remove() == {'FINISHED'} and model.mode == 'EDIT', 'Remove from Source Edit preserves mode')
         check(old_controller_name not in bpy.data.objects and old_mesh_name not in bpy.data.meshes, 'Remove deletes controller and its unused mesh')
+        check(model.as_pointer() not in addon._DANP_TRANSACTIONS
+              and model.as_pointer() not in addon._NATIVE_TRANSFORM_SESSIONS
+              and model.as_pointer() not in addon._NATIVE_UNDO_RECORDS,
+              'Remove clears transient transform state')
         bpy.ops.object.mode_set(mode='OBJECT')
         check(not any(k.startswith('dan_form_') for k in model.keys()), 'Remove clears addon binding and definitions')
         check(mesh.attributes.get(addon.VID_ATTR) is None and mesh.attributes.get(addon.EID_ATTR) is None, 'Remove clears addon ID layers')
         check(model['keep_property'] == 'untouched' and mesh.attributes.get('keep_attribute') is not None, 'Remove preserves unrelated properties and attributes')
-        check(coordinates == [tuple(v.co) for v in mesh.vertices] and connectivity == [tuple(e.vertices) for e in mesh.edges], 'Remove preserves model geometry')
+        check(accepted_source_coordinates == [tuple(v.co) for v in mesh.vertices]
+              and connectivity == [tuple(e.vertices) for e in mesh.edges],
+              'Remove preserves current model geometry')
         check(not bpy.ops.dan_form.remove.poll(), 'Remove disabled after cleanup')
         check(bpy.ops.dan_form.initialize() == {'FINISHED'} and addon._controls(model) == [], 're-Init starts clean')
         check(bpy.ops.dan_form.remove() == {'FINISHED'}, 'Remove empty controller from Object Mode')

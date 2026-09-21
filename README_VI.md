@@ -25,9 +25,11 @@ lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao n
 theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
 hay deactivate riêng.
 
-Bộ này gồm specification và addon prototype Phase 1/2. Bản 0.2.4 dùng tên DANP
-Form; model có Init/Remove, controller chỉ sửa vị trí các điểm đã có. Biến dạng
-Source từ controller thuộc Phase 4, chưa triển khai. Lộ trình đã chốt:
+Bộ này gồm specification và addon prototype Phase 1–4. Bản 0.5.17 dùng tên DANP
+Form; model có Init/Remove, controller giữ topology cố định. Patch chỉ có một
+control biên nhận toàn bộ G/R/S; patch có nhiều control blend transform với các
+control không chọn làm neo đứng yên. Lộ trình kiểm chứng agent và release vẫn
+thuộc Phase 5.
 
 Controller Edit: Ctrl+Alt+Click chọn đoạn giữa giao điểm; Shift để chọn thêm.
 H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ toàn bộ con mắt.

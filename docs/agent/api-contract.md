@@ -67,3 +67,38 @@ Simplify/refine and sparse-span APIs are optional extension capabilities. Advert
 what the installed build supports; unsupported capability requests return a clear
 error rather than silently succeeding. Reference-based testing in phase 5 supplies
 ordinary targets, with no additional mesh-write API or reference solver.
+
+## Blender facade (current build)
+
+When running inside Blender, external agents should import `dan_form.agent` and
+use the facade instead of editing `dan_form_controls` or indexing `mesh.vertices`
+directly:
+
+```python
+from dan_form.agent import (
+    inspect_source_selection, create_control_from_current_selection,
+    begin_operation, update_operation, commit_operation, cancel_operation,
+)
+
+selection = inspect_source_selection()
+# persistent_vertex_ids / persistent_edge_ids are canonical; mesh_*_indices are
+# diagnostics only and may change after topology operations.
+result = create_control_from_current_selection(
+    name="Shoulder Base (Left)", side="LEFT", region="SHOULDER_BASE"
+)
+
+# Controller Edit must be active for the transaction facade.
+begin_operation()
+update_operation((0.02, 0.0, 0.0), radius=0.0)
+commit_operation()       # or cancel_operation()
+```
+
+`create_control_from_current_selection` calls the same registered operator as the
+Sidebar `+` button. It returns the canonical control definition, a persistent-ID
+selection snapshot, and validation data. Stable failures include
+`NO_ACTIVE_SOURCE`, `SOURCE_EDIT_MODE_REQUIRED`, `NO_SOURCE_SELECTION`,
+`SOURCE_ID_LAYERS_MISSING`, `STALE_MAPPING`, and `CONTROL_CREATE_FAILED`.
+Display names are normalized to a deterministic suffix when a duplicate is
+requested; agents should use `control_uuid` as identity and should include
+`side` (`LEFT`, `RIGHT`, or `CENTER`) and a semantic `region` when known.
+Agents must re-query after rebuilds and must never write the control JSON directly.

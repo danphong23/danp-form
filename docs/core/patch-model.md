@@ -31,6 +31,12 @@ patches, subject to proportional and hard constraints. Paths follow member-face
 edges; they may branch. Do not assign one exclusive vertex chain to each control
 vertex or infer horizontal/vertical/anatomical directions from control names.
 
+An incident control supplies a transform field, not merely an averaged boundary
+displacement. If a patch has one incident control, that control owns the whole
+patch. If it has several incident controls, their transforms are blended across
+the patch; an enabled unselected control contributes the identity transform and
+is a hard stationary boundary.
+
 Patch visualization visibility is display-only. All patches remain available to
 scope/solve regardless of overlay toggles; DANP Form control Hide changes actual
 partition as described below.

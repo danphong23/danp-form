@@ -1,0 +1,331 @@
+"""Blender lifecycle callbacks and runtime invalidation.
+
+The callbacks are deliberately kept outside the package facade.  ``bind``
+injects the small set of Source/controller adapters and shared runtime caches
+after import, so registration and reload always point at one callback object.
+"""
+
+from __future__ import annotations
+
+import bpy
+from bpy.app.handlers import persistent
+from mathutils import Vector
+
+from .. import runtime
+from ..constants import *
+from . import transform_session as _transform_session
+from .workflows import update_revision
+
+
+def bind(api) -> None:
+    for name in dir(api):
+        if name.startswith("_"):
+            globals()[name] = getattr(api, name)
+
+
+@persistent
+def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph) -> None:
+    if runtime.SYNC_GUARD:
+        return
+    runtime.SYNC_GUARD = True
+    try:
+        changed_geometry = {update.id.original.as_pointer() for update in depsgraph.updates if update.is_updated_geometry}
+        for source, controller in _source_controller_pairs():
+            source_changed = source.as_pointer() in changed_geometry or source.data.as_pointer() in changed_geometry
+            controller_changed = controller.as_pointer() in changed_geometry or controller.data.as_pointer() in changed_geometry
+            if not source_changed and not controller_changed:
+                continue
+            previous_proxy_snapshot = _PROXY_SNAPSHOTS.get(controller.as_pointer())
+            _OVERLAY_CACHE.clear()
+            _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+            try:
+                if source_changed:
+                    _MAPPING_CACHE.pop(source.as_pointer(), None)
+                    _FACE_CACHE.pop(source.as_pointer(), None)
+                    _validate_source_topology(source)
+                _guard_proxy_topology(source, controller)
+                if (controller_changed and controller.mode == "EDIT"
+                        and _controller_pose_changed(source, controller, previous_proxy_snapshot)):
+                    # Blender restores the proxy to C0 when the user presses
+                    # RMB/Esc.  This is true for both the legacy macro path
+                    # and the native observer path.  Detect it before calling
+                    # update(); otherwise the timer can commit a cancelled
+                    # preview or start the next mouse sample from a deformed
+                    # Source pose (the cumulative-shrink bug).
+                    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(source.as_pointer())
+                    if (session is not None
+                            and session.get("had_delta")
+                            and _transform_session._positions_close(
+                                _transform_session.controller_positions(controller),
+                                session.get("controller_rest", {}))):
+                        _transform_session.cancel(source, controller, _workflow_dependencies())
+                        bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
+                        continue
+                    _observe_native_controller_transform(
+                        source, controller, previous_proxy_snapshot
+                    )
+                # A native G/R/S session owns the live Controller Edit pose.
+                # Pushing Source back into that proxy during the same
+                # dependency-graph tick would visibly snap the transform and
+                # lose numeric/axis-lock input.  The transform bridge performs
+                # the final sync on commit or cancel.
+                if source_changed and source.as_pointer() not in runtime.NATIVE_TRANSFORM_SESSIONS:
+                    _sync_proxy(source, controller)
+            except (KeyError, ValueError):
+                # A stale topology is reported by the next explicit command;
+                # the depsgraph callback must never escape into Blender.
+                pass
+        active_source, _ = _context_source(bpy.context)
+        _sync_ui_list(bpy.context.scene, active_source)
+    except (AttributeError, RuntimeError, ValueError):
+        pass
+    finally:
+        runtime.SYNC_GUARD = False
+
+
+def _controller_pose_changed(source, controller, previous_snapshot) -> bool:
+    """Distinguish coordinate transforms from selection-only Edit updates."""
+    current_positions = _transform_session.controller_positions(controller)
+    if previous_snapshot is None or len(previous_snapshot) < 4:
+        try:
+            return not _positions_close(current_positions, _source_positions(source))
+        except (AttributeError, KeyError, RuntimeError, ValueError):
+            return False
+    previous_positions = {
+        int(vertex_id): Vector(coordinates)
+        for vertex_id, coordinates, _selected, _hidden in previous_snapshot[3][0]
+    }
+    return not _positions_close(current_positions, previous_positions)
+
+
+def _rest_from_proxy_snapshot(snapshot):
+    if not snapshot or len(snapshot) < 4:
+        return None
+    try:
+        return {int(vertex_id): Vector(coordinates)
+                for vertex_id, coordinates, _selected, _hidden in snapshot[3][0]}
+    except (IndexError, TypeError, ValueError):
+        return None
+
+
+def _observe_native_controller_transform(source, controller, previous_snapshot=None) -> None:
+    """Bridge native Blender G/R/S edits without nesting a modal operator.
+
+    Controller Edit remains entirely owned by Blender.  On the first native
+    coordinate update we capture the DANP transaction rest, then update the
+    Source from the live selected proxy coordinates.  A lightweight timer
+    waits for Blender's transform operator to finish before committing the
+    single transaction; canceling the native operation restores the proxy and
+    therefore restores Source through the same path.
+    """
+    key = source.as_pointer()
+    deps = _workflow_dependencies()
+    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
+    try:
+        if session is None:
+            session = _transform_session.begin(
+                source, controller, deps, "NATIVE",
+                controller_rest=_rest_from_proxy_snapshot(previous_snapshot),
+            )
+            session["idle_polls"] = 0
+            session["timer_registered"] = False
+        scene = bpy.context.scene
+        _transform_session.update(
+            source,
+            controller,
+            deps,
+            session,
+            profile=getattr(scene, "dan_form_proportional_profile", "LINEAR"),
+            radius=float(getattr(scene, "dan_form_proportional_radius", 0.0)),
+        )
+        # Every geometry sample means the modal transform is still alive.
+        # Reset the quiet-poll counter here; otherwise a timer can commit a
+        # transform while the mouse is still moving in contexts where
+        # WindowManager.operators does not expose TRANSFORM_OT_*.
+        session["idle_polls"] = 0
+        if not session.get("timer_registered"):
+            session["timer_registered"] = True
+            bpy.app.timers.register(
+                lambda source_ptr=key: _native_transform_timer(source_ptr),
+                first_interval=0.05,
+            )
+    except (ValueError, RuntimeError, KeyError):
+        runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
+        if key in deps.transactions:
+            try:
+                _transform_session.cancel(source, controller, deps)
+            except (ValueError, RuntimeError):
+                deps.transactions.pop(key, None)
+
+
+def _native_transform_timer(source_ptr):
+    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(source_ptr)
+    if session is None:
+        return None
+    source = next((obj for obj in bpy.data.objects if obj.as_pointer() == source_ptr), None)
+    controller = next((obj for obj in bpy.data.objects if obj.as_pointer() == session["controller"]), None)
+    if source is None or controller is None or controller.mode != "EDIT":
+        if source is not None and controller is not None and source_ptr in _DANP_TRANSACTIONS:
+            try:
+                # Leaving Controller Edit Mode through "Back to Model" is a
+                # normal completion path.  The old code treated every mode
+                # change as cancellation and restored Source to p0, which
+                # erased a valid edit immediately after the user left the
+                # controller.  Preserve completed edits; only restore when
+                # no transform delta was produced.
+                if session.get("had_delta"):
+                    _transform_session.commit(source, _workflow_dependencies())
+                else:
+                    _transform_session.cancel(source, controller, _workflow_dependencies())
+            except (ValueError, RuntimeError):
+                _DANP_TRANSACTIONS.pop(source_ptr, None)
+        runtime.NATIVE_TRANSFORM_SESSIONS.pop(source_ptr, None)
+        return None
+    try:
+        current = _transform_session.controller_positions(controller)
+        # A cancelled modal transform restores the proxy to its immutable
+        # rest pose.  Handle this before the native-operator probe so a
+        # context with an empty WindowManager.operators list cannot turn the
+        # restored pose into a committed zero/partial operation.
+        if (session.get("had_delta")
+                and _transform_session._positions_close(
+                    current, session.get("controller_rest", {}))):
+            _transform_session.cancel(source, controller, _workflow_dependencies())
+            bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
+            return None
+        if session.get("managed_by_macro"):
+            # The macro's Finish step owns Confirm.  The timer is only a
+            # cancellation safety net for a native operator that restores C0
+            # without producing a second usable callback (not a commit path).
+            session["idle_polls"] = int(session.get("idle_polls", 0)) + 1
+            if (_transform_session._positions_close(current, session.get("controller_rest", {}))
+                    and (session.get("had_delta") or session["idle_polls"] >= 10)):
+                _transform_session.cancel(source, controller, _workflow_dependencies())
+                bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
+                return None
+            return 0.05
+        if _transform_session.native_transform_active(bpy.context):
+            session["idle_polls"] = 0
+            return 0.05
+        session["idle_polls"] = int(session.get("idle_polls", 0)) + 1
+        # Some headless/MCP contexts do not expose the native operator in
+        # WindowManager.Operators.  Require a few quiet polls so a single
+        # dependency update cannot prematurely close a real transform.
+        # Do not treat a short gap between mouse samples as confirmation.
+        # In UI contexts where WindowManager.operators is empty, RMB/Esc can
+        # need several timer ticks to restore the proxy to its rest pose.
+        # A longer quiet window prevents committing an intermediate preview
+        # that would later survive cancel and require Undo to remove.
+        if session["idle_polls"] < 20:
+            return 0.05
+        scene = bpy.context.scene
+        _transform_session.update(
+            source,
+            controller,
+            _workflow_dependencies(),
+            session,
+            profile=getattr(scene, "dan_form_proportional_profile", "LINEAR"),
+            radius=float(getattr(scene, "dan_form_proportional_radius", 0.0)),
+        )
+        _transform_session.commit(source, _workflow_dependencies())
+        bpy.context.scene.dan_form_status = "Native Controller transform committed"
+    except (ValueError, RuntimeError, KeyError):
+        try:
+            _transform_session.cancel(source, controller, _workflow_dependencies())
+        except (ValueError, RuntimeError):
+            runtime.NATIVE_TRANSFORM_SESSIONS.pop(source_ptr, None)
+    return None
+
+
+@persistent
+def _refresh_runtime(_unused=None, direction=None) -> None:
+    runtime.PICK_SESSION += 1
+    runtime.NATIVE_TRANSFORM_SESSIONS.clear()
+    runtime.DANP_TRANSACTIONS.clear()
+    # Undo/redo handlers run inside Blender's undo stack.  Defer Source mesh
+    # writeback until the handler has returned; writing BMesh data re-entrantly
+    # from undo_post can deadlock or invalidate the active edit mesh.
+    if direction in {"UNDO", "REDO"} and runtime.NATIVE_UNDO_RECORDS and not runtime.NATIVE_UNDO_TIMER:
+        runtime.NATIVE_UNDO_TIMER = True
+        runtime.NATIVE_UNDO_DIRECTION = direction
+        bpy.app.timers.register(
+            lambda pending_direction=direction: _restore_native_undo_records(pending_direction),
+            first_interval=0.05,
+        )
+
+
+@persistent
+def _undo_post(_unused=None) -> None:
+    _refresh_runtime(_unused, "UNDO")
+
+
+@persistent
+def _redo_post(_unused=None) -> None:
+    _refresh_runtime(_unused, "REDO")
+
+
+@persistent
+def _load_post(_unused=None) -> None:
+    runtime.NATIVE_UNDO_RECORDS.clear()
+    _refresh_runtime(_unused)
+    _PICK_PREVIEW.clear()
+    _MAPPING_CACHE.clear()
+    _UI_SIGNATURES.clear()
+    _PROXY_SNAPSHOTS.clear()
+    _NETWORK_CACHE.clear()
+    _PATCH_CACHE.clear()
+    _PATCH_OVERLAY_CACHE.clear()
+    _FACE_CACHE.clear()
+    _OVERLAY_CACHE.clear()
+    try:
+        for source, controller in _source_controller_pairs():
+            _guard_proxy_topology(source, controller)
+        _sync_context_ui_list(bpy.context)
+    except (AttributeError, RuntimeError, ValueError):
+        pass
+
+
+def _update_revision(source: bpy.types.Object) -> None:
+    update_revision(source)
+
+
+def _positions_close(left, right, tolerance=1e-6) -> bool:
+    if set(left) != set(right):
+        return False
+    return all((left[key] - right[key]).length <= tolerance for key in left)
+
+
+def _restore_native_undo_records(direction: str):
+    """Pair Blender's native proxy undo with the Source deformation state."""
+    try:
+        for source_ptr, record in list(runtime.NATIVE_UNDO_RECORDS.items()):
+            source = next((obj for obj in bpy.data.objects if obj.as_pointer() == source_ptr), None)
+            if source is None:
+                runtime.NATIVE_UNDO_RECORDS.pop(source_ptr, None)
+                continue
+            try:
+                source_now = _source_positions(source)
+                source_post = record.get("source_post", {})
+                source_pre = record.get("source_pre", {})
+                if direction == "UNDO" and record.get("state") == "committed" and _positions_close(source_now, source_post):
+                    runtime.SYNC_GUARD = True
+                    try:
+                        _write_source_positions(source, source_pre)
+                    finally:
+                        runtime.SYNC_GUARD = False
+                    record["state"] = "undone"
+                elif direction == "REDO" and record.get("state") == "undone" and _positions_close(source_now, source_pre):
+                    runtime.SYNC_GUARD = True
+                    try:
+                        _write_source_positions(source, source_post)
+                    finally:
+                        runtime.SYNC_GUARD = False
+                    record["state"] = "committed"
+            except (AttributeError, KeyError, RuntimeError, ValueError):
+                continue
+    finally:
+        runtime.NATIVE_UNDO_TIMER = False
+        runtime.NATIVE_UNDO_DIRECTION = None
+
+
+__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision"]

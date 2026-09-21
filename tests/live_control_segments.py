@@ -5,8 +5,17 @@ from types import SimpleNamespace
 import bpy
 
 
+def _addon_module():
+    candidates = [module for name, module in sys.modules.items()
+                  if (name == "dan_form" or name.endswith(".dan_form"))
+                  and hasattr(module, "_context_source")]
+    if len(candidates) != 1:
+        raise RuntimeError("DANP Form module is not uniquely loaded")
+    return candidates[0]
+
+
 def run():
-    a = sys.modules['bl_ext.user_default.dan_form']
+    a = _addon_module()
     ctx = bpy.context
     original = ctx.view_layer.objects.active
     if original and original.mode != 'OBJECT':
@@ -49,7 +58,7 @@ def run():
         check(tuple(map(len, a._effective_proxy_elements(model))) == (13,12), 'overlapping groups deduplicate graph')
         check(not bpy.ops.dan_form.select_segment.poll() and not bpy.ops.dan_form.reveal_controller.poll(), 'controller shortcuts do not intercept Source')
         bpy.ops.dan_form.focus_controller()
-        check(len(a._CONTROL_KEYMAPS) == 7, 'seven scoped selection/visibility shortcuts')
+        check(len(a._CONTROL_KEYMAPS) == 10, 'ten scoped selection/visibility shortcuts')
         whole_control = controls[-1]
         check(bpy.ops.dan_form.clear_selection() == {'FINISHED'}, 'setup Clear selection')
         check(a._proxy_selection_snapshot(controller) == (set(), set()), 'setup Clear empties proxy selection')

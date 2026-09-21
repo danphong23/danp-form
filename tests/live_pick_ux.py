@@ -13,8 +13,17 @@ from mathutils import Quaternion, Vector
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 
 
+def _addon_module():
+    candidates = [module for name, module in sys.modules.items()
+                  if (name == "dan_form" or name.endswith(".dan_form"))
+                  and hasattr(module, "_context_source")]
+    if len(candidates) != 1:
+        raise RuntimeError("DANP Form module is not uniquely loaded")
+    return candidates[0]
+
+
 def run():
-    a = sys.modules['bl_ext.user_default.dan_form']
+    a = _addon_module()
     ctx = bpy.context
     original = ctx.object
     if original and original.mode != 'OBJECT':
@@ -45,7 +54,7 @@ def run():
 
     def picker(tool='SEGMENT', add=False):
         fake = SimpleNamespace(tool=tool, add_to_selection=add,
-            _session=a._PICK_SESSION, _controller=controller.as_pointer(),
+            _session=a._runtime.PICK_SESSION, _controller=controller.as_pointer(),
             _generation=controller.get(a.PROXY_GENERATION_KEY), _area=area,
             _committed=False, _navigating=False, _last_target=None, _last_edge_id=None)
         for name in ('_finish', '_in_viewport', '_preview', 'modal'):

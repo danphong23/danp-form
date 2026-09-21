@@ -1,0 +1,236 @@
+"""Pure patch-local interpolation regressions."""
+
+import importlib.util
+import sys
+import types
+from pathlib import Path
+
+
+ROOT = Path(__file__).parents[1]
+PACKAGE = "dan_form_core_test"
+pkg = types.ModuleType(PACKAGE)
+pkg.__path__ = [str(ROOT / "dan_form" / "core")]
+sys.modules[PACKAGE] = pkg
+
+
+def _load(name):
+    spec = importlib.util.spec_from_file_location(
+        f"{PACKAGE}.{name}", ROOT / "dan_form" / "core" / f"{name}.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+_load("graph")
+_load("proportional")
+DEFORMATION = _load("deformation")
+OPERATION = _load("operation")
+
+
+class V:
+    def __init__(self, x=0.0, y=0.0, z=0.0):
+        self.values = [float(x), float(y), float(z)]
+
+    def __iter__(self):
+        return iter(self.values)
+
+    def __sub__(self, other):
+        return V(*(a - b for a, b in zip(self.values, other.values)))
+
+    def __add__(self, other):
+        return V(*(a + b for a, b in zip(self.values, other.values)))
+
+    def __mul__(self, scalar):
+        return V(*(a * scalar for a in self.values))
+
+    __rmul__ = __mul__
+
+    def __truediv__(self, scalar):
+        return V(*(a / scalar for a in self.values))
+
+    def copy(self):
+        return V(*self.values)
+
+    def __eq__(self, other):
+        return isinstance(other, V) and self.values == other.values
+
+
+def test_moving_boundary_interpolates_toward_stationary_boundary():
+    p0 = {index: V(index, 0, 0) for index in range(5)}
+    output, changed = DEFORMATION.compute_preview(
+        p0,
+        selected={0},
+        scope=set(p0),
+        patches=[{"vertex_ids": list(p0)}],
+        edge_vids={index: (index, index + 1) for index in range(4)},
+        targets={0: V(1, 0, 0)},
+        stationary={4},
+        profile="LINEAR",
+        radius=0.0,
+    )
+
+    assert output[0] == V(1, 0, 0)
+    assert output[4] == p0[4]
+    assert 1.0 < output[1].values[0] < 2.0
+    assert 2.0 < output[2].values[0] < 3.0
+    assert changed == 4
+
+
+def test_nonuniform_loop_targets_are_not_reduced_to_one_average_vector():
+    p0 = {index: V(index, 0, 0) for index in range(5)}
+    output, _ = DEFORMATION.compute_preview(
+        p0,
+        selected={0, 4},
+        scope=set(p0),
+        patches=[{"vertex_ids": list(p0)}],
+        edge_vids={index: (index, index + 1) for index in range(4)},
+        targets={0: V(1, 0, 0), 4: V(4, 1, 0)},
+        stationary=set(),
+        profile="LINEAR",
+        radius=0.0,
+    )
+
+    # The midpoint receives the spatially varying loop displacement, rather
+    # than the same averaged vector as every interior vertex.
+    assert output[2].values[0] == 2.5
+    assert output[2].values[1] == 0.5
+
+
+def test_finite_radius_cannot_expand_or_cross_patch_scope():
+    p0 = {index: V(index, 0, 0) for index in range(7)}
+    output, changed = DEFORMATION.compute_preview(
+        p0,
+        selected={0},
+        scope={0, 1, 2, 3},
+        patches=[
+            {"vertex_ids": [0, 1, 2, 3]},
+            {"vertex_ids": [4, 5, 6]},
+        ],
+        edge_vids={index: (index, index + 1) for index in range(6)},
+        targets={0: V(1, 0, 0)},
+        stationary=set(),
+        profile="LINEAR",
+        radius=2.0,
+    )
+
+    assert output[0] == V(1, 0, 0)
+    assert output[1].values[0] == 1.5
+    assert output[2] == p0[2]
+    assert output[3] == p0[3]
+    assert output[4] == p0[4]
+    assert output[5] == p0[5]
+    assert output[6] == p0[6]
+    assert changed == 2
+
+
+def test_noop_target_clears_to_operation_rest_exactly():
+    p0 = {index: V(index, 0, 0) for index in range(4)}
+    output, changed = DEFORMATION.compute_preview(
+        p0,
+        selected={0},
+        scope=set(p0),
+        patches=[{"vertex_ids": list(p0)}],
+        edge_vids={index: (index, index + 1) for index in range(3)},
+        targets={0: p0[0]},
+        stationary={3},
+        profile="SMOOTH",
+        radius=2.0,
+    )
+
+    assert output == p0
+    assert changed == 0
+
+
+def test_shared_free_vertex_conflict_is_rejected_before_writeback():
+    p0 = {index: V(index, 0, 0) for index in range(4)}
+    patches = [
+        {"vertex_ids": [0, 1, 2]},
+        {"vertex_ids": [1, 2, 3]},
+    ]
+    edges = {0: (0, 1), 1: (1, 2), 2: (2, 3)}
+
+    try:
+        DEFORMATION.compute_preview(
+            p0,
+            selected={0, 3},
+            scope=set(p0),
+            patches=patches,
+            edge_vids=edges,
+            targets={0: V(1, 0, 0), 3: V(3, 2, 0)},
+            stationary=set(),
+            profile="LINEAR",
+            radius=0.0,
+        )
+    except ValueError as error:
+        assert str(error) == "TARGET_CONFLICT"
+    else:
+        raise AssertionError("shared patch candidates must not be resolved by iteration order")
+
+
+def test_single_control_owns_rotation_of_the_whole_patch():
+    # A planar ring is the common control shape.  The patch continues along X;
+    # averaging ring displacements would incorrectly erase the rotation there.
+    p0 = {
+        0: V(0, 1, 0), 1: V(0, 0, 1), 2: V(0, -1, 0), 3: V(0, 0, -1),
+        4: V(1, 0.5, 0.5),
+    }
+    target = {0: V(0, 0, 1), 1: V(0, -1, 0), 2: V(0, 0, -1), 3: V(0, 1, 0)}
+    output, _ = DEFORMATION.compute_preview(
+        p0, {0, 1, 2, 3}, set(p0),
+        [{"vertex_ids": list(p0), "incident_control_uuids": ["B"]}],
+        {0: (0, 1), 1: (1, 2), 2: (2, 3), 3: (3, 4)},
+        target, set(), "LINEAR", 0.0,
+        control_groups={"B": {0, 1, 2, 3}},
+    )
+
+    assert output[4].values[0] == 1.0
+    assert abs(output[4].values[1] + 0.5) < 1e-6
+    assert abs(output[4].values[2] - 0.5) < 1e-6
+
+
+def test_single_control_owns_scale_of_the_whole_patch():
+    p0 = {0: V(0, 1, 0), 1: V(0, 0, 1), 2: V(1, 0.5, 0.5)}
+    target = {0: V(0, 2, 0), 1: V(0, 0, 2)}
+    output, _ = DEFORMATION.compute_preview(
+        p0, {0, 1}, set(p0),
+        [{"vertex_ids": list(p0), "incident_control_uuids": ["B"]}],
+        {0: (0, 1), 1: (1, 2)}, target, set(), "LINEAR", 0.0,
+        control_groups={"B": {0, 1}},
+    )
+
+    assert output[2].values[0] == 1.0
+    assert abs(output[2].values[1] - 1.0) < 1e-6
+    assert abs(output[2].values[2] - 1.0) < 1e-6
+
+
+def test_unselected_control_is_an_identity_anchor_for_shared_patch():
+    p0 = {index: V(index, 0, 0) for index in range(5)}
+    target = {0: V(1, 0, 0), 1: V(2, 0, 0)}
+    output, _ = DEFORMATION.compute_preview(
+        p0, {0, 1}, set(p0),
+        [{"vertex_ids": list(p0), "incident_control_uuids": ["A", "B"]}],
+        {index: (index, index + 1) for index in range(4)}, target, {3, 4},
+        "LINEAR", 0.0,
+        control_groups={"A": {0, 1}, "B": {3, 4}},
+    )
+
+    assert output[0] == target[0]
+    assert output[1] == target[1]
+    assert output[3] == p0[3]
+    assert output[4] == p0[4]
+    assert 2.0 < output[2].values[0] < 3.0
+
+
+def test_canonical_operation_resolves_absolute_targets_for_agent_and_ui():
+    p0 = {0: V(0, 1, 0), 1: V(1, 0, 0)}
+    transform = OPERATION.OperationTransform(
+        operation="ROTATE", pivot=(0, 0, 0), rotation=(0.0, 0.0, 1.5707963267948966)
+    )
+    targets = OPERATION.targets_from_transform(p0, set(p0), transform)
+    assert abs(targets[0].values[0] + 1.0) < 1e-6
+    assert abs(targets[0].values[1]) < 1e-6
+    assert abs(targets[1].values[0]) < 1e-6
+    assert abs(targets[1].values[1] - 1.0) < 1e-6

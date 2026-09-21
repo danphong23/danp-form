@@ -13,6 +13,27 @@ bằng 0. Đây là baseline có thể thay thế; chưa đóng băng solver nâ
 
 ## Kiểm tra trực tiếp
 
+### Regression gate lặp lại được trên Blender MCP
+
+Ngoài các phiên fit tham chiếu dưới đây, `tests/live_deformation_regression.py`
+được chạy trên đúng phiên Blender đang mở sau khi nạp lại extension 0.5.0. Fixture
+tạm gồm hai quad và một controller thật; nó tạo control qua sidebar operator,
+chọn hai đỉnh biên trong Controller Edit, chạy preview Smooth/proportional,
+Cancel để khôi phục tuyệt đối, rồi chạy `dan_form.deform` để Commit. Kết quả:
+
+- 10/10 kiểm tra đạt;
+- target của hai đỉnh chọn nhận đúng delta;
+- Cancel khôi phục Source và đồng bộ lại Controller;
+- Commit qua Blender operator giữ các đỉnh bật nhưng không chọn đứng yên;
+- fixture được xóa và Source, mode, selection của file người dùng được phục hồi;
+- file vẫn dirty như trước và không được lưu.
+
+`tests/live_reference_workflow.py` bổ sung cùng gate trên model đang mở: Blender
+được chuyển thật qua Front Orthographic, Right/Side Orthographic và Perspective;
+mỗi hướng đều chạy preview rồi Cancel, kiểm tra trạng thái viewport đúng, khôi
+phục tọa độ chính xác, và cuối cùng Hide/Reveal lại vùng control. 15/15 kiểm tra
+đạt; view, active object và mode được phục hồi.
+
 File đang mở: `Project/2. toon/girl_chibi_1.blend`, Blender 5.2.1 LTS,
 MCP kết nối đúng phiên. File đã dirty từ trước; không lưu đè.
 

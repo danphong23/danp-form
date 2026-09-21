@@ -5,8 +5,17 @@ import sys
 import bpy
 
 
+def _addon_module():
+    candidates = [module for name, module in sys.modules.items()
+                  if (name == "dan_form" or name.endswith(".dan_form"))
+                  and hasattr(module, "_context_source")]
+    if len(candidates) != 1:
+        raise RuntimeError("DANP Form module is not uniquely loaded")
+    return candidates[0]
+
+
 def run():
-    addon = sys.modules["bl_ext.user_default.dan_form"]
+    addon = _addon_module()
     context = bpy.context
     scene = context.scene
     original = context.object
