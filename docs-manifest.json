@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "01aa7d3f94a1e307dd62a72db2013c5c1d6bf6db4208bfe3d5e43eeccc475720",
-    "bytes": 25188
+    "sha256": "7a4abbe9fb139f94ec707e82a35d5abb7b89ec9066c4fff311c8dec66a23b98a",
+    "bytes": 23915
   },
   {
     "path": "CONTRIBUTING.md",
@@ -38,11 +38,6 @@
     "path": "docs/architecture/mapping-and-sync.md",
     "sha256": "e92ade198fbdbc08660aa31b4c769b8685cbf92020f9a08045e7997d3256b09b",
     "bytes": 3614
-  },
-  {
-    "path": "docs/architecture/modifier-sync.md",
-    "sha256": "8130d82285452b661f416ae43e890f04f09ff41e1597a6f5289e0f2b19cd94f7",
-    "bytes": 3476
   },
   {
     "path": "docs/architecture/module-boundaries.md",
@@ -186,8 +181,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "18c28653e3febe4fc9bde11d12696b6da23f8c43dfd54375401b373f2a7c6246",
-    "bytes": 231953
+    "sha256": "367d478055a23d6b146c8e8439bf0704e16ffa837002ab8c0cdfb7c9fdb000ef",
+    "bytes": 228418
   },
   {
     "path": "docs/product/leg-control-examples.md",

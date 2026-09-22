@@ -11,7 +11,6 @@ from mathutils import Vector
 
 from ..constants import *
 from ..core.deformation import compute_preview
-from .modifiers import apply_mirror_constraints
 from ..core.operation import OperationTransform, targets_from_transform
 
 
@@ -134,7 +133,6 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         float(radius),
         control_groups=tx.get("control_groups"),
     )
-    output = apply_mirror_constraints(source, p0, output)
     write_source_positions(source, {vid: output[vid] for vid in tx["scope"] if vid in output}, deps)
     # During native Controller Edit transforms Blender owns the proxy
     # coordinates.  Syncing it back here would erase the live G/R/S preview;

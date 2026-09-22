@@ -1,25 +1,5 @@
 # Design Changelog
 
-## 2026-09-22 — DANP Form 0.5.27 Mirror Edit stability
-
-- Loại `is_active` của modifier khỏi dữ liệu đồng bộ: đây là trạng thái lựa
-  chọn UI riêng của từng object, không phải thiết lập hình học. Trước đây
-  Mirror trên Controller bị dựng lại liên tục khi Source có Subdivision được
-  chọn, có thể ngắt Edit Control giữa G/R/S và làm hỏng thao tác hủy.
-- Chỉ ghi metadata Controller khi giá trị thực sự đổi để tránh phát sinh cập
-  nhật depsgraph không cần thiết.
-- Thêm bài kiểm tra Blender cho đồng bộ lặp lại trong Edit Mode, native Mirror
-  Clipping và chuỗi preview → hủy trả Source về vị trí ban đầu.
-
-## 2026-09-22 — DANP Form 0.5.26 modifier synchronization
-
-- Đồng bộ Mirror từ Source sang Controller theo đúng thứ tự và thiết lập RNA.
-- Tự cập nhật Controller khi modifier Source đổi, mở file hoặc Undo/Redo.
-- DANP writeback tôn trọng Merge/Clipping của Mirror khi tính preview trên Source.
-- Bỏ qua modifier cần mặt trên proxy vertex/edge như Subdivision; Source vẫn giữ
-  toàn bộ stack gốc.
-- Thêm kiểm tra tĩnh và tài liệu về ranh giới Source/Controller.
-
 ## 2026-09-22 — DANP Form 0.5.24 moved-target transform bridge
 
 - Native Controller transforms now derive targets from every proxy vertex whose
