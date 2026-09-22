@@ -1,6 +1,6 @@
 # Blender Integration
 
-**Status: Implementation guidance; no production code yet**
+**Status: Current DANP Form integration contract**
 
 DANP Form can be implemented as a normal Blender Extension using Python APIs for mesh access, BMesh, PropertyGroups/attributes, modal operators, overlays, and keymaps.
 
@@ -27,7 +27,13 @@ When Source is in Edit Mode, implementation must use the edit-mesh/BMesh pathway
 
 ## Downstream modifiers
 
-Core edits base Source coordinates. Subdivision/Armature/etc. may evaluate afterward. A modifier that radically changes displayed topology can make the visual proxy differ from evaluated geometry; core mapping remains against the base Source.
+Core edits base Source coordinates. Subdivision/Armature/etc. may evaluate
+afterward. An unapplied modifier never becomes the control mapping: the proxy
+continues to follow base Source IDs while the overlay may use evaluated cage
+geometry. Applying a modifier is treated as a normal Source topology/coordinate
+edit. If the base topology fingerprint changes, DANP pauses and reports a
+recovery action; it does not write stale IDs. Undo can restore the old mapping,
+or Reset DANP can create a new mapping on the current mesh in one undoable step.
 
 ## Unsupported/uncertain Blender features
 

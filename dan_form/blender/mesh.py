@@ -38,8 +38,45 @@ def _topology_fingerprint(source: bpy.types.Object) -> str:
 
 def _validate_source_topology(source: bpy.types.Object) -> None:
     stored = source.get(TOPOLOGY_KEY)
-    if stored and stored != _topology_fingerprint(source) and controls(source):
-        raise ValueError("STALE_MAPPING")
+    actual = _topology_fingerprint(source)
+    if stored and stored != actual and controls(source):
+        runtime.TOPOLOGY_STATES[source.as_pointer()] = {
+            "state": "PAUSED", "expected": str(stored), "actual": actual,
+        }
+        raise ValueError("TOPOLOGY_CHANGED")
+    runtime.TOPOLOGY_STATES.pop(source.as_pointer(), None)
+
+
+def _topology_state(source: bpy.types.Object | None) -> dict:
+    if source is None:
+        return {"state": "UNBOUND"}
+    state = runtime.TOPOLOGY_STATES.get(source.as_pointer())
+    if state is not None:
+        return dict(state)
+    stored = str(source.get(TOPOLOGY_KEY, ""))
+    if stored and controls(source):
+        actual = _topology_fingerprint(source)
+        if actual != stored:
+            state = {"state": "PAUSED", "expected": stored, "actual": actual}
+            runtime.TOPOLOGY_STATES[source.as_pointer()] = state
+            return dict(state)
+    return {"state": "READY" if source.get(SOURCE_UUID_KEY) else "UNBOUND"}
+
+
+def _modifier_signature(source: bpy.types.Object | None) -> tuple:
+    """Return display-relevant modifier identity without evaluating geometry."""
+    if source is None:
+        return ()
+    return tuple(
+        (
+            modifier.name,
+            modifier.type,
+            bool(modifier.show_viewport),
+            bool(modifier.show_in_editmode),
+            bool(getattr(modifier, "show_on_cage", False)),
+        )
+        for modifier in source.modifiers
+    )
 
 
 def _ensure_attribute(mesh: bpy.types.Mesh, name: str, domain: str):
@@ -59,7 +96,11 @@ def _ensure_source_ids(source: bpy.types.Object) -> None:
     current_fingerprint = _topology_fingerprint(source)
     stored_fingerprint = source.get(TOPOLOGY_KEY)
     if stored_fingerprint and stored_fingerprint != current_fingerprint and controls(source):
-        raise ValueError("STALE_MAPPING")
+        runtime.TOPOLOGY_STATES[source.as_pointer()] = {
+            "state": "PAUSED", "expected": str(stored_fingerprint),
+            "actual": current_fingerprint,
+        }
+        raise ValueError("TOPOLOGY_CHANGED")
 
     next_vid = int(source.get(NEXT_VID_KEY, 1))
     next_eid = int(source.get(NEXT_EID_KEY, 1))

@@ -873,7 +873,7 @@ NO_ACTIVE_SOURCE
 SOURCE_NOT_EDITABLE
 PROXY_MISSING
 PROXY_CORRUPT
-STALE_MAPPING
+STALE_MAPPING (legacy diagnostic; translated to TOPOLOGY_CHANGED in the UI)
 TOPOLOGY_CHANGED
 CONTROL_HIDDEN
 EMPTY_SELECTION
@@ -890,7 +890,14 @@ Rules:
 - mapping/proxy failure never writes Source;
 - non-finite result with unchanged identity/topology restores P0/proxy and cancels; topology/deletion failures follow operation-semantics.md limits;
 - missing proxy is recoverable by rebuild if Source definitions are valid;
-- stale mapping requires explicit repair/recreation;
+- a Source topology change pauses DANP without writing stale IDs. Undo restores
+  the previous mapping when Blender can restore the mesh. Reset DANP is the
+  explicit repair path: it removes the old controller/definitions and creates
+  a fresh mapping from the current Source topology in one undoable operation;
+- an unapplied modifier does not redefine the mapping. The proxy stays backed
+  by base Source IDs while the overlay may follow evaluated cage geometry. An
+  Apply operation that changes base topology pauses DANP and uses the same Undo
+  or Reset recovery path;
 - user UI receives a short recovery-oriented message;
 - agent receives a stable code plus machine-readable context.
 
@@ -909,7 +916,7 @@ skip prior-preview cleanup. NO_AFFECTED_PATCH describes selected geometry with n
 
 # Blender Integration
 
-**Status: Implementation guidance; no production code yet**
+**Status: Current DANP Form integration contract**
 
 DANP Form can be implemented as a normal Blender Extension using Python APIs for mesh access, BMesh, PropertyGroups/attributes, modal operators, overlays, and keymaps.
 
@@ -936,7 +943,13 @@ When Source is in Edit Mode, implementation must use the edit-mesh/BMesh pathway
 
 ## Downstream modifiers
 
-Core edits base Source coordinates. Subdivision/Armature/etc. may evaluate afterward. A modifier that radically changes displayed topology can make the visual proxy differ from evaluated geometry; core mapping remains against the base Source.
+Core edits base Source coordinates. Subdivision/Armature/etc. may evaluate
+afterward. An unapplied modifier never becomes the control mapping: the proxy
+continues to follow base Source IDs while the overlay may use evaluated cage
+geometry. Applying a modifier is treated as a normal Source topology/coordinate
+edit. If the base topology fingerprint changes, DANP pauses and reports a
+recovery action; it does not write stale IDs. Undo can restore the old mapping,
+or Reset DANP can create a new mapping on the current mesh in one undoable step.
 
 ## Unsupported/uncertain Blender features
 
@@ -1139,7 +1152,16 @@ On undo/redo:
 - at the next sync boundary validate Source metadata and resample/rebuild Proxy;
 - recovery synchronization must not create a second undo entry.
 
-On Source deletion, proxy may be deleted/orphan-marked. On Proxy deletion, Source remains valid and can rebuild it.
+On Source deletion, the lifecycle handler removes only Controller objects and
+auxiliary face/prototype objects carrying an explicit DANP Source ownership
+marker. It never guesses from object names or collections, so unrelated assets
+remain safe. On Proxy deletion, Source remains valid and can rebuild it.
+
+If Source topology changes outside DANP, the stored ID mapping is kept intact
+but the pair enters a paused state. Commands do not write against stale array
+indices. Undo restores the previous Source topology and mapping; Reset DANP
+discarding the old definitions and rebuilding the controller is the explicit
+repair operation for the current topology.
 
 Hide/reveal is its own undoable state edit with zero Source coordinate changes. Undo/redo
 restores masks and invalidates network/patch/constraint caches. Proxy rebuild and load

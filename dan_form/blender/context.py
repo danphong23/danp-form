@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import bpy
 
-from ..constants import CONTROLLER_KEY, SOURCE_UUID_KEY
+from ..constants import CONTROLLER_KEY, FACE_SOURCE_UUID_KEY, SOURCE_UUID_KEY
 
 
 def find_controller(source: bpy.types.Object) -> bpy.types.Object | None:
@@ -63,6 +63,24 @@ def source_controller_pairs() -> list[tuple[bpy.types.Object, bpy.types.Object]]
         if controller is not None:
             pairs.append((source, controller))
     return pairs
+
+
+def orphaned_owned_objects() -> list[bpy.types.Object]:
+    """Return explicitly DANP-owned objects whose Source no longer exists."""
+    source_uuids = {
+        str(obj.get(SOURCE_UUID_KEY))
+        for obj in bpy.data.objects
+        if obj.type == "MESH" and obj.get(SOURCE_UUID_KEY)
+    }
+    result = []
+    for obj in bpy.data.objects:
+        controller_owner = obj.get(CONTROLLER_KEY)
+        face_owner = obj.get(FACE_SOURCE_UUID_KEY)
+        if controller_owner and str(controller_owner) not in source_uuids:
+            result.append(obj)
+        elif face_owner and str(face_owner) not in source_uuids:
+            result.append(obj)
+    return result
 
 
 def controller_collection(source: bpy.types.Object, scene: bpy.types.Scene) -> bpy.types.Collection:

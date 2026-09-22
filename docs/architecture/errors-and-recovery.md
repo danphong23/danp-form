@@ -14,7 +14,7 @@ NO_ACTIVE_SOURCE
 SOURCE_NOT_EDITABLE
 PROXY_MISSING
 PROXY_CORRUPT
-STALE_MAPPING
+STALE_MAPPING (legacy diagnostic; translated to TOPOLOGY_CHANGED in the UI)
 TOPOLOGY_CHANGED
 CONTROL_HIDDEN
 EMPTY_SELECTION
@@ -31,7 +31,14 @@ Rules:
 - mapping/proxy failure never writes Source;
 - non-finite result with unchanged identity/topology restores P0/proxy and cancels; topology/deletion failures follow operation-semantics.md limits;
 - missing proxy is recoverable by rebuild if Source definitions are valid;
-- stale mapping requires explicit repair/recreation;
+- a Source topology change pauses DANP without writing stale IDs. Undo restores
+  the previous mapping when Blender can restore the mesh. Reset DANP is the
+  explicit repair path: it removes the old controller/definitions and creates
+  a fresh mapping from the current Source topology in one undoable operation;
+- an unapplied modifier does not redefine the mapping. The proxy stays backed
+  by base Source IDs while the overlay may follow evaluated cage geometry. An
+  Apply operation that changes base topology pauses DANP and uses the same Undo
+  or Reset recovery path;
 - user UI receives a short recovery-oriented message;
 - agent receives a stable code plus machine-readable context.
 

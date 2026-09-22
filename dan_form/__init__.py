@@ -46,6 +46,8 @@ from .blender.mesh import _source_vertices as _source_vertices
 from .blender.mesh import _source_vid as _source_vid
 from .blender.mesh import _topology_fingerprint as _topology_fingerprint
 from .blender.mesh import _validate_source_topology as _validate_source_topology
+from .blender.mesh import _topology_state as _topology_state
+from .blender.mesh import _modifier_signature as _modifier_signature
 from .blender.proxy import ProxyDeps as _ProxyDeps
 from .blender.proxy import guard_proxy_topology as _proxy_guard
 from .blender.proxy import proxy_state as _proxy_state_impl
@@ -122,11 +124,13 @@ _PICK_PREVIEW = _runtime.PICK_PREVIEW
 _DANP_TRANSACTIONS = _runtime.DANP_TRANSACTIONS
 _NATIVE_TRANSFORM_SESSIONS = _runtime.NATIVE_TRANSFORM_SESSIONS
 _NATIVE_UNDO_RECORDS = _runtime.NATIVE_UNDO_RECORDS
+_TOPOLOGY_STATES = _runtime.TOPOLOGY_STATES
+_MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 21),
+    "version": (0, 5, 22),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",

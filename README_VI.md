@@ -34,6 +34,11 @@ thuộc Phase 5.
 Controller Edit: Ctrl+Alt+Click chọn đoạn giữa giao điểm; Shift để chọn thêm.
 H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ toàn bộ con mắt.
 
+Source vẫn có thể chỉnh topology bằng Edit Mode hoặc Apply Modifier. Khi topology
+thay đổi, DANP tạm dừng để không ghi theo ID cũ; dùng Undo để quay lại mapping
+trước đó hoặc bấm **Reset** để bỏ control cũ và tạo mapping mới trên mesh hiện tại.
+Modifier chưa Apply chỉ thay đổi hình hiển thị; mapping vẫn theo Source base.
+
 1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
 2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.
 3. Tính patch theo topology và bật/tắt lớp hiển thị patch.

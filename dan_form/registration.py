@@ -99,6 +99,8 @@ def unregister(api) -> None:
         cache.clear()
     api._NATIVE_TRANSFORM_SESSIONS.clear()
     api._NATIVE_UNDO_RECORDS.clear()
+    api._runtime.TOPOLOGY_STATES.clear()
+    api._runtime.MODIFIER_SIGNATURES.clear()
     api._runtime.NATIVE_UNDO_TIMER = False
     api._runtime.NATIVE_UNDO_DIRECTION = None
     for prop in (

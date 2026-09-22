@@ -24,6 +24,20 @@ def bind(api) -> None:
             globals()[name] = getattr(api, name)
 
 
+def _friendly_error(exc: Exception) -> str:
+    """Translate stable machine errors into short recovery actions."""
+    code = str(exc)
+    if code in {"STALE_MAPPING", "TOPOLOGY_CHANGED"}:
+        # STALE_MAPPING remains an accepted legacy diagnostic from old files;
+        # users should see the recovery action, never an implementation code.
+        return "DANP tạm dừng: topology mesh đã thay đổi. Undo để khôi phục mapping hoặc Reset DANP để tạo control mới."
+    if code == "SOURCE_ID_LAYERS_MISSING":
+        return "DANP không tìm thấy ID mesh. Hãy Sync hoặc Reset DANP trên mesh hiện tại."
+    if code.startswith("CONTROL_DATA_INVALID"):
+        return "Dữ liệu control bị lỗi; hãy Undo hoặc Reset DANP để tạo lại control trên mesh hiện tại."
+    return code
+
+
 def _discard_source_runtime(source: bpy.types.Object | None) -> None:
     """Drop transient deformation state when a Source/controller is removed."""
     if source is None:
@@ -32,6 +46,7 @@ def _discard_source_runtime(source: bpy.types.Object | None) -> None:
     runtime.DANP_TRANSACTIONS.pop(key, None)
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
     runtime.NATIVE_UNDO_RECORDS.pop(key, None)
+    runtime.TOPOLOGY_STATES.pop(key, None)
     if not runtime.NATIVE_UNDO_RECORDS:
         runtime.NATIVE_UNDO_TIMER = False
         runtime.NATIVE_UNDO_DIRECTION = None
@@ -79,8 +94,8 @@ class DANFORM_OT_initialize(bpy.types.Operator):
             self.report({"INFO"}, "DANP Form controller ready")
             return {"FINISHED"}
         except ValueError as exc:
-            scene.dan_form_status = f"Error: {exc}"
-            self.report({"ERROR"}, str(exc))
+            scene.dan_form_status = _friendly_error(exc)
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -101,7 +116,7 @@ class DANFORM_OT_sync(bpy.types.Operator):
             context.scene.dan_form_status = f"Synced: {controller.name}"
             return {"FINISHED"}
         except ValueError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -239,7 +254,7 @@ class DANFORM_OT_sync_control(bpy.types.Operator):
             _sync_context_ui_list(context)
             return {"FINISHED"}
         except (ValueError, RuntimeError) as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -369,7 +384,7 @@ class DANFORM_OT_create_control(bpy.types.Operator):
             self.report({"INFO"}, scene.dan_form_status)
             return {"FINISHED"}
         except ValueError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -439,7 +454,7 @@ class DANFORM_OT_select_control(bpy.types.Operator):
             context.scene.dan_form_status = f"Selected {control.get('name', 'Control')}"
             return {"FINISHED"}
         except ValueError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -471,7 +486,7 @@ class DANFORM_OT_set_control_visibility(bpy.types.Operator):
             _sync_context_ui_list(context)
             return {"FINISHED"}
         except (ValueError, RuntimeError) as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -560,7 +575,7 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
                 _select_proxy_ids(controller, vertex_ids - _hidden(source, HIDDEN_VIDS_KEY), edge_ids - _hidden(source, HIDDEN_EIDS_KEY))
             return {"FINISHED"}
         except ValueError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -686,6 +701,89 @@ class DANFORM_OT_remove(bpy.types.Operator):
                 bpy.ops.object.mode_set(mode="EDIT")
 
 
+class DANFORM_OT_reset(bpy.types.Operator):
+    bl_idname = "dan_form.reset"
+    bl_label = "Reset DANP Form"
+    bl_description = "Discard old control mapping and create a fresh controller for the current mesh topology"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        source, _controller = _context_source(context)
+        return (
+            source is not None
+            and context.view_layer.objects.active == source
+            and source.mode in {"OBJECT", "EDIT"}
+            and bool(source.get(SOURCE_UUID_KEY))
+            and _is_valid_source(source)
+        )
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if not self.poll(context):
+            return {"CANCELLED"}
+        was_edit = source.mode == "EDIT"
+        old_uuid = str(source.get(SOURCE_UUID_KEY, ""))
+        if was_edit:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        try:
+            _discard_source_runtime(source)
+            # Remove only explicitly DANP-owned runtime objects.  Face assets
+            # without the ownership marker remain untouched user data.
+            owned = [obj for obj in bpy.data.objects
+                     if obj.get(FACE_SOURCE_UUID_KEY) == old_uuid]
+            if controller is not None:
+                owned.append(controller)
+            for obj in list(dict.fromkeys(owned)):
+                mesh = getattr(obj, "data", None)
+                _PROXY_SNAPSHOTS.pop(obj.as_pointer(), None)
+                bpy.data.objects.remove(obj, do_unlink=True)
+                if mesh is not None and getattr(mesh, "users", 0) == 0 and bpy.data.meshes.get(mesh.name) is mesh:
+                    bpy.data.meshes.remove(mesh)
+            for name in (VID_ATTR, EID_ATTR):
+                attr = source.data.attributes.get(name)
+                if attr is not None:
+                    source.data.attributes.remove(attr)
+            for key in (SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
+                        HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
+                        NETWORK_REVISION_KEY, "dan_form_controller_name"):
+                if key in source:
+                    del source[key]
+            _MAPPING_CACHE.pop(source.as_pointer(), None)
+            _NETWORK_CACHE.pop(source.as_pointer(), None)
+            _invalidate_patch_cache(source)
+            _OVERLAY_CACHE.clear()
+            _ACTIVE_CONTROL_UUIDS.pop(old_uuid, None)
+            _RETURN_MODES.pop(old_uuid, None)
+
+            _ensure_source_ids(source)
+            source_uuid = _source_uuid(source)
+            mesh = bpy.data.meshes.new(f"DANPFORM_CTRL_{source.name}")
+            mesh.from_pydata([], [], [])
+            mesh.update()
+            fresh = bpy.data.objects.new(f"DANPFORM_CTRL_{source.name}", mesh)
+            _controller_collection(source, context.scene).objects.link(fresh)
+            fresh[CONTROLLER_KEY] = source_uuid
+            fresh[SCHEMA_KEY] = SCHEMA_VERSION
+            fresh["dan_form_source_name"] = source.name
+            fresh.display_type = "WIRE"
+            fresh.hide_render = True
+            _rebuild_proxy(source, fresh)
+            source["dan_form_controller_name"] = fresh.name
+            _set_scene_context(context, source, fresh)
+            _select_only(context, source)
+            if was_edit:
+                bpy.ops.object.mode_set(mode="EDIT")
+            context.scene.dan_form_status = (
+                f"Đã reset DANP: tạo mapping mới cho topology hiện tại của {source.name}"
+            )
+            self.report({"INFO"}, "DANP reset complete; current mesh topology is now the mapping source")
+            return {"FINISHED"}
+        except (RuntimeError, ValueError) as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
+
+
 class DANFORM_OT_topology_locked(bpy.types.Operator):
     bl_idname = "dan_form.topology_locked"
     bl_label = "Controller Topology Locked"
@@ -782,7 +880,7 @@ class DANFORM_OT_deform(bpy.types.Operator):
                     _deform_cancel(source, controller)
             except (ValueError, RuntimeError):
                 pass
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -800,7 +898,7 @@ class DANFORM_OT_cancel_deform(bpy.types.Operator):
             context.scene.dan_form_status = "Deformation cancelled"
             return {"FINISHED"}
         except ValueError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -1405,7 +1503,7 @@ class DANFORM_OT_focus_source(bpy.types.Operator):
             _sync_context_ui_list(context)
             return {"FINISHED"}
         except RuntimeError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -1443,7 +1541,7 @@ class DANFORM_OT_focus_controller(bpy.types.Operator):
             _sync_context_ui_list(context)
             return {"FINISHED"}
         except RuntimeError as exc:
-            self.report({"ERROR"}, str(exc))
+            self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
 
@@ -1467,11 +1565,21 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             lifecycle = layout.row(align=True)
             lifecycle.enabled = source.mode in {"OBJECT", "EDIT"}
             lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
+            if source.get(SOURCE_UUID_KEY):
+                reset = lifecycle.row(align=True)
+                reset.alert = True
+                reset.operator(DANFORM_OT_reset.bl_idname, text="Reset", icon="FILE_REFRESH")
             remove = lifecycle.row(align=True)
             remove.alert = True
             remove.operator(DANFORM_OT_remove.bl_idname, text="Remove DANP Form", icon="TRASH")
         if source.get(SOURCE_UUID_KEY) is None:
             return
+        topology = _topology_state(source)
+        if topology.get("state") == "PAUSED":
+            warning = layout.box()
+            warning.alert = True
+            warning.label(text="DANP tạm dừng: topology đã thay đổi", icon="ERROR")
+            warning.label(text="Undo để khôi phục hoặc Reset để tạo mapping mới")
         if controller is None:
             layout.label(text="Nhấn Init để dựng lại controller", icon="INFO")
             return
@@ -1579,6 +1687,7 @@ CLASSES = (
     DANFORM_OT_reveal,
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
+    DANFORM_OT_reset,
     DANFORM_OT_topology_locked,
     DANFORM_OT_deform,
     DANFORM_OT_cancel_deform,

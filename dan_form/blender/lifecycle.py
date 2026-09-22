@@ -14,6 +14,7 @@ from mathutils import Vector
 from .. import runtime
 from ..constants import *
 from . import transform_session as _transform_session
+from .context import orphaned_owned_objects
 from .workflows import update_revision
 
 NATIVE_POLL_INTERVAL = 0.05
@@ -34,6 +35,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
         return
     runtime.SYNC_GUARD = True
     try:
+        _cleanup_orphaned_owned_objects()
         changed_geometry = {update.id.original.as_pointer() for update in depsgraph.updates if update.is_updated_geometry}
         for source, controller in _source_controller_pairs():
             source_changed = source.as_pointer() in changed_geometry or source.data.as_pointer() in changed_geometry
@@ -41,6 +43,11 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             if not source_changed and not controller_changed:
                 continue
             previous_proxy_snapshot = _PROXY_SNAPSHOTS.get(controller.as_pointer())
+            modifier_key = source.as_pointer()
+            previous_modifiers = runtime.MODIFIER_SIGNATURES.get(modifier_key)
+            current_modifiers = _modifier_signature(source)
+            modifier_changed = previous_modifiers is not None and previous_modifiers != current_modifiers
+            runtime.MODIFIER_SIGNATURES[modifier_key] = current_modifiers
             _OVERLAY_CACHE.clear()
             _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
             try:
@@ -48,6 +55,11 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                     _MAPPING_CACHE.pop(source.as_pointer(), None)
                     _FACE_CACHE.pop(source.as_pointer(), None)
                     _validate_source_topology(source)
+                    if modifier_changed:
+                        bpy.context.scene.dan_form_status = (
+                            "Modifier chưa Apply: DANP vẫn ánh xạ theo mesh Source gốc; "
+                            "overlay được cập nhật theo hình hiển thị."
+                        )
                 _guard_proxy_topology(source, controller)
                 if (controller_changed and controller.mode == "EDIT"
                         and _controller_pose_changed(source, controller, previous_proxy_snapshot)):
@@ -75,17 +87,44 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                 if source_changed and source.as_pointer() not in runtime.NATIVE_TRANSFORM_SESSIONS:
                     _sync_proxy(source, controller)
             except (KeyError, ValueError) as exc:
-                # A stale topology is reported by the next explicit command;
-                # the depsgraph callback must never escape into Blender.
-                if str(exc).startswith("CONTROL_DATA_INVALID"):
+                if str(exc).startswith("TOPOLOGY_CHANGED"):
+                    _set_topology_paused_status(source)
+                elif str(exc).startswith("CONTROL_DATA_INVALID"):
                     bpy.context.scene.dan_form_status = f"Error: {exc}"
         active_source, _ = _context_source(bpy.context)
         _sync_ui_list(bpy.context.scene, active_source)
     except (AttributeError, RuntimeError, ValueError) as exc:
-        if str(exc).startswith("CONTROL_DATA_INVALID") and bpy.context.scene is not None:
+        if str(exc).startswith("TOPOLOGY_CHANGED"):
+            active_source, _ = _context_source(bpy.context)
+            if active_source is not None:
+                _set_topology_paused_status(active_source)
+        elif str(exc).startswith("CONTROL_DATA_INVALID") and bpy.context.scene is not None:
             bpy.context.scene.dan_form_status = f"Error: {exc}"
     finally:
         runtime.SYNC_GUARD = False
+
+
+def _set_topology_paused_status(source) -> None:
+    scene = getattr(bpy.context, "scene", None)
+    if scene is not None:
+        scene.dan_form_status = (
+            f"DANP tạm dừng: topology của '{source.name}' đã thay đổi. "
+            "Undo để khôi phục mapping hoặc Reset DANP để tạo control mới."
+        )
+
+
+def _cleanup_orphaned_owned_objects() -> int:
+    removed = 0
+    for obj in orphaned_owned_objects():
+        mesh = getattr(obj, "data", None)
+        try:
+            bpy.data.objects.remove(obj, do_unlink=True)
+            if mesh is not None and getattr(mesh, "users", 0) == 0 and bpy.data.meshes.get(mesh.name) is mesh:
+                bpy.data.meshes.remove(mesh)
+            removed += 1
+        except (ReferenceError, RuntimeError):
+            continue
+    return removed
 
 
 def _controller_pose_changed(source, controller, previous_snapshot) -> bool:
@@ -261,6 +300,8 @@ def _native_transform_timer(source_ptr):
 def _refresh_runtime(_unused=None, direction=None) -> None:
     runtime.PICK_SESSION += 1
     runtime.NATIVE_TRANSFORM_SESSIONS.clear()
+    runtime.TOPOLOGY_STATES.clear()
+    runtime.MODIFIER_SIGNATURES.clear()
     runtime.DANP_TRANSACTIONS.clear()
     # Undo/Redo may restore definitions, masks or coordinates.  Derived data
     # must be rebuilt from the restored Source rather than reused by identity.
@@ -305,13 +346,18 @@ def _load_post(_unused=None) -> None:
     _PATCH_OVERLAY_CACHE.clear()
     _FACE_CACHE.clear()
     _OVERLAY_CACHE.clear()
+    _cleanup_orphaned_owned_objects()
     try:
         for source, controller in _source_controller_pairs():
             _migrate_control_schema(source)
             _guard_proxy_topology(source, controller)
         _sync_context_ui_list(bpy.context)
     except (AttributeError, RuntimeError, ValueError) as exc:
-        if str(exc).startswith("CONTROL_DATA_INVALID") and bpy.context.scene is not None:
+        if str(exc).startswith("TOPOLOGY_CHANGED"):
+            active_source, _ = _context_source(bpy.context)
+            if active_source is not None:
+                _set_topology_paused_status(active_source)
+        elif str(exc).startswith("CONTROL_DATA_INVALID") and bpy.context.scene is not None:
             bpy.context.scene.dan_form_status = f"Error: {exc}"
 
 
@@ -417,4 +463,4 @@ def _restore_native_undo_records(direction: str):
         runtime.NATIVE_UNDO_DIRECTION = None
 
 
-__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision"]
+__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision", "_cleanup_orphaned_owned_objects"]

@@ -1,5 +1,17 @@
 # Design Changelog
 
+## 2026-09-22 — DANP Form 0.5.22 topology-safe recovery
+
+- Native Source topology edits now pause DANP with a recovery message instead
+  of exposing `STALE_MAPPING` to the user or writing stale IDs.
+- Added an undoable Reset action that discards the old mapping and rebuilds a
+  Controller from the current Source topology.
+- Added explicit orphan cleanup for DANP-owned Controller and face objects when
+  their Source no longer exists; unrelated assets are not inferred or deleted.
+- Modifier changes invalidate display caches while unapplied modifiers remain
+  evaluated display input only; Apply operations that change base topology use
+  the same Undo/Reset recovery path.
+
 ## 2026-09-21 — DANP Form 0.5.21 Source and Undo cleanup
 
 - Rebuild every Controller coordinate from Source while retaining selection;
