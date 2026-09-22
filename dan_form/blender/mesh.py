@@ -10,6 +10,7 @@ import bpy
 from .. import runtime
 from ..constants import *
 from ..storage import controls, hidden, json_set, migrate_control_schema, validate_control_storage
+from .modifiers import stack_signature
 
 def _is_valid_source(obj: bpy.types.Object | None) -> bool:
     return (
@@ -64,19 +65,8 @@ def _topology_state(source: bpy.types.Object | None) -> dict:
 
 
 def _modifier_signature(source: bpy.types.Object | None) -> tuple:
-    """Return display-relevant modifier identity without evaluating geometry."""
-    if source is None:
-        return ()
-    return tuple(
-        (
-            modifier.name,
-            modifier.type,
-            bool(modifier.show_viewport),
-            bool(modifier.show_in_editmode),
-            bool(getattr(modifier, "show_on_cage", False)),
-        )
-        for modifier in source.modifiers
-    )
+    """Return the complete modifier identity without evaluating geometry."""
+    return stack_signature(source)
 
 
 def _ensure_attribute(mesh: bpy.types.Mesh, name: str, domain: str):

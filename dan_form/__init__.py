@@ -48,6 +48,7 @@ from .blender.mesh import _topology_fingerprint as _topology_fingerprint
 from .blender.mesh import _validate_source_topology as _validate_source_topology
 from .blender.mesh import _topology_state as _topology_state
 from .blender.mesh import _modifier_signature as _modifier_signature
+from .blender.modifiers import sync_controller_modifiers as _sync_controller_modifiers
 from .blender.proxy import ProxyDeps as _ProxyDeps
 from .blender.proxy import guard_proxy_topology as _proxy_guard
 from .blender.proxy import proxy_state as _proxy_state_impl
@@ -130,7 +131,7 @@ _MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 25),
+    "version": (0, 5, 26),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -148,6 +149,7 @@ def _proxy_dependencies() -> _ProxyDeps:
         source_vertices=_source_vertices,
         proxy_selection_snapshot=_proxy_selection_snapshot,
         select_proxy_ids=_select_proxy_ids,
+        sync_controller_modifiers=_sync_controller_modifiers,
     )
 
 

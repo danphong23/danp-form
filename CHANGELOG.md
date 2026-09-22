@@ -1,5 +1,14 @@
 # Design Changelog
 
+## 2026-09-22 — DANP Form 0.5.26 modifier synchronization
+
+- Đồng bộ Mirror từ Source sang Controller theo đúng thứ tự và thiết lập RNA.
+- Tự cập nhật Controller khi modifier Source đổi, mở file hoặc Undo/Redo.
+- DANP writeback tôn trọng Merge/Clipping của Mirror khi tính preview trên Source.
+- Bỏ qua modifier cần mặt trên proxy vertex/edge như Subdivision; Source vẫn giữ
+  toàn bộ stack gốc.
+- Thêm kiểm tra tĩnh và tài liệu về ranh giới Source/Controller.
+
 ## 2026-09-22 — DANP Form 0.5.24 moved-target transform bridge
 
 - Native Controller transforms now derive targets from every proxy vertex whose

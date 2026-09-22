@@ -40,14 +40,14 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
         for source, controller in _source_controller_pairs():
             source_changed = source.as_pointer() in changed_geometry or source.data.as_pointer() in changed_geometry
             controller_changed = controller.as_pointer() in changed_geometry or controller.data.as_pointer() in changed_geometry
-            if not source_changed and not controller_changed:
-                continue
             previous_proxy_snapshot = _PROXY_SNAPSHOTS.get(controller.as_pointer())
             modifier_key = source.as_pointer()
             previous_modifiers = runtime.MODIFIER_SIGNATURES.get(modifier_key)
             current_modifiers = _modifier_signature(source)
-            modifier_changed = previous_modifiers is not None and previous_modifiers != current_modifiers
+            modifier_changed = previous_modifiers != current_modifiers
             runtime.MODIFIER_SIGNATURES[modifier_key] = current_modifiers
+            if not source_changed and not controller_changed and not modifier_changed:
+                continue
             _OVERLAY_CACHE.clear()
             _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
             try:
@@ -55,11 +55,8 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                     _MAPPING_CACHE.pop(source.as_pointer(), None)
                     _FACE_CACHE.pop(source.as_pointer(), None)
                     _validate_source_topology(source)
-                    if modifier_changed:
-                        bpy.context.scene.dan_form_status = (
-                            "Modifier chưa Apply: DANP vẫn ánh xạ theo mesh Source gốc; "
-                            "overlay được cập nhật theo hình hiển thị."
-                        )
+                if modifier_changed:
+                    _sync_controller_modifiers(source, controller)
                 _guard_proxy_topology(source, controller)
                 if (controller_changed and controller.mode == "EDIT"
                         and _controller_pose_changed(source, controller, previous_proxy_snapshot)):
@@ -322,7 +319,7 @@ def _refresh_runtime(_unused=None, direction=None) -> None:
     # Undo/redo handlers run inside Blender's undo stack.  Defer Source mesh
     # writeback until the handler has returned; writing BMesh data re-entrantly
     # from undo_post can deadlock or invalidate the active edit mesh.
-    if direction in {"UNDO", "REDO"} and runtime.NATIVE_UNDO_RECORDS and not runtime.NATIVE_UNDO_TIMER:
+    if direction in {"UNDO", "REDO"} and not runtime.NATIVE_UNDO_TIMER:
         runtime.NATIVE_UNDO_TIMER = True
         runtime.NATIVE_UNDO_DIRECTION = direction
         bpy.app.timers.register(
@@ -358,6 +355,7 @@ def _load_post(_unused=None) -> None:
     try:
         for source, controller in _source_controller_pairs():
             _migrate_control_schema(source)
+            _sync_controller_modifiers(source, controller)
             _guard_proxy_topology(source, controller)
         _sync_context_ui_list(bpy.context)
     except (AttributeError, RuntimeError, ValueError) as exc:
@@ -382,6 +380,14 @@ def _positions_close(left, right, tolerance=1e-6) -> bool:
 def _restore_native_undo_records(direction: str):
     """Pair Blender's native proxy undo with the Source deformation state."""
     try:
+        # Undo/Redo can restore a Source modifier stack without restoring the
+        # Controller's derived stack. Reconcile that display/edit adapter first;
+        # native transform history below remains independent of modifier state.
+        for source, controller in _source_controller_pairs():
+            try:
+                _sync_controller_modifiers(source, controller)
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                continue
         for source_ptr, record in list(runtime.NATIVE_UNDO_RECORDS.items()):
             source = next((obj for obj in bpy.data.objects if obj.as_pointer() == source_ptr), None)
             if source is None and record.get("source_uuid"):

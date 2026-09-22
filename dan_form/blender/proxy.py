@@ -22,6 +22,7 @@ class ProxyDeps:
     source_vertices: Callable
     proxy_selection_snapshot: Callable
     select_proxy_ids: Callable
+    sync_controller_modifiers: Callable
 
 
 def rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object, deps) -> None:
@@ -51,6 +52,10 @@ def rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object, d
         # Blender cannot rebuild a Mesh datablock while its edit BMesh owns it.
         # Temporarily leave only the controller edit context, then restore it.
         bpy.ops.object.mode_set(mode="OBJECT")
+    # Modifier sync happens while the proxy owns no live edit BMesh.  This
+    # keeps the native Mirror modifier available as soon as Edit Control is
+    # restored, while leaving Source as the only coordinate authority.
+    deps.sync_controller_modifiers(source, controller)
     proxy_mesh.clear_geometry()
     source_vertices = deps.source_vertices(source)
     edge_vids = deps.source_edge_vids(source)
@@ -218,4 +223,3 @@ def guard_proxy_topology(source, controller, deps) -> bool:
     runtime.PROXY_SNAPSHOTS[key] = snapshot
     bpy.context.scene.dan_form_status = "Controller chỉ chỉnh vị trí; tạo/xóa đường trên model"
     return True
-
