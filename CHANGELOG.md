@@ -1,5 +1,15 @@
 # Design Changelog
 
+## 2026-09-22 — DANP Form 0.5.24 moved-target transform bridge
+
+- Native Controller transforms now derive targets from every proxy vertex whose
+  coordinate changed during the operation, so Blender Proportional Editing is
+  preserved for unselected vertices.
+- Selection changes delimit operations without treating proportional motion as a
+  new selection; Source writeback skips unchanged coordinates to reduce viewport
+  flicker and redundant depsgraph updates.
+- Added documentation for the moved-target contract and patch-local behavior.
+
 ## 2026-09-22 — DANP Form 0.5.23 cylinder interpolation and compact actions
 
 - In full-patch mode, blend moving control transforms once and interpolate to

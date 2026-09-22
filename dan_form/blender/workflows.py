@@ -62,7 +62,8 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
         "source": source.as_pointer(), "controller": controller.as_pointer(),
         "source_uuid": source.get(SOURCE_UUID_KEY), "topology": source.get(TOPOLOGY_KEY),
         "network": source.get(NETWORK_REVISION_KEY), "p0": current,
-        "selected": selected, "scope": scope, "closed": False, "preview": None,
+        "selected": selected, "selection": set(selected), "scope": scope,
+        "closed": False, "preview": None,
         "control_groups": {
             str(control.get("control_uuid")): set(deps.control_effective(source, control)[0])
             for control in deps.controls(source)
@@ -72,20 +73,29 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
     return tx
 
 
-def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector], deps) -> None:
+def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector], deps) -> bool:
     vids, _ = deps.source_id_maps(source)
+    changed = False
     if source.mode == "EDIT":
         bm = bmesh.from_edit_mesh(source.data)
         bm.verts.ensure_lookup_table(); layer = bm.verts.layers.int.get(VID_ATTR)
         if layer is None: raise ValueError("SOURCE_ID_LAYERS_MISSING")
         for vert in bm.verts:
-            if int(vert[layer]) in positions: vert.co = positions[int(vert[layer])]
-        bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
+            position = positions.get(int(vert[layer]))
+            if position is not None and (vert.co - position).length_squared > 1e-16:
+                vert.co = position
+                changed = True
+        if changed:
+            bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
     else:
         for vid, position in positions.items():
             index = vids.get(int(vid))
-            if index is not None: source.data.vertices[index].co = position
-        source.data.update()
+            if index is not None and (source.data.vertices[index].co - position).length_squared > 1e-16:
+                source.data.vertices[index].co = position
+                changed = True
+        if changed:
+            source.data.update()
+    return changed
 
 
 def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
@@ -97,15 +107,19 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
     if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
     if source.get(TOPOLOGY_KEY) != tx["topology"] or source.get(NETWORK_REVISION_KEY) != tx["network"]:
         raise ValueError("OPERATION_STALE")
-    p0 = tx["p0"]; selected = tx["selected"]
+    p0 = tx["p0"]
     # ``None`` means the ordinary delta path.  An explicitly supplied empty
-    # mapping must stay empty so the core validator can reject a target-count
-    # mismatch instead of silently turning it into a movement command.
+    # mapping is a valid no-op sample when Proportional Editing has returned
+    # every Controller vertex to its pre-transform coordinates.
     if targets is None and operation_transform is not None:
-        targets = targets_from_transform(p0, selected, operation_transform)
+        targets = targets_from_transform(p0, tx["selected"], operation_transform)
     if targets is None:
-        targets = {vid: p0[vid] + Vector(delta) for vid in selected}
+        targets = {vid: p0[vid] + Vector(delta) for vid in tx["selected"]}
+    selected = set(targets)
     partition = deps.patch_partition(source)
+    for patch in partition["patches"]:
+        if selected.intersection(set(patch["vertex_ids"])):
+            tx["scope"].update(int(v) for v in patch["vertex_ids"])
     stationary = set(deps.effective_proxy_elements(source)[0]) - selected
     output, changed_vertices = compute_preview(
         p0,

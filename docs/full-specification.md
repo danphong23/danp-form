@@ -96,8 +96,11 @@ This replaces a separate deactivate/nesting system. See leg-control-examples.md.
 
 Register Source, select Source topology, Make Control and repeat. Patch authoring is
 automatic. On the proxy, select a point, strip, span/edge or loop; use G/R/S, choose
-proportional, then confirm/cancel. Selected Source-backed geometry moves; all other
-enabled control vertices hold. Named control selection is optional convenience.
+proportional, then confirm/cancel. The initial selection starts Blender's native
+transform. DANP compares the whole Controller against its pre-transform pose, so
+every proxy vertex that actually moved becomes an exact Source target, including
+unselected vertices affected by Blender Proportional Editing. Enabled control
+vertices that did not move remain fixed. Named control selection is optional.
 
 ## Let a contour follow the mesh
 
@@ -334,19 +337,24 @@ a loop, or multiple elements. A named definition is only a selection shortcut.
 2. Node selection resolves to those Source vertices only.
 3. Selected edges/spans select all represented enabled Source vertices in those spans.
 4. Loop/whole-control selection is the union of its enabled nodes/spans. Hidden segments stay excluded; selection does not silently reveal them.
-5. Deduplicate by Source ID. Selected span endpoints count as selected even without endpoint knot flags. Unselected neighboring spans do not become selected.
-6. Resolve one target per selected vertex. Every other enabled control vertex gets stationary target Q[i]=P0[i].
+5. Deduplicate by Source ID. Selected span endpoints count as selected even without endpoint knot flags. Unselected neighboring spans do not become selected at operation start.
+6. The initial selection starts Blender's native transform. During each preview sample,
+   compare every Controller vertex with its pre-transform pose. Every ID whose
+   coordinate changed is an exact target, including unselected vertices moved by
+   Blender Proportional Editing. Enabled control vertices that did not change are
+   stationary for that sample.
 
 Hidden geometry contributes neither targets nor stationary constraints. Explicit edit
 requests for hidden elements return CONTROL_HIDDEN; reveal in a separate command.
 
 ## G/R/S targets
 
-From the operation-start transform, pivot and orientation:
+From the operation-start transform, pivot and orientation, Blender produces the live
+Controller coordinates. DANP resolves targets from the changed-coordinate set:
 
 ```text
-Q[i] = T(P0[i])  for resolved selected Source geometry
-Q[i] = P0[i]     for all other enabled Source control vertices
+Q[i] = Controller[i] for every moved Controller vertex
+Q[i] = P0[i]         for every enabled Controller vertex that did not move
 ```
 
 A selected coarse edge transforms the existing dense curve, not a reconstructed chord.
@@ -357,10 +365,11 @@ transforms. Freeze the frame so equivalent human/agent targets have the same mea
 
 ## Knot-only selection, including sparse mode
 
-Only the knot's bound vertex moves. Omitted enabled vertices between knots remain
-stationary; do not implicitly generate moving targets for them. To move more of a
-line, select its strip/span/loop. To let it follow mesh deformation, hide it first.
-This supersedes the previous automatic sparse-knot displacement-expansion exception.
+Without Blender Proportional Editing, only the selected knot's bound vertex moves.
+With Blender Proportional Editing, omitted enabled vertices may also move; DANP
+detects their changed coordinates and treats them as targets. To move more of a
+line deliberately, select its strip/span/loop. To let a line follow mesh
+deformation, hide it first.
 
 ## Numeric/agent parity and conflicts
 
@@ -369,9 +378,9 @@ a transform for intermediate vertices. Rotate/scale a selected span using a tran
 call, or supply targets for every selected dense vertex. Span coverage is explicit
 selection, not proportional falloff.
 
-At a junction, selected targets win over stationary membership. Incompatible selected
+At a junction, moved targets win over stationary membership. Incompatible moved
 targets return TARGET_CONFLICT regardless of order. No generated moving target is
-allowed outside the selected Source geometry.
+allowed outside the current Controller mapping.
 
 Validate target count, finite values, Source-scoped IDs and selection membership before
 writes. Do not discard unknown IDs/malformed partial payloads silently. Validate explicit
@@ -440,8 +449,12 @@ No fixed midpoint motion or mandatory affine deformation follows from choosing a
 profile. Prototype comparisons must use identical targets/constraints while changing
 profile/radius. Numerical influence method and quality require evidence.
 
-Sparse representation adds no second user proportional and no implicit movement of
-enabled unselected control vertices. Selecting a span explicitly selects dense vertices.
+Blender's native Proportional Editing may move enabled unselected Controller
+vertices. DANP accepts those coordinates as exact targets by comparing the whole
+proxy with its pre-transform pose. DANP's own Radius/profile then controls how the
+resulting moved targets influence free Source vertices inside the affected patches;
+it does not override Blender's proxy falloff. Sparse representation adds no second
+user proportional.
 
 ---
 
@@ -1093,7 +1106,11 @@ Source positions. Partial masks produce Partial eye state for every affected gro
 
 Vertex mode selects nodes; edge mode selects full represented Source spans. Mixed
 selection is a union; span endpoints are selected, not implicit stationary nodes.
-Loop selection excludes hidden portions. Enabled unselected geometry holds its position.
+Loop selection excludes hidden portions. The initial selection starts the native
+transform; during the operation every Controller vertex whose coordinate changes
+from the pre-transform pose becomes an exact target, including unselected vertices
+moved by Blender Proportional Editing. Enabled control vertices that do not change
+hold their position.
 Hidden portions are not selectable deformation handles until revealed.
 
 The controller object is parented to Source, so object transforms follow Source.

@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "8cb91d6d616d456cc477ab93a2ce8ca6cc147c7d96d2bcc070fb96094e318931",
-    "bytes": 23370
+    "sha256": "7a4abbe9fb139f94ec707e82a35d5abb7b89ec9066c4fff311c8dec66a23b98a",
+    "bytes": 23915
   },
   {
     "path": "CONTRIBUTING.md",
@@ -61,8 +61,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "cce944869f747ad2fc251e747ab9b1078bae358fc05e78ec62ed22415066cb35",
-    "bytes": 9639
+    "sha256": "f7df62b538c57efbccd32ef44c7e4ee88609c843fa8c200b5826bd535d5931d0",
+    "bytes": 9898
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -96,13 +96,13 @@
   },
   {
     "path": "docs/core/proportional.md",
-    "sha256": "12af3d793715ae433df33f35247f66a827c83f461b14129d809d0bbfb5b6784e",
-    "bytes": 2396
+    "sha256": "4d8b243acaeac0ab2a1729b7bd39a0fcead59559f4fa9a585fc458a62a555e58",
+    "bytes": 2651
   },
   {
     "path": "docs/core/selection-and-targets.md",
-    "sha256": "7197ff55adeed2eee6f3b0884fe19950db73ff23bd8d1630290affc7a6646737",
-    "bytes": 3381
+    "sha256": "f2d700df250b82c0a534bf03a6c9c96e5d27e5f7d55aba0f70d9c04115e4129d",
+    "bytes": 3772
   },
   {
     "path": "docs/core/sparse-controls.md",
@@ -181,8 +181,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "9d6fc088e800cf7dd89d6eed7894e2b92070b00dbdb06299ec2258434586616e",
-    "bytes": 228326
+    "sha256": "5fb7797421d71996c45cb7341168b73bcf230e6da228f673d977f7ce018da9fd",
+    "bytes": 229463
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -201,8 +201,8 @@
   },
   {
     "path": "docs/product/user-workflows.md",
-    "sha256": "cb2d92e74e06369b3027307bad13c07070f3bb50dd2e6fd7cc63e956735eafdc",
-    "bytes": 2138
+    "sha256": "d2e78914b01dee727e6ea4aebeb428a31a9d98f6d674a49e18d3e10550d2a27c",
+    "bytes": 2370
   },
   {
     "path": "docs/README.md",
@@ -321,8 +321,8 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "ede01338f3c40ab408bb59901d91ef707ae2b42d9ab915260eb32a8da12df586",
-    "bytes": 4212
+    "sha256": "31973dee0cd4014af0c6fdf30f4ee8f62b31d3162d89e4894ce548ee0fb24f15",
+    "bytes": 4606
   },
   {
     "path": "README.md",

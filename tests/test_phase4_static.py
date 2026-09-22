@@ -50,12 +50,21 @@ def test_native_grs_uses_blender_edit_transform_without_legacy_macros():
 def test_native_session_commits_original_targets_before_selection_changes():
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
     session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
-    assert "live_targets = _transform_session.controller_targets(controller)" in lifecycle
-    assert "set(live_targets) != set(transaction.get(\"selected\", ()))" in lifecycle
+    assert "_controller_selection_changed(controller, transaction)" in lifecycle
+    assert "moved_controller_targets" in session
     assert "finalize_active(source, controller, deps)" in lifecycle
     assert "update(source, controller, deps, session," in session
     assert "targets=session.get(\"last_targets\", {})" in session
     assert "rest_targets = {vertex_id: rest[vertex_id]" in session
+
+
+def test_native_targets_are_coordinate_deltas_and_source_write_is_idempotent():
+    session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
+    workflows = (ROOT / "dan_form" / "blender" / "workflows.py").read_text(encoding="utf-8")
+    assert "def moved_controller_targets" in session
+    assert "position - rest[vertex_id]" in session
+    assert "if changed:" in workflows
+    assert "length_squared > 1e-16" in workflows
 
 
 def test_native_undo_keeps_history_and_resyncs_proxy():

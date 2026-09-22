@@ -142,6 +142,16 @@ def _controller_pose_changed(source, controller, previous_snapshot) -> bool:
     return not _positions_close(current_positions, previous_positions)
 
 
+def _controller_selection_changed(controller, transaction) -> bool:
+    """Selection changes delimit transforms; proportional motion does not."""
+    try:
+        current = _controller_selected_source_ids(controller)
+    except (AttributeError, KeyError, RuntimeError, ValueError):
+        return False
+    expected = transaction.get("selection", transaction.get("selected", ()))
+    return set(current) != set(expected)
+
+
 def _rest_from_proxy_snapshot(snapshot):
     if not snapshot or len(snapshot) < 4:
         return None
@@ -180,9 +190,8 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
             # previous transform; feeding the new set into it produces
             # TARGET_INVALID and cancellation restores the old Source pose.
             # Commit the old preview from its immutable last targets first.
-            live_targets = _transform_session.controller_targets(controller)
             transaction = session.get("transaction") or {}
-            if set(live_targets) != set(transaction.get("selected", ())):
+            if _controller_selection_changed(controller, transaction):
                 _transform_session.finalize_active(source, controller, deps)
                 session = _transform_session.begin(
                     source, controller, deps, "NATIVE",
@@ -247,9 +256,8 @@ def _native_transform_timer(source_ptr):
         # Selection can change without a geometry depsgraph update.  If it did
         # change before the timer's quiet window elapsed, close the previous
         # operation now; the next transform will create a fresh transaction.
-        live_targets = _transform_session.controller_targets(controller)
         transaction = session.get("transaction") or {}
-        if set(live_targets) != set(transaction.get("selected", ())):
+        if _controller_selection_changed(controller, transaction):
             _transform_session.finalize_active(source, controller, _workflow_dependencies())
             bpy.context.scene.dan_form_status = "Native Controller transform committed"
             return None

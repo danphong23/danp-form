@@ -6,8 +6,11 @@
 
 Register Source, select Source topology, Make Control and repeat. Patch authoring is
 automatic. On the proxy, select a point, strip, span/edge or loop; use G/R/S, choose
-proportional, then confirm/cancel. Selected Source-backed geometry moves; all other
-enabled control vertices hold. Named control selection is optional convenience.
+proportional, then confirm/cancel. The initial selection starts Blender's native
+transform. DANP compares the whole Controller against its pre-transform pose, so
+every proxy vertex that actually moved becomes an exact Source target, including
+unselected vertices affected by Blender Proportional Editing. Enabled control
+vertices that did not move remain fixed. Named control selection is optional.
 
 ## Let a contour follow the mesh
 

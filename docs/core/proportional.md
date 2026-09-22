@@ -44,5 +44,9 @@ No fixed midpoint motion or mandatory affine deformation follows from choosing a
 profile. Prototype comparisons must use identical targets/constraints while changing
 profile/radius. Numerical influence method and quality require evidence.
 
-Sparse representation adds no second user proportional and no implicit movement of
-enabled unselected control vertices. Selecting a span explicitly selects dense vertices.
+Blender's native Proportional Editing may move enabled unselected Controller
+vertices. DANP accepts those coordinates as exact targets by comparing the whole
+proxy with its pre-transform pose. DANP's own Radius/profile then controls how the
+resulting moved targets influence free Source vertices inside the affected patches;
+it does not override Blender's proxy falloff. Sparse representation adds no second
+user proportional.

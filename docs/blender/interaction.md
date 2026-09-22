@@ -108,7 +108,11 @@ Source positions. Partial masks produce Partial eye state for every affected gro
 
 Vertex mode selects nodes; edge mode selects full represented Source spans. Mixed
 selection is a union; span endpoints are selected, not implicit stationary nodes.
-Loop selection excludes hidden portions. Enabled unselected geometry holds its position.
+Loop selection excludes hidden portions. The initial selection starts the native
+transform; during the operation every Controller vertex whose coordinate changes
+from the pre-transform pose becomes an exact target, including unselected vertices
+moved by Blender Proportional Editing. Enabled control vertices that do not change
+hold their position.
 Hidden portions are not selectable deformation handles until revealed.
 
 The controller object is parented to Source, so object transforms follow Source.

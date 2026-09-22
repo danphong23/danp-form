@@ -47,6 +47,17 @@ def controller_positions(controller: bpy.types.Object) -> dict[int, Vector]:
     return _controller_positions(controller)
 
 
+def moved_controller_targets(controller: bpy.types.Object, rest: dict[int, Vector],
+                             tolerance: float = 1e-7) -> dict[int, Vector]:
+    """Return every Controller vertex whose coordinate changed from rest."""
+    current = _controller_positions(controller)
+    return {
+        vertex_id: position.copy()
+        for vertex_id, position in current.items()
+        if vertex_id not in rest or (position - rest[vertex_id]).length > tolerance
+    }
+
+
 def _has_native_transform(context: bpy.types.Context) -> bool:
     return any(str(operator.bl_idname).startswith("TRANSFORM_OT_")
                for operator in context.window_manager.operators)
@@ -63,7 +74,7 @@ def begin(source, controller, deps, operation: str, controller_rest=None) -> dic
         "operation": operation,
         "source_uuid": source.get(SOURCE_UUID_KEY),
         "transaction": tx,
-        "last_targets": _controller_targets(controller),
+        "last_targets": {},
         # The observer normally starts on the first geometry update, after
         # Blender has already applied the first mouse sample.  Callers may
         # therefore provide the immutable pre-transform snapshot captured by
@@ -79,23 +90,21 @@ def begin(source, controller, deps, operation: str, controller_rest=None) -> dic
 def update(source, controller, deps, session, profile="LINEAR", radius=0.0,
            targets=None) -> dict | None:
     if targets is None:
-        targets = _controller_targets(controller)
-    if not targets:
-        return None
+        targets = moved_controller_targets(controller, session.get("controller_rest", {}))
     # Controller and Source share local coordinates by construction
     # (controller is parented with an identity basis).  Keep this conversion
     # explicit so a future non-identity controller can add one in one place.
     result = _deform_update(source, controller, (0.0, 0.0, 0.0), profile,
                             radius, targets=targets, sync_controller=False)
-    session["last_targets"] = targets
+    session["last_targets"] = {vertex_id: position.copy() for vertex_id, position in targets.items()}
     rest = session.get("controller_rest", {})
     # ``targets`` only contains the selected vertices.  Comparing it with the
     # complete controller rest pose makes every partial selection look moved,
     # even when Blender confirmed a zero-distance transform.  Compare the same
     # persistent-ID domain so an untouched session can be cancelled cleanly.
     rest_targets = {vertex_id: rest[vertex_id] for vertex_id in targets if vertex_id in rest}
-    session["had_delta"] = session.get("had_delta", False) or not _positions_close(
-        targets, rest_targets
+    session["had_delta"] = session.get("had_delta", False) or (
+        bool(targets) and not _positions_close(targets, rest_targets)
     )
     return result
 
@@ -187,4 +196,4 @@ def bind(api) -> None:
     _source_positions = api._source_positions
 
 
-__all__ = ["bind", "begin", "update", "commit", "cancel", "finalize_active", "native_transform_active", "controller_targets", "controller_positions"]
+__all__ = ["bind", "begin", "update", "commit", "cancel", "finalize_active", "native_transform_active", "controller_targets", "controller_positions", "moved_controller_targets"]

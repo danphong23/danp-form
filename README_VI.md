@@ -50,6 +50,11 @@ vòng hình trụ giữ tỉ lệ khoảng cách ban đầu khi hai đầu tiế
 Nếu model đã bị biến dạng không đều ở các thao tác trước, dùng Reset Model
 trước khi thử lại; lệnh transform mới không tự thay đổi lịch sử hình học.
 
+Trong Controller Edit, DANP so sánh toàn bộ tọa độ proxy trước và sau mỗi mẫu
+G/R/S. Vì vậy Blender Proportional Editing có thể kéo cả các điểm không được
+chọn; mọi điểm thực sự đổi tọa độ đều được xem là mục tiêu, còn vùng chọn chỉ
+dùng để bắt đầu và phân định thời điểm chuyển sang thao tác khác.
+
 1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
 2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.
 3. Tính patch theo topology và bật/tắt lớp hiển thị patch.
