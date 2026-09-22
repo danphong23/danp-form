@@ -19,6 +19,7 @@ from mathutils import Matrix, Vector
 # policy boundary rather than an assumption that every future modifier is safe
 # on a face-less proxy.
 CONTROLLER_MODIFIER_TYPES = frozenset({"MIRROR"})
+_NON_TRANSFERABLE_PROPERTIES = frozenset({"rna_type", "name", "type", "is_active"})
 
 
 def _rna_value(value: Any):
@@ -38,7 +39,7 @@ def modifier_properties(modifier: bpy.types.Modifier) -> tuple:
     values = []
     for prop in modifier.bl_rna.properties:
         identifier = prop.identifier
-        if identifier in {"rna_type", "name", "type"} or prop.is_readonly:
+        if identifier in _NON_TRANSFERABLE_PROPERTIES or prop.is_readonly:
             continue
         try:
             values.append((identifier, _rna_value(getattr(modifier, identifier))))
@@ -70,7 +71,7 @@ def _copy_properties(source_modifier: bpy.types.Modifier,
     """Copy compatible RNA properties without relying on modifier-specific code."""
     for prop in source_modifier.bl_rna.properties:
         identifier = prop.identifier
-        if identifier in {"rna_type", "name", "type"} or prop.is_readonly:
+        if identifier in _NON_TRANSFERABLE_PROPERTIES or prop.is_readonly:
             continue
         try:
             value = getattr(source_modifier, identifier)
@@ -124,14 +125,19 @@ def sync_controller_modifiers(source: bpy.types.Object,
                 controller.select_set(True)
                 bpy.context.view_layer.objects.active = controller
                 bpy.ops.object.mode_set(mode="EDIT")
-    controller["dan_form_source_modifier_signature"] = repr(stack_signature(source))
-    controller["dan_form_controller_modifier_types"] = ",".join(
-        modifier.type for modifier in desired
-    )
-    controller["dan_form_unsupported_source_modifiers"] = ",".join(
-        modifier.name for modifier in source.modifiers
-        if modifier.type not in CONTROLLER_MODIFIER_TYPES
-    )
+    metadata = {
+        "dan_form_source_modifier_signature": repr(stack_signature(source)),
+        "dan_form_controller_modifier_types": ",".join(
+            modifier.type for modifier in desired
+        ),
+        "dan_form_unsupported_source_modifiers": ",".join(
+            modifier.name for modifier in source.modifiers
+            if modifier.type not in CONTROLLER_MODIFIER_TYPES
+        ),
+    }
+    for key, value in metadata.items():
+        if controller.get(key) != value:
+            controller[key] = value
     return {
         "changed": changed,
         "copied": tuple(modifier.name for modifier in desired),

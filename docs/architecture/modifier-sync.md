@@ -45,6 +45,12 @@ modifier, nên đổi Clipping, Merge Distance, trục hoặc Mirror Object đ�
 Controller được cập nhật. Việc đồng bộ không chạy solver và không ghi tọa độ
 Source.
 
+`is_active` chỉ cho biết modifier nào đang được chọn trong giao diện của từng
+object. Giá trị này không được sao chép hoặc so sánh: Source có thể đang chọn
+Subdivision trong khi Mirror là modifier duy nhất của Controller. Một lần
+đồng bộ không có thay đổi hình học phải giữ nguyên chính modifier Controller
+và Edit Mode đang hoạt động.
+
 ## Ràng buộc đường giữa
 
 Mirror trên Controller xử lý transform native trong Edit Mode. Phần DANP ghi
