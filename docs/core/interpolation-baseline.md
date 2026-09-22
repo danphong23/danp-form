@@ -21,6 +21,16 @@ No required formula says a patch midpoint moves half as far as a boundary. Whole
 and finite radius/profile may produce different interior responses. Inspect leg examples
 in product/leg-control-examples.md before interpreting interpolation results.
 
+The current Whole Patch (`Radius = 0`) implementation uses the operation rest
+Source mesh for edge lengths. It blends transforms from selected control
+groups once, then fades the resulting displacement between selected and fixed
+control boundaries by their shortest metric paths. Thus an ordinary cylinder
+with two control loops retains the original spacing ratios of its intermediate
+rings when one loop moves. Every new operation starts from the current Source
+coordinates; an already distorted model needs an explicit Reset Model if the
+user wants to return to its Init pose. Finite radius uses a separate profile
+and graph-distance response.
+
 ## Small displacement candidate for initial evidence
 
 An additive test model keeps P0 and adds a control displacement field:

@@ -16,9 +16,11 @@ object or empty selection must not leave commands targeting the previous Source.
 Identity binding, not display names, resolves the Source. Drawing the panel is read-only.
 
 The product/sidebar name is DANP Form. Existing `dan_form` extension/operator/storage
-identifiers remain compatible. When the model is active, Init DANP Form and a red
-Remove DANP Form button are always visible; Remove is disabled before binding.
-Init is idempotent and also rebuilds a missing controller. Remove deletes the
+identifiers remain compatible. Before binding, the model shows Init DANP Form.
+After binding, it shows Reset Model and a Manage menu containing Reset DANP
+Controls and Remove DANP Form. If the controller is missing, Rebuild Controller
+replaces Reset Model in that row. Init is idempotent and rebuilds a missing
+controller. Remove deletes the
 controller, its unused mesh, Source-owned DANP Form definitions/masks/binding and
 ID attributes. It preserves model geometry, unrelated properties, attributes and
 Source Object/Edit Mode. It is one undoable addon operation.

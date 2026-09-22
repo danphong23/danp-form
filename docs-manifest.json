@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "a3f9a5dccba1f9f621742b583011236b83cfcb239d3594cfa9277ac25be72ff1",
-    "bytes": 22843
+    "sha256": "8cb91d6d616d456cc477ab93a2ce8ca6cc147c7d96d2bcc070fb96094e318931",
+    "bytes": 23370
   },
   {
     "path": "CONTRIBUTING.md",
@@ -61,8 +61,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "850314908a158bb45b8bb9cdfb512b787c66f8045eed7af93efe144acc498997",
-    "bytes": 9536
+    "sha256": "cce944869f747ad2fc251e747ab9b1078bae358fc05e78ec62ed22415066cb35",
+    "bytes": 9639
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -76,8 +76,8 @@
   },
   {
     "path": "docs/core/interpolation-baseline.md",
-    "sha256": "7c11c8d6e65006588faf9280207fbc66f56ad6c84c0f349fee6ef2c7de01a4d7",
-    "bytes": 4469
+    "sha256": "c57531b641d9c1349b398736b9cbeef179a0804ab11c71cb446b2facb7e68425",
+    "bytes": 5116
   },
   {
     "path": "docs/core/invariants.md",
@@ -181,8 +181,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "e7c94b2b5d313857fc9c216a976d8978c2377b653ea07f811bafbd5423dd1f6e",
-    "bytes": 227576
+    "sha256": "9d6fc088e800cf7dd89d6eed7894e2b92070b00dbdb06299ec2258434586616e",
+    "bytes": 228326
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -321,8 +321,8 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "bd6b1b42d8e6fe2f31918b114bef1e8f51e4d59f18342c897eea7948f2def0dc",
-    "bytes": 3630
+    "sha256": "ede01338f3c40ab408bb59901d91ef707ae2b42d9ab915260eb32a8da12df586",
+    "bytes": 4212
   },
   {
     "path": "README.md",

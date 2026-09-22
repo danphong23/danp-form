@@ -1,6 +1,7 @@
 """Pure patch-local interpolation regressions."""
 
 import importlib.util
+import math
 import sys
 import types
 from pathlib import Path
@@ -220,6 +221,46 @@ def test_radius_zero_preserves_ratio_between_moving_and_stationary_boundaries():
     )
     assert abs(output[1].values[2] - 1.5) < 1e-6
     assert output[2] == p0[2]
+
+
+def test_cylinder_rings_keep_their_longitudinal_ratios_when_controls_approach():
+    # This matches the user's basic-cylinder case: two control rings and five
+    # free rings.  Both uniform and irregular initial spacing must retain the
+    # same fraction of the new total height across every circumferential point.
+    for heights in (
+        [0, 1, 2, 3, 4, 5, 6],
+        [0, 0.25, 0.75, 1.5, 2.5, 4, 6],
+    ):
+        sides = 8
+        p0 = {}
+        edges = {}
+        next_edge = 0
+        for ring, height in enumerate(heights):
+            for side in range(sides):
+                vertex_id = ring * sides + side
+                angle = 2 * math.pi * side / sides
+                p0[vertex_id] = V(math.cos(angle), math.sin(angle), height)
+                edges[next_edge] = (vertex_id, ring * sides + (side + 1) % sides)
+                next_edge += 1
+                if ring:
+                    edges[next_edge] = ((ring - 1) * sides + side, vertex_id)
+                    next_edge += 1
+        selected = set(range((len(heights) - 1) * sides, len(heights) * sides))
+        stationary = set(range(sides))
+        targets = {vertex_id: p0[vertex_id] + V(0, 0, -3) for vertex_id in selected}
+        output, _ = DEFORMATION.compute_preview(
+            p0, selected, set(p0),
+            [{"vertex_ids": list(p0), "incident_control_uuids": ["top", "bottom"]}],
+            edges, targets, stationary, "LINEAR", 0.0,
+            control_groups={"top": selected, "bottom": stationary},
+        )
+        for ring, height in enumerate(heights):
+            expected_z = height * 0.5
+            for side in range(sides):
+                actual = output[ring * sides + side]
+                assert abs(actual.values[2] - expected_z) < 1e-6
+                assert abs(actual.values[0] - p0[ring * sides + side].values[0]) < 1e-6
+                assert abs(actual.values[1] - p0[ring * sides + side].values[1]) < 1e-6
 
 
 def test_unselected_control_is_an_identity_anchor_for_shared_patch():

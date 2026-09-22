@@ -36,12 +36,19 @@ H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ t
 
 Source vẫn có thể chỉnh topology bằng Edit Mode hoặc Apply Modifier. Khi topology
 thay đổi, DANP tạm dừng để không ghi theo ID cũ; dùng Undo để quay lại mapping
-trước đó hoặc bấm **Reset** để bỏ control cũ và tạo mapping mới trên mesh hiện tại.
+trước đó hoặc chọn **Manage → Reset DANP Controls** để tạo mapping mới trên mesh hiện tại.
 Modifier chưa Apply chỉ thay đổi hình hiển thị; mapping vẫn theo Source base.
 
 Khi Init lần đầu, DANP lưu một snapshot tọa độ theo ID của Source. **Reset Model**
-đưa mesh về đúng dáng đó và có thể Undo; **Reset DANP** chỉ tạo lại mapping trên
+đưa mesh về đúng dáng đó và có thể Undo; **Reset DANP Controls** chỉ tạo lại mapping trên
 topology hiện tại và dùng dáng hiện tại làm snapshot mới.
+
+Khi Source đã có DANP, thanh trên chỉ hiện **Reset Model** và **Manage**;
+Manage chứa lệnh tạo lại control và gỡ DANP. Với Radius = 0, vùng giữa hai
+đường control nội suy theo chiều dài cạnh của Source ở đầu thao tác, nên các
+vòng hình trụ giữ tỉ lệ khoảng cách ban đầu khi hai đầu tiến lại gần nhau.
+Nếu model đã bị biến dạng không đều ở các thao tác trước, dùng Reset Model
+trước khi thử lại; lệnh transform mới không tự thay đổi lịch sử hình học.
 
 1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
 2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.

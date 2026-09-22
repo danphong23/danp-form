@@ -335,6 +335,17 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
             layout.prop(context.scene, "dan_form_overlay_hidden", text="Preview Hidden Controls")
 
 
+class DANFORM_MT_manage(bpy.types.Menu):
+    bl_idname = "DANFORM_MT_manage"
+    bl_label = "Manage DANP Form"
+
+    def draw(self, _context):
+        layout = self.layout
+        layout.operator(DANFORM_OT_reset.bl_idname, text="Reset DANP Controls", icon="FILE_REFRESH")
+        layout.separator()
+        layout.operator(DANFORM_OT_remove.bl_idname, text="Remove DANP Form", icon="TRASH")
+
+
 class DANFORM_OT_create_control(bpy.types.Operator):
     bl_idname = "dan_form.create_control"
     bl_label = "Make Control from Source Selection"
@@ -1627,16 +1638,14 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         if active == source:
             lifecycle = layout.row(align=True)
             lifecycle.enabled = source.mode in {"OBJECT", "EDIT"}
-            lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
-            if source.get(SOURCE_UUID_KEY):
-                reset = lifecycle.row(align=True)
-                reset.alert = True
-                reset.operator(DANFORM_OT_reset.bl_idname, text="Reset", icon="FILE_REFRESH")
-                reset_source = lifecycle.row(align=True)
-                reset_source.operator(DANFORM_OT_reset_source.bl_idname, text="Reset Model", icon="LOOP_BACK")
-            remove = lifecycle.row(align=True)
-            remove.alert = True
-            remove.operator(DANFORM_OT_remove.bl_idname, text="Remove DANP Form", icon="TRASH")
+            if not source.get(SOURCE_UUID_KEY):
+                lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
+            else:
+                if controller is None:
+                    lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Rebuild Controller", icon="FILE_REFRESH")
+                else:
+                    lifecycle.operator(DANFORM_OT_reset_source.bl_idname, text="Reset Model", icon="LOOP_BACK")
+                lifecycle.menu(DANFORM_MT_manage.bl_idname, text="Manage", icon="DOWNARROW_HLT")
         if source.get(SOURCE_UUID_KEY) is None:
             return
         topology = _topology_state(source)
@@ -1751,6 +1760,7 @@ CLASSES = (
     DANFORM_OT_focus_source,
     DANFORM_OT_focus_controller,
     DANFORM_MT_control_menu,
+    DANFORM_MT_manage,
     DANFORM_PT_sidebar,
 )
 
@@ -1758,7 +1768,7 @@ CLASSES = (
 
 __all__ = [
     "bind", "CLASSES",
-    "DANFORM_PG_ControlItem", "DANFORM_UL_controls", "DANFORM_MT_control_menu",
+    "DANFORM_PG_ControlItem", "DANFORM_UL_controls", "DANFORM_MT_control_menu", "DANFORM_MT_manage",
     "DANFORM_PT_sidebar", "DANFORM_OT_initialize", "DANFORM_OT_sync",
     "DANFORM_OT_sync_control", "DANFORM_OT_move_control", "DANFORM_OT_create_control",
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",

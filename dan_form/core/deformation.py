@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from .graph import distances
+from .graph import distances, metric_distances
 from .proportional import alpha
 
 
@@ -158,9 +158,8 @@ def compute_preview(
         samples = {vertex_id: targets[vertex_id] for vertex_id in selected_members}
         transform = _transform_from_samples(p0, samples)
         if transform is None:
-            # An enabled but unselected control is an identity transform, not
-            # an absent sample.  Keeping it in the field is what pins the
-            # opposite boundary of a shared patch.
+            # Unselected controls are identity fields for finite-radius mode.
+            # In full-patch mode their vertices are exact fixed boundaries.
             transform = lambda point: point.copy()
         transforms[control_uuid] = transform
 
@@ -178,28 +177,58 @@ def compute_preview(
         incident = [control_uuid for control_uuid in incident if control_uuid in control_groups]
         if not incident:
             continue
-        # A patch with one incident control is owned by that control.  This is
-        # the key semantic difference from averaging boundary displacements.
-        control_distances = {
-            control_uuid: distances(
-                edge_vids,
-                patch_vertices,
-                patch_vertices.intersection(control_groups[control_uuid]),
+        moving_controls = [control_uuid for control_uuid in incident
+                           if selected.intersection(control_groups[control_uuid])]
+        if radius <= 0.0:
+            # Full-patch mode blends each moving control field once, then
+            # interpolates that field between the selected and fixed boundary.
+            # A second inverse-square blend against identity controls would
+            # compress the middle rings of a cylinder unevenly.
+            selected_distances = metric_distances(edge_vids, patch_vertices, seeds, p0)
+            fixed_distances = metric_distances(
+                edge_vids, patch_vertices, stationary.intersection(patch_vertices), p0
             )
-            for control_uuid in incident
-        }
-        # Radius 0 means the complete patch participates, while the original
-        # template proportions between the moving and stationary boundaries
-        # are preserved.  A free vertex receives the moving field according to
-        # its normalized graph distance: 0 at the selected boundary and 1 at
-        # the stationary boundary.  Without this factor a pure translation of
-        # one cylinder ring was copied unchanged to every free ring, collapsing
-        # the spacing instead of forming an even taper.
-        selected_distances = distances(edge_vids, patch_vertices, seeds)
-        stationary_boundary = stationary.intersection(patch_vertices)
-        stationary_distances = distances(edge_vids, patch_vertices, stationary_boundary)
+            moving_distances = {
+                control_uuid: metric_distances(
+                    edge_vids, patch_vertices,
+                    selected.intersection(control_groups[control_uuid]).intersection(patch_vertices), p0,
+                )
+                for control_uuid in moving_controls
+            }
+        else:
+            control_distances = {
+                control_uuid: distances(
+                    edge_vids, patch_vertices,
+                    patch_vertices.intersection(control_groups[control_uuid]),
+                )
+                for control_uuid in incident
+            }
         for vertex_id in patch_vertices:
             if vertex_id in selected or vertex_id in stationary:
+                continue
+            if radius <= 0.0:
+                contributions = []
+                for control_uuid in moving_controls:
+                    distance = moving_distances[control_uuid].get(vertex_id)
+                    if distance is None:
+                        continue
+                    displacement = transforms[control_uuid](p0[vertex_id]) - p0[vertex_id]
+                    weight = 1.0 / max(distance, 1e-12) ** 2
+                    contributions.append((displacement, weight))
+                if not contributions:
+                    continue
+                total_weight = sum(weight for _value, weight in contributions)
+                displacement = None
+                for value, weight in contributions:
+                    part = value * (weight / total_weight)
+                    displacement = part if displacement is None else displacement + part
+                moving_distance = selected_distances.get(vertex_id)
+                fixed_distance = fixed_distances.get(vertex_id)
+                if moving_distance is not None and fixed_distance is not None:
+                    span = moving_distance + fixed_distance
+                    if span > 0.0:
+                        displacement *= fixed_distance / span
+                candidates.setdefault(vertex_id, []).append(p0[vertex_id] + displacement)
                 continue
             contributions = []
             for control_uuid in incident:
@@ -214,16 +243,6 @@ def compute_preview(
                     continue
                 transformed = transform(p0[vertex_id])
                 displacement = transformed - p0[vertex_id]
-                if radius <= 0.0:
-                    moving_distance = selected_distances.get(vertex_id)
-                    stationary_distance = stationary_distances.get(vertex_id)
-                    if moving_distance is not None and stationary_distance is not None:
-                        span = float(moving_distance + stationary_distance)
-                        blend = (float(stationary_distance) / span) if span > 0.0 else 1.0
-                        displacement = displacement * blend
-                if len(incident) == 1 and radius <= 0.0:
-                    contributions = [(displacement, 1.0)]
-                    break
                 weight = weight / max(float(distance), 1e-12) ** 2
                 contributions.append((displacement, weight))
             if contributions:

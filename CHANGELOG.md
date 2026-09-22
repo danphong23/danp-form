@@ -1,5 +1,14 @@
 # Design Changelog
 
+## 2026-09-22 — DANP Form 0.5.23 cylinder interpolation and compact actions
+
+- In full-patch mode, blend moving control transforms once and interpolate to
+  fixed control boundaries by Source edge length. This preserves the longitudinal
+  ratios of cylinder rings when two control loops approach each other.
+- Replace the crowded Init/Reset/Reset Model/Remove row with the current primary
+  action and a Manage menu for rebuilding or removing control definitions.
+- Add uniform and irregular cylinder-ring regression cases.
+
 ## 2026-09-22 — DANP Form 0.5.22 topology-safe recovery
 
 - Native Source topology edits now pause DANP with a recovery message instead
