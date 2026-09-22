@@ -2,7 +2,7 @@
 
 **Status: Normative role and placement; exact default/profile set remains open**
 
-Within already affected patches, proportional governs how selected control movement
+Within already affected patches, proportional governs how moved control vertices
 spreads into mesh interiors. It does not select patches, release enabled controls,
 or define new control targets. Current patch shape is the deformation baseline.
 
@@ -12,8 +12,8 @@ The additive candidate computes U then applies the user's profile once:
 P1(v) = P0(v) + A(v) * U(v)
 ```
 
-For finite radius R > 0, the initial experiment uses shortest graph distance inside
-the patch from nonzero selected targets:
+For finite radius R > 0, use shortest rest-edge metric distance inside
+the patch from nonzero moved targets:
 
 ```text
 x(v) = clamp(1 - d_move(v)/R, 0, 1)
@@ -21,7 +21,7 @@ A(v) = profile(x(v))
 ```
 
 Whole Patch uses A=1 within affected scope, not across enabled cuts. Enabled stationary
-vertices remain exactly P0 regardless of radius. Selected targets remain exactly Q.
+vertices remain exactly P0 regardless of radius. Moved targets remain exactly Q.
 Hidden vertices are attenuated like ordinary mesh vertices and may remain unchanged
 outside radius. Zero/negative/non-finite radius requests must be rejected or represented
 as an explicit separate mode; do not divide by zero.
@@ -38,7 +38,7 @@ scale; do not silently mix units.
 
 Radius/profile changes recompute from P0 and clear old motion outside new influence.
 No nonzero targets means P0 output; do not compute distances to an empty moving set.
-Selected control vertices still receive Q.
+Moved control vertices still receive Q.
 
 No fixed midpoint motion or mandatory affine deformation follows from choosing a
 profile. Prototype comparisons must use identical targets/constraints while changing

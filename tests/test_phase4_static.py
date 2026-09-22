@@ -15,10 +15,9 @@ def test_phase4_hard_constraints_and_profiles_are_present():
         "stationary = set(deps.effective_proxy_elements(source)[0]) - selected" in SOURCE
         or "stationary = set(_effective_proxy_elements(source)[0]) - selected" in SOURCE
     )
-    assert (
-        "if vertex_id in selected or vertex_id in stationary" in SOURCE
-        or "if vid in selected or vid in stationary" in SOURCE
-    )
+    assert "for vertex_id, target in targets.items():" in SOURCE
+    assert "output[vertex_id] = p0[vertex_id].copy()" in SOURCE
+    assert "solve_displacements(" in SOURCE
     assert '"SMOOTH"' in SOURCE and '"UNIFORM"' in SOURCE
 
 

@@ -15,8 +15,8 @@
 - **Patch** — connected component of source faces after adjacency across effective enabled control edges is removed.
 - **Operation Rest (`P0`)** — snapshot of current Source coordinates at operation start.
 - **Control Target (`Q`)** — target position assigned to a source control vertex for the current operation.
-- **Dense Target Set** — one selected or stationary target per enabled Source control vertex in scope; span coverage expands selection, not movement of unselected vertices.
+- **Dense Target Set** — one moved or stationary target per enabled Source control vertex in scope; Blender Proportional Editing may move vertices beyond the explicit selection.
 - **Affected Patch Set** — patches incident to moving target geometry for the current operation.
 - **Captured Patch Scope** — patches incident to selection at invoke; bounds snapshot/writeback and prior-preview cleanup even when current affected scope shrinks.
-- **Proportional** — user-controlled attenuation of patch displacement as topological distance from moving targets grows.
+- **Proportional** — user-controlled attenuation of patch displacement as Source-local rest-edge distance from moving targets grows.
 - **Original Snapshot** — optional historical template state used for reset/compare only.

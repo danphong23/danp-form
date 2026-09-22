@@ -27,6 +27,7 @@ def _load(name):
 
 _load("graph")
 _load("proportional")
+_load("harmonic")
 DEFORMATION = _load("deformation")
 OPERATION = _load("operation")
 
@@ -279,6 +280,46 @@ def test_unselected_control_is_an_identity_anchor_for_shared_patch():
     assert output[3] == p0[3]
     assert output[4] == p0[4]
     assert 2.0 < output[2].values[0] < 3.0
+
+
+def test_native_proportional_targets_shape_the_patch_from_each_vertex():
+    # A cylinder side unwrapped as a grid. The right control line has a local
+    # proportional bulge; every untouched point on either line stays pinned.
+    width, height = 7, 7
+    vertex_id = lambda x, y: y * width + x
+    p0 = {vertex_id(x, y): V(x, y, 0)
+          for y in range(height) for x in range(width)}
+    edges = {}
+    for y in range(height):
+        for x in range(width):
+            current = vertex_id(x, y)
+            if x:
+                edges[len(edges)] = (current, vertex_id(x - 1, y))
+            if y:
+                edges[len(edges)] = (current, vertex_id(x, y - 1))
+    moved = {vertex_id(6, y): V(6 + delta, y, 0)
+             for y, delta in ((2, 0.5), (3, 1.0), (4, 0.5))}
+    fixed = {vertex_id(x, y) for y in range(height) for x in (0, 6)} - set(moved)
+    args = (p0, set(moved), set(p0), [{"vertex_ids": list(p0)}],
+            edges, moved, fixed, "LINEAR", 0.0)
+    grouped, _ = DEFORMATION.compute_preview(
+        *args, control_groups={"left": {vertex_id(0, y) for y in range(height)},
+                               "right": {vertex_id(6, y) for y in range(height)}}
+    )
+    regrouped, _ = DEFORMATION.compute_preview(
+        *args, control_groups={"all": set(moved) | fixed}
+    )
+
+    assert grouped == regrouped
+    for vertex_id_, target in moved.items():
+        assert grouped[vertex_id_] == target
+    for vertex_id_ in fixed:
+        assert grouped[vertex_id_] == p0[vertex_id_]
+    displacement = lambda x, y: grouped[vertex_id(x, y)].values[0] - x
+    assert 0.0 < displacement(3, 0) < displacement(3, 2) < displacement(3, 3) < 1.0
+    assert abs(displacement(3, 2) - displacement(3, 4)) < 1e-7
+    assert all(-1e-8 <= displacement(x, y) <= 1.0 + 1e-8
+               for y in range(height) for x in range(width))
 
 
 def test_canonical_operation_resolves_absolute_targets_for_agent_and_ui():

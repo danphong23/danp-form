@@ -11,7 +11,8 @@ Never promise hiding a line always merges exactly two patches.
 
 ## Operation scope and constraints
 
-Resolve selected Source vertices/spans and their nonzero targets. Include every patch
+Resolve every Source control vertex that actually moved, including vertices moved by
+Blender Proportional Editing. Include every patch
 incident to moving Source geometry, including all sides of separators and junctions.
 Unrelated patches are excluded; proportional radius cannot expand that set.
 
@@ -20,7 +21,7 @@ Per-update affected scope may shrink when targets become zero; operation-semanti
 requires resetting earlier preview writes to P0. Patches outside captured scope are
 never written, including during cleanup.
 
-Selected enabled vertices hit their targets. Every other enabled control vertex stays
+Moved enabled vertices hit their targets. Every other enabled control vertex stays
 at P0. Hidden vertices are ordinary mesh vertices, not anchors: they can follow
 deformation inside this scope and proportional radius.
 
@@ -31,11 +32,12 @@ patches, subject to proportional and hard constraints. Paths follow member-face
 edges; they may branch. Do not assign one exclusive vertex chain to each control
 vertex or infer horizontal/vertical/anatomical directions from control names.
 
-An incident control supplies a transform field, not merely an averaged boundary
-displacement. If a patch has one incident control, that control owns the whole
-patch. If it has several incident controls, their transforms are blended across
-the patch; an enabled unselected control contributes the identity transform and
-is a hard stationary boundary.
+Each enabled control vertex supplies an exact boundary position. Moved vertices
+have displacement Q-P0; unchanged vertices have zero displacement. Free patch
+vertices interpolate those per-vertex constraints using rest-edge geometry.
+Logical control definitions do not change the solve. A coherent whole-control
+transform can extend through a patch without a fixed boundary; a nonuniform
+transform uses the same per-vertex interpolation as any other edit.
 
 Patch visualization visibility is display-only. All patches remain available to
 scope/solve regardless of overlay toggles; DANP Form control Hide changes actual

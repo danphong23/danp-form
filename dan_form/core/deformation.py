@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import math
 
-from .graph import distances, metric_distances
+from .graph import metric_distances
+from .harmonic import solve_displacements
 from .proportional import alpha
 
 
@@ -138,190 +139,73 @@ def compute_preview(
     radius: float,
     control_groups: dict[str, set[int]] | None = None,
 ) -> tuple[dict[int, object], int]:
-    """Compute one absolute preview without reading or writing Blender data."""
-    if set(targets) != set(selected):
-        raise ValueError("TARGET_INVALID")
-    if any(not all(math.isfinite(float(component)) for component in value) for value in targets.values()):
-        raise ValueError("TARGET_INVALID")
+    """Compute an absolute preview from individual control-vertex positions.
 
-    # ``control_groups`` is the canonical transform-field path.  The legacy
-    # displacement path remains available for pure callers that have not yet
-    # supplied persistent control membership.
-    if control_groups is None:
-        return _compute_displacement_preview(
-            p0, selected, scope, patches, edge_vids, targets, stationary, profile, radius
-        )
-
-    transforms = {}
-    for control_uuid, members in control_groups.items():
-        selected_members = selected.intersection(members)
-        samples = {vertex_id: targets[vertex_id] for vertex_id in selected_members}
-        transform = _transform_from_samples(p0, samples)
-        if transform is None:
-            # Unselected controls are identity fields for finite-radius mode.
-            # In full-patch mode their vertices are exact fixed boundaries.
-            transform = lambda point: point.copy()
-        transforms[control_uuid] = transform
+    Logical control groups identify vertices for selection; they do not affect
+    the deformation. Each patch uses exact moved and stationary boundaries.
+    """
+    if set(targets) != set(selected) or selected.intersection(stationary):
+        raise ValueError("TARGET_INVALID")
+    if any(not all(math.isfinite(float(component)) for component in value)
+           for value in targets.values()):
+        raise ValueError("TARGET_INVALID")
 
     output = dict(p0)
     candidates: dict[int, list[object]] = {}
     for patch in patches:
         patch_vertices = {int(vertex_id) for vertex_id in patch["vertex_ids"]}
-        seeds = selected.intersection(patch_vertices)
-        if not seeds:
+        patch_targets = {vertex_id: targets[vertex_id]
+                         for vertex_id in selected.intersection(patch_vertices)}
+        if not patch_targets:
             continue
-        incident = [str(control_uuid) for control_uuid in patch.get("incident_control_uuids", [])]
-        if not incident:
-            incident = [control_uuid for control_uuid, members in control_groups.items()
-                        if patch_vertices.intersection(members)]
-        incident = [control_uuid for control_uuid in incident if control_uuid in control_groups]
-        if not incident:
-            continue
-        moving_controls = [control_uuid for control_uuid in incident
-                           if selected.intersection(control_groups[control_uuid])]
-        if radius <= 0.0:
-            # Full-patch mode blends each moving control field once, then
-            # interpolates that field between the selected and fixed boundary.
-            # A second inverse-square blend against identity controls would
-            # compress the middle rings of a cylinder unevenly.
-            selected_distances = metric_distances(edge_vids, patch_vertices, seeds, p0)
-            fixed_distances = metric_distances(
-                edge_vids, patch_vertices, stationary.intersection(patch_vertices), p0
-            )
-            moving_distances = {
-                control_uuid: metric_distances(
-                    edge_vids, patch_vertices,
-                    selected.intersection(control_groups[control_uuid]).intersection(patch_vertices), p0,
-                )
-                for control_uuid in moving_controls
-            }
-        else:
-            control_distances = {
-                control_uuid: distances(
-                    edge_vids, patch_vertices,
-                    patch_vertices.intersection(control_groups[control_uuid]),
-                )
-                for control_uuid in incident
-            }
-        for vertex_id in patch_vertices:
-            if vertex_id in selected or vertex_id in stationary:
-                continue
-            if radius <= 0.0:
-                contributions = []
-                for control_uuid in moving_controls:
-                    distance = moving_distances[control_uuid].get(vertex_id)
-                    if distance is None:
-                        continue
-                    displacement = transforms[control_uuid](p0[vertex_id]) - p0[vertex_id]
-                    weight = 1.0 / max(distance, 1e-12) ** 2
-                    contributions.append((displacement, weight))
-                if not contributions:
-                    continue
-                total_weight = sum(weight for _value, weight in contributions)
-                displacement = None
-                for value, weight in contributions:
-                    part = value * (weight / total_weight)
-                    displacement = part if displacement is None else displacement + part
-                moving_distance = selected_distances.get(vertex_id)
-                fixed_distance = fixed_distances.get(vertex_id)
-                if moving_distance is not None and fixed_distance is not None:
-                    span = moving_distance + fixed_distance
-                    if span > 0.0:
-                        displacement *= fixed_distance / span
-                candidates.setdefault(vertex_id, []).append(p0[vertex_id] + displacement)
-                continue
-            contributions = []
-            for control_uuid in incident:
-                transform = transforms.get(control_uuid)
-                if transform is None:
-                    continue
-                distance = control_distances[control_uuid].get(vertex_id)
-                if distance is None:
-                    continue
-                weight = alpha(distance, profile, float(radius))
-                if weight <= 0.0:
-                    continue
-                transformed = transform(p0[vertex_id])
-                displacement = transformed - p0[vertex_id]
-                weight = weight / max(float(distance), 1e-12) ** 2
-                contributions.append((displacement, weight))
-            if contributions:
-                total_weight = sum(weight for _value, weight in contributions)
-                displacement = None
-                for value, weight in contributions:
-                    part = value * (weight / total_weight)
-                    displacement = part if displacement is None else displacement + part
-                candidates.setdefault(vertex_id, []).append(p0[vertex_id] + displacement)
+        patch_stationary = stationary.intersection(patch_vertices)
 
-    for vertex_id, values in candidates.items():
-        reference = values[0]
-        for candidate in values[1:]:
-            if any(abs(float(a) - float(b)) > 1e-7 for a, b in zip(reference, candidate)):
-                raise ValueError("TARGET_CONFLICT")
-        output[vertex_id] = reference
-    for vertex_id, target in targets.items():
-        output[vertex_id] = target.copy()
-    for vertex_id in stationary:
-        output[vertex_id] = p0[vertex_id].copy()
-    changed = len([vertex_id for vertex_id in scope if output.get(vertex_id) != p0.get(vertex_id)])
-    return output, changed
+        # With no fixed boundary, a coherent whole-control G/R/S can extend
+        # through the patch as a rigid or affine transform. One or two samples
+        # are underdetermined, so retain their translation fit. Nonuniform
+        # Proportional Editing uses the vertex-constrained solve below.
+        transform = None
+        if not patch_stationary:
+            transform = _transform_from_samples(p0, patch_targets)
+            if transform is not None and len(patch_targets) > 2:
+                for vertex_id, target in patch_targets.items():
+                    predicted = transform(p0[vertex_id])
+                    if math.dist(tuple(predicted), tuple(target)) > 1e-6:
+                        transform = None
+                        break
 
-
-def _compute_displacement_preview(
-    p0, selected, scope, patches, edge_vids, targets, stationary, profile, radius
-):
-    """Compatibility implementation for callers without control groups."""
-    # Keep one displacement sample per selected Source vertex.  This path is
-    # retained for old fixtures; Blender workflows now pass control_groups.
-    displacement = {vertex_id: targets[vertex_id] - p0[vertex_id] for vertex_id in selected}
-    output = dict(p0)
-    candidates: dict[int, list[object]] = {}
-    for patch in patches:
-        patch_vertices = {int(vertex_id) for vertex_id in patch["vertex_ids"]}
-        seeds = selected.intersection(patch_vertices)
-        if not seeds:
-            continue
-        # Interpolate from every enabled control vertex in this patch.  The
-        # stationary samples have a zero displacement and therefore anchor the
-        # opposite boundary while a moving loop influences the patch between
-        # them.  This is deliberately patch-local: distances never cross an
-        # effective control cut.
-        samples = (selected | stationary).intersection(patch_vertices)
-        sample_distances = {
-            sample: distances(edge_vids, patch_vertices, {sample})
-            for sample in samples
-        }
-        moving_distances = distances(edge_vids, patch_vertices, seeds)
-        for vertex_id, distance in moving_distances.items():
-            if vertex_id in selected or vertex_id in stationary:
-                continue
-            weight = alpha(distance, profile, float(radius))
-            if weight <= 0.0:
-                continue
-            weighted = None
-            weight_sum = 0.0
-            for sample, graph_distance in sample_distances.items():
-                sample_distance = graph_distance.get(vertex_id)
-                if sample_distance is None:
+        if transform is not None:
+            distances = metric_distances(edge_vids, patch_vertices, set(patch_targets), p0)
+            for vertex_id, distance in distances.items():
+                if vertex_id in patch_targets:
                     continue
-                # A non-control vertex is never itself a sample, nevertheless
-                # retain the epsilon for degenerate/duplicate graph inputs.
-                sample_weight = 1.0 / max(float(sample_distance), 1e-12) ** 2
-                weight_sum += sample_weight
-                vector = displacement.get(sample)
-                if vector is None:
-                    continue  # stationary sample: displacement is exactly zero
-                if weighted is None:
-                    weighted = vector * sample_weight
-                else:
-                    weighted += vector * sample_weight
-            if weighted is not None and weight_sum > 0.0:
-                candidate = p0[vertex_id] + (weighted / weight_sum) * weight
-                # A free vertex may occur in more than one incident patch.
-                # Collect every patch-local candidate and validate agreement
-                # before writeback; patch iteration order must never resolve a
-                # conflict implicitly.
+                strength = alpha(distance, profile, float(radius))
+                if strength <= 0.0:
+                    continue
+                rest = _coords(p0[vertex_id])
+                transformed = _coords(transform(p0[vertex_id]))
+                candidate = _vec(p0[vertex_id], (
+                    rest[axis] + strength * (transformed[axis] - rest[axis])
+                    for axis in range(3)
+                ))
                 candidates.setdefault(vertex_id, []).append(candidate)
+            continue
+
+        displacements = solve_displacements(
+            p0, patch_vertices, edge_vids, patch_targets, patch_stationary
+        )
+        distances = (metric_distances(edge_vids, patch_vertices, set(patch_targets), p0)
+                     if radius > 0.0 else {})
+        for vertex_id, displacement in displacements.items():
+            strength = (alpha(distances.get(vertex_id, math.inf), profile, float(radius))
+                        if radius > 0.0 else 1.0)
+            if strength <= 0.0:
+                continue
+            rest = _coords(p0[vertex_id])
+            candidate = _vec(p0[vertex_id], (
+                rest[axis] + strength * displacement[axis] for axis in range(3)
+            ))
+            candidates.setdefault(vertex_id, []).append(candidate)
 
     for vertex_id, values in candidates.items():
         reference = values[0]
@@ -329,10 +213,9 @@ def _compute_displacement_preview(
             if any(abs(float(a) - float(b)) > 1e-7 for a, b in zip(reference, candidate)):
                 raise ValueError("TARGET_CONFLICT")
         output[vertex_id] = reference
-
     for vertex_id, target in targets.items():
         output[vertex_id] = target.copy()
     for vertex_id in stationary:
         output[vertex_id] = p0[vertex_id].copy()
-    changed = len([vertex_id for vertex_id in scope if output.get(vertex_id) != p0.get(vertex_id)])
+    changed = sum(output.get(vertex_id) != p0.get(vertex_id) for vertex_id in scope)
     return output, changed

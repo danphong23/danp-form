@@ -76,8 +76,8 @@
   },
   {
     "path": "docs/core/interpolation-baseline.md",
-    "sha256": "c57531b641d9c1349b398736b9cbeef179a0804ab11c71cb446b2facb7e68425",
-    "bytes": 5116
+    "sha256": "8d1368357adc942068af194e6a43c80f570ae3d95ab18834977facb250ed621e",
+    "bytes": 3935
   },
   {
     "path": "docs/core/invariants.md",
@@ -91,13 +91,13 @@
   },
   {
     "path": "docs/core/patch-model.md",
-    "sha256": "827ebe455e1a6b9c0ee0e54b73aaa1697caf80ce3f96d3d1f9bcd3b051e0510b",
-    "bytes": 3505
+    "sha256": "aa679e7d4ad370b76c30812805b6ad6f9c0c1b08e9b6704556cee021db8fdd85",
+    "bytes": 3652
   },
   {
     "path": "docs/core/proportional.md",
-    "sha256": "4d8b243acaeac0ab2a1729b7bd39a0fcead59559f4fa9a585fc458a62a555e58",
-    "bytes": 2651
+    "sha256": "f5d14f63231a21665614e45ab31f397e816e88c5913fb1af476385713a6a49a1",
+    "bytes": 2626
   },
   {
     "path": "docs/core/selection-and-targets.md",
@@ -181,8 +181,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "5fb7797421d71996c45cb7341168b73bcf230e6da228f673d977f7ce018da9fd",
-    "bytes": 229463
+    "sha256": "367d478055a23d6b146c8e8439bf0704e16ffa837002ab8c0cdfb7c9fdb000ef",
+    "bytes": 228418
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -196,8 +196,8 @@
   },
   {
     "path": "docs/product/terminology.md",
-    "sha256": "fcf3f65700164b8f701712360a3371e6ac073305fc814dfa5318a3a9effb56cb",
-    "bytes": 2169
+    "sha256": "f0f0c801347cba03b0370ff8450a6c77fe8dc67b2f887dbd9bc5291272e3b065",
+    "bytes": 2183
   },
   {
     "path": "docs/product/user-workflows.md",

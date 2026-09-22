@@ -78,10 +78,10 @@ This replaces a separate deactivate/nesting system. See leg-control-examples.md.
 - **Patch** — connected component of source faces after adjacency across effective enabled control edges is removed.
 - **Operation Rest (`P0`)** — snapshot of current Source coordinates at operation start.
 - **Control Target (`Q`)** — target position assigned to a source control vertex for the current operation.
-- **Dense Target Set** — one selected or stationary target per enabled Source control vertex in scope; span coverage expands selection, not movement of unselected vertices.
+- **Dense Target Set** — one moved or stationary target per enabled Source control vertex in scope; Blender Proportional Editing may move vertices beyond the explicit selection.
 - **Affected Patch Set** — patches incident to moving target geometry for the current operation.
 - **Captured Patch Scope** — patches incident to selection at invoke; bounds snapshot/writeback and prior-preview cleanup even when current affected scope shrinks.
-- **Proportional** — user-controlled attenuation of patch displacement as topological distance from moving targets grows.
+- **Proportional** — user-controlled attenuation of patch displacement as Source-local rest-edge distance from moving targets grows.
 - **Original Snapshot** — optional historical template state used for reset/compare only.
 
 ---
@@ -269,7 +269,8 @@ Never promise hiding a line always merges exactly two patches.
 
 ## Operation scope and constraints
 
-Resolve selected Source vertices/spans and their nonzero targets. Include every patch
+Resolve every Source control vertex that actually moved, including vertices moved by
+Blender Proportional Editing. Include every patch
 incident to moving Source geometry, including all sides of separators and junctions.
 Unrelated patches are excluded; proportional radius cannot expand that set.
 
@@ -278,7 +279,7 @@ Per-update affected scope may shrink when targets become zero; operation-semanti
 requires resetting earlier preview writes to P0. Patches outside captured scope are
 never written, including during cleanup.
 
-Selected enabled vertices hit their targets. Every other enabled control vertex stays
+Moved enabled vertices hit their targets. Every other enabled control vertex stays
 at P0. Hidden vertices are ordinary mesh vertices, not anchors: they can follow
 deformation inside this scope and proportional radius.
 
@@ -289,11 +290,12 @@ patches, subject to proportional and hard constraints. Paths follow member-face
 edges; they may branch. Do not assign one exclusive vertex chain to each control
 vertex or infer horizontal/vertical/anatomical directions from control names.
 
-An incident control supplies a transform field, not merely an averaged boundary
-displacement. If a patch has one incident control, that control owns the whole
-patch. If it has several incident controls, their transforms are blended across
-the patch; an enabled unselected control contributes the identity transform and
-is a hard stationary boundary.
+Each enabled control vertex supplies an exact boundary position. Moved vertices
+have displacement Q-P0; unchanged vertices have zero displacement. Free patch
+vertices interpolate those per-vertex constraints using rest-edge geometry.
+Logical control definitions do not change the solve. A coherent whole-control
+transform can extend through a patch without a fixed boundary; a nonuniform
+transform uses the same per-vertex interpolation as any other edit.
 
 Patch visualization visibility is display-only. All patches remain available to
 scope/solve regardless of overlay toggles; DANP Form control Hide changes actual
@@ -407,7 +409,7 @@ skips solving, not cleanup; see operation-semantics.md.
 
 **Status: Normative role and placement; exact default/profile set remains open**
 
-Within already affected patches, proportional governs how selected control movement
+Within already affected patches, proportional governs how moved control vertices
 spreads into mesh interiors. It does not select patches, release enabled controls,
 or define new control targets. Current patch shape is the deformation baseline.
 
@@ -417,8 +419,8 @@ The additive candidate computes U then applies the user's profile once:
 P1(v) = P0(v) + A(v) * U(v)
 ```
 
-For finite radius R > 0, the initial experiment uses shortest graph distance inside
-the patch from nonzero selected targets:
+For finite radius R > 0, use shortest rest-edge metric distance inside
+the patch from nonzero moved targets:
 
 ```text
 x(v) = clamp(1 - d_move(v)/R, 0, 1)
@@ -426,7 +428,7 @@ A(v) = profile(x(v))
 ```
 
 Whole Patch uses A=1 within affected scope, not across enabled cuts. Enabled stationary
-vertices remain exactly P0 regardless of radius. Selected targets remain exactly Q.
+vertices remain exactly P0 regardless of radius. Moved targets remain exactly Q.
 Hidden vertices are attenuated like ordinary mesh vertices and may remain unchanged
 outside radius. Zero/negative/non-finite radius requests must be rejected or represented
 as an explicit separate mode; do not divide by zero.
@@ -443,7 +445,7 @@ scale; do not silently mix units.
 
 Radius/profile changes recompute from P0 and clear old motion outside new influence.
 No nonzero targets means P0 output; do not compute distances to an empty moving set.
-Selected control vertices still receive Q.
+Moved control vertices still receive Q.
 
 No fixed midpoint motion or mandatory affine deformation follows from choosing a
 profile. Prototype comparisons must use identical targets/constraints while changing
@@ -462,12 +464,12 @@ user proportional.
 
 # Patch Interpolation Prototype
 
-**Status: Replaceable prototype candidate; required behavior comes from core contracts**
+**Status: Current solver; required behavior comes from core contracts**
 
 ## Product requirements
 
-Inputs are immutable current patch P0, actual patch topology, explicit selected targets,
-enabled unselected stationary vertices, and proportional settings. Hidden geometry is
+Inputs are immutable current patch P0, actual patch topology, the Controller vertices
+that actually moved, unchanged enabled control vertices, and proportional settings. Hidden geometry is
 ordinary Source geometry. Names/logical grouping must not affect the result.
 
 Keep current patch form as the geometric starting point. Generate its deformation from
@@ -475,7 +477,7 @@ control movement and the user proportional setting; never reconstruct a patch so
 from sparse endpoint positions or pull toward the historical template. Extra detail
 preservation is not mandated; a user can add controls around a feature to edit it separately.
 
-Hard targets: selected vertices equal Q; enabled unselected vertices equal P0. No-op
+Hard targets: moved vertices equal Q; unchanged enabled vertices equal P0. No-op
 returns P0 and clears old preview motion. New deformation stays in currently affected
 patches; cleanup stays in captured scope. These rules hold for every method.
 
@@ -483,55 +485,34 @@ No required formula says a patch midpoint moves half as far as a boundary. Whole
 and finite radius/profile may produce different interior responses. Inspect leg examples
 in product/leg-control-examples.md before interpreting interpolation results.
 
-The current Whole Patch (`Radius = 0`) implementation uses the operation rest
-Source mesh for edge lengths. It blends transforms from selected control
-groups once, then fades the resulting displacement between selected and fixed
-control boundaries by their shortest metric paths. Thus an ordinary cylinder
-with two control loops retains the original spacing ratios of its intermediate
-rings when one loop moves. Every new operation starts from the current Source
-coordinates; an already distorted model needs an explicit Reset Model if the
-user wants to return to its Init pose. Finite radius uses a separate profile
-and graph-distance response.
+## Current interpolation
 
-## Small displacement candidate for initial evidence
-
-An additive test model keeps P0 and adds a control displacement field:
+For every enabled control vertex in an affected patch, take its measured Controller
+displacement `D[i] = Q[i] - P0[i]`; an unchanged vertex has `D[i] = 0`. These are exact
+constraints. For a free vertex, solve a weighted discrete Laplace equation on the
+patch's Source edges:
 
 ```text
-D[i] = Q[i] - P0[i]   # selected or stationary enabled Source control vertex
-P1[v] = P0[v] + A[v] * U[v]
+sum over neighbors j: (D[v] - D[j]) / length_P0(v,j) = 0
+P1[v] = P0[v] + A[v] * D[v]
 ```
 
-A is the user proportional applied once, as defined in proportional.md. U is a technical
-candidate, not a frozen product behavior. The old per-logical-component nearest-sample
-blend is superseded: grouping identical control geometry must not change motion.
+This spreads local Blender Proportional motion along the boundary smoothly into the
+patch without fitting one transform to a named control. In a straight strip, edge
+resistance follows its original length, retaining the spacing ratios of intermediate
+rings. A free component unreachable from any constraint retains P0. With no fixed
+boundary and a coherent whole-control G/R/S, a fitted transform can extend through
+the patch; nonuniform targets use the constrained solve.
 
-For a small pure-geometry experiment, test inverse-distance blending over unique enabled
-Source control vertices, including stationary samples. For each non-control vertex v,
-compute graph distance d(v,i) inside the patch to each sample i:
+`A` is 1 for Whole Patch (`Radius = 0`), or the chosen profile of Source-local
+rest-edge distance for finite radius. It never weakens hard control targets.
+Every preview starts from immutable P0, not the previous preview. Build and
+validate the complete output before writeback; copy hard targets and unchanged
+control positions exactly and reject conflicting shared-patch results.
 
-```text
-eps = max(patch_bbox_diagonal * 1e-9, 1e-12)
-r_i(v) = 1 / max(d(v,i), eps)^2
-w_i(v) = r_i(v) / sum_j r_j(v)
-U(v) = sum_i w_i(v) * D[i]
-```
-
-Deduplicate samples by persistent Source ID; ordering/group names do not add weight.
-Only sample vertices belonging to this patch. Unreachable free components retain P0.
-Without reachable finite samples, do not divide by zero or blend across components.
-Free vertices outside finite radius retain P0 exactly; omit unnecessary interpolation
-there. Distances come from immutable P0, never previous preview geometry.
-Directly set all enabled control vertices to their selected/stationary targets afterward.
-Check finite outputs, shared-boundary agreement and write mask before Source writes.
-
-Build and validate complete output buffers before writing; leave no half-written patch
-on error. Copy fixed P0 coordinates exactly instead of relying on attenuation alone.
-
-This is a deliberately small test candidate, not a production solver decision. Pairwise
-distances are expensive for dense controls; start with tiny fixtures, record memory/time,
-and do not promise interactive dense-mesh performance. It can fail quality tests; record
-that evidence rather than weakening hard-control behavior to make it pass.
+The solver minimizes edge displacement differences. It does not guarantee
+volume preservation or prevent face inversion under extreme edits. More
+geometric controls can constrain important features when needed.
 
 ## Required observations
 
