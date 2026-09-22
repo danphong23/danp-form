@@ -19,8 +19,11 @@ def test_reset_is_registered_and_undoable():
     operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
     assert 'class DANFORM_OT_reset' in operators
     assert 'bl_idname = "dan_form.reset"' in operators
+    assert 'class DANFORM_OT_reset_source' in operators
+    assert 'bl_idname = "dan_form.reset_source"' in operators
     assert 'bl_options = {"REGISTER", "UNDO"}' in operators
     assert "_ensure_source_ids(source)" in operators
+    assert "ORIGINAL_POSITIONS_KEY" in operators
 
 
 def test_cleanup_requires_explicit_ownership_marker():

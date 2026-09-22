@@ -898,6 +898,9 @@ Rules:
   by base Source IDs while the overlay may follow evaluated cage geometry. An
   Apply operation that changes base topology pauses DANP and uses the same Undo
   or Reset recovery path;
+- Reset Model restores the coordinate snapshot captured by the first Init on the
+  same topology. It is separate from Reset DANP and is itself undoable. If the
+  topology no longer matches that snapshot, Undo or Reset DANP is required first;
 - user UI receives a short recovery-oriented message;
 - agent receives a stable code plus machine-readable context.
 
@@ -1017,11 +1020,12 @@ rare display/maintenance actions belong in the list menu.
 With X-Ray off, the overlay uses the normal depth test and is occluded by the opaque
 mesh. X-Ray explicitly disables that test when the user needs to inspect controls
 through the model.
-Controller Edit also exposes a compact Setup block. Pick Segment and Pick Control
-start a hover preview in the viewport; the preview commits on click and Esc cancels
-it. Add to Selection or Shift-click accumulates multiple spans/controls, while Clear
-and All Controls provide explicit reset and bulk selection. The same tools are
-available from Ctrl+Alt+S and Ctrl+Alt+C.
+Controller Edit keeps Blender's native selection tools as the only selection
+surface. Box, circle, lasso, click, Shift and Ctrl selection operate directly on
+the Controller Edit mesh; the control list remains the shortcut for selecting a
+stored membership. DANP does not add a second hover picker, segment picker,
+"select all" button or Add-to-Selection toggle that can compete with Blender's
+selection state.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
 events, context, masks, selected row and object transforms invalidate the relevant
 display; idle redraw only draws existing buffers. Topology/ID caches contain no
@@ -1054,26 +1058,9 @@ object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation 
 
 ## Selection and deformation
 
-Ctrl+Alt+Click an edge in controller Edit selects its visible span up to junctions
-or endpoints (degree other than two); Shift adds the span. A closed uninterrupted
-loop selects fully. Names/overlapping groups do not split the graph. The list menu
-or F3 uses a single selected/active edge; agents can pass `edge_id` to
-`dan_form.select_segment`. Overlapping projected edges require visual review.
-Ctrl+Shift+Click the edge selects the whole logical control containing it. If the
-edge belongs to several controls, the currently active list control wins; without
-an active matching row the command refuses to guess and asks the user to choose
-from the list. Agents can pass the canonical Source edge ID to the same operator.
-Shift belongs to the whole-control shortcut itself; it does not implicitly add.
-Use Add to Selection or the hover picker to accumulate whole controls.
-
-Pick Segment / Pick Control previews a magenta span without changing native
-selection. LMB commits; Shift/Add accumulates and Ctrl subtracts, keeping the tool
-active for repeated picks. RMB/Esc ends preview; already committed repeated picks
-remain selected. MMB/wheel/trackpad navigation passes through. A native command
-such as B, C, A, G/R/S or Tab ends picking and receives its normal input. A click
-outside the viewport or on empty space ends picking and passes to Blender.
-Sidebar invocation converts global mouse coordinates into the viewport's WINDOW
-region; UI-relative coordinates are not valid for projected picking.
+Selection is ordinary Blender Controller Edit selection. The list selects a stored
+control quickly, after which the user can refine it with Blender's native tools.
+There is no addon-specific hover preview or alternate segment grammar to maintain.
 
 The cyan enabled-edge highlight is an optional draw-only layer, capped at 1.5 px
 in controller Edit. It never captures mouse input or selects vertices. Native
@@ -3613,7 +3600,7 @@ Các dòng trên là đánh giá mã hiện tại, không khẳng định mọi 
 | `Hide Controls` / `Show Controls` | Bật/tắt tất cả định nghĩa; đây là thay đổi mạng hiệu dụng, không phải công tắc vẽ. Tooltip/status nói rõ. Trạng thái ẩn một phần của từng mục được giữ khi bật lại hàng loạt. |
 | `Overlay`, `Patches`, `Preview Hidden` | Chỉ thay đổi hiển thị. Preview Hidden không làm phần ẩn chọn được hoặc trở lại làm ràng buộc. |
 | `X-Ray` | Điều khiển hiển thị, click/Pick của DANP và các công cụ có policy riêng; Box Select native vẫn theo Blender. |
-| `Pick Segment`, `Pick Control`, `Clear`, `All Controls`, `Add to Selection` | Giữ vị trí và thao tác. Tất cả chỉ sửa native selection; kết quả G/R/S không phụ thuộc mục danh sách đang active. |
+| Bộ Pick/Clear/All Controls/Add to Selection | Bỏ khỏi sidebar và keymap. Controller Edit dùng trực tiếp Box/Circle/Lasso/click/Shift/Ctrl native của Blender; UIList vẫn là lối tắt chọn control. |
 | UIList: hàng, mắt, đổi tên, `+`, `−`, lên/xuống, `Sync` | Giữ giao diện. Click hàng chọn membership đang bật; mắt bật/tắt đóng góp của mục; `+` và Sync chỉ trong Source Edit; `−` xóa định nghĩa và phần chỉ nó giữ khỏi proxy; lên/xuống và đổi tên không đổi hình học. |
 | `Profile`, `Radius` | Giữ trong nhóm G/R/S. `Radius = 0` hiển thị rõ là ảnh hưởng toàn patch; Profile mờ đi khi không có tác dụng. Chưa đổi mặc định trước khi so sánh chất lượng. |
 

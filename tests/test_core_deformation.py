@@ -206,6 +206,22 @@ def test_single_control_owns_scale_of_the_whole_patch():
     assert abs(output[2].values[2] - 1.0) < 1e-6
 
 
+def test_radius_zero_preserves_ratio_between_moving_and_stationary_boundaries():
+    # A one-dimensional patch models a cylinder section: the top boundary
+    # moves, the bottom boundary is an unselected control, and the middle
+    # vertex must receive exactly half of the boundary displacement.
+    p0 = {0: V(0, 1, 0), 1: V(0, 1, 1), 2: V(0, 1, 2)}
+    target = {0: V(0, 1, 1)}
+    output, _ = DEFORMATION.compute_preview(
+        p0, {0}, set(p0),
+        [{"vertex_ids": list(p0), "incident_control_uuids": ["TOP"]}],
+        {0: (0, 1), 1: (1, 2)}, target, {2}, "LINEAR", 0.0,
+        control_groups={"TOP": {0}},
+    )
+    assert abs(output[1].values[2] - 1.5) < 1e-6
+    assert output[2] == p0[2]
+
+
 def test_unselected_control_is_an_identity_anchor_for_shared_patch():
     p0 = {index: V(index, 0, 0) for index in range(5)}
     target = {0: V(1, 0, 0), 1: V(2, 0, 0)}

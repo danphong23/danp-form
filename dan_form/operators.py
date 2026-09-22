@@ -38,6 +38,31 @@ def _friendly_error(exc: Exception) -> str:
     return code
 
 
+def _capture_original_snapshot(source) -> None:
+    """Capture the first Init pose by persistent Source vertex ID."""
+    if source.get(ORIGINAL_POSITIONS_KEY):
+        return
+    positions = _source_positions(source)
+    _json_set(source, ORIGINAL_POSITIONS_KEY, {
+        str(vertex_id): [float(component) for component in coordinates]
+        for vertex_id, coordinates in positions.items()
+    })
+    source[ORIGINAL_TOPOLOGY_KEY] = str(source.get(TOPOLOGY_KEY, ""))
+
+
+def _original_snapshot(source) -> dict[int, Vector]:
+    raw = source.get(ORIGINAL_POSITIONS_KEY)
+    if not raw:
+        raise ValueError("ORIGINAL_SNAPSHOT_MISSING")
+    try:
+        payload = json.loads(raw) if isinstance(raw, str) else raw
+        if not isinstance(payload, dict):
+            raise ValueError
+        return {int(vertex_id): Vector(value) for vertex_id, value in payload.items()}
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("ORIGINAL_SNAPSHOT_INVALID") from exc
+
+
 def _discard_source_runtime(source: bpy.types.Object | None) -> None:
     """Drop transient deformation state when a Source/controller is removed."""
     if source is None:
@@ -73,6 +98,7 @@ class DANFORM_OT_initialize(bpy.types.Operator):
             if controller is None:
                 _ensure_source_ids(source)
                 _source_uuid(source)
+                _capture_original_snapshot(source)
                 mesh = bpy.data.meshes.new(f"DANPFORM_CTRL_{source.name}")
                 mesh.from_pydata([], [], [])
                 mesh.update()
@@ -88,6 +114,7 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 _migrate_control_schema(source)
                 _validate_source_topology(source)
                 _guard_proxy_topology(source, controller)
+                _capture_original_snapshot(source)
             source["dan_form_controller_name"] = controller.name
             _set_scene_context(context, source, controller)
             scene.dan_form_status = f"Ready: {source.name} / {controller.name}"
@@ -299,10 +326,6 @@ class DANFORM_MT_control_menu(bpy.types.Menu):
         layout.separator()
         layout.operator("dan_form.reveal", text="Reveal All", icon="HIDE_OFF")
         layout.operator("dan_form.hide_selected", text="Hide Selected", icon="HIDE_ON")
-        layout.operator("dan_form.select_control_at_cursor", text="Select Whole Control Under Cursor", icon="OUTLINER_OB_MESH")
-        layout.operator("dan_form.select_segment", text="Select Segment Between Junctions", icon="EDGESEL")
-        layout.operator("dan_form.pick_selection_tool", text="Hover Pick Segment", icon="EYEDROPPER")
-        layout.operator("dan_form.pick_selection_tool", text="Hover Pick Control", icon="EYEDROPPER").tool = "CONTROL"
         layout.separator()
         layout.prop(context.scene, "dan_form_overlay_enabled", text="Control Overlay")
         if context.view_layer.objects.active == source:
@@ -675,7 +698,8 @@ class DANFORM_OT_remove(bpy.types.Operator):
                     source.data.attributes.remove(attr)
             for key in (SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
                         HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
-                        NETWORK_REVISION_KEY, "dan_form_controller_name"):
+                        NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY,
+                        ORIGINAL_TOPOLOGY_KEY, "dan_form_controller_name"):
                 if key in source:
                     del source[key]
             _MAPPING_CACHE.pop(source.as_pointer(), None)
@@ -746,7 +770,8 @@ class DANFORM_OT_reset(bpy.types.Operator):
                     source.data.attributes.remove(attr)
             for key in (SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
                         HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
-                        NETWORK_REVISION_KEY, "dan_form_controller_name"):
+                        NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY,
+                        ORIGINAL_TOPOLOGY_KEY, "dan_form_controller_name"):
                 if key in source:
                     del source[key]
             _MAPPING_CACHE.pop(source.as_pointer(), None)
@@ -758,6 +783,7 @@ class DANFORM_OT_reset(bpy.types.Operator):
 
             _ensure_source_ids(source)
             source_uuid = _source_uuid(source)
+            _capture_original_snapshot(source)
             mesh = bpy.data.meshes.new(f"DANPFORM_CTRL_{source.name}")
             mesh.from_pydata([], [], [])
             mesh.update()
@@ -781,6 +807,52 @@ class DANFORM_OT_reset(bpy.types.Operator):
             return {"FINISHED"}
         except (RuntimeError, ValueError) as exc:
             self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_reset_source(bpy.types.Operator):
+    bl_idname = "dan_form.reset_source"
+    bl_label = "Reset Model"
+    bl_description = "Restore the Source mesh to the pose captured when DANP Form was initialized"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        source, _controller = _context_source(context)
+        return (
+            source is not None
+            and context.view_layer.objects.active == source
+            and source.mode in {"OBJECT", "EDIT"}
+            and bool(source.get(ORIGINAL_POSITIONS_KEY))
+        )
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if not self.poll(context):
+            return {"CANCELLED"}
+        try:
+            _validate_source_topology(source)
+            if str(source.get(ORIGINAL_TOPOLOGY_KEY, "")) != str(source.get(TOPOLOGY_KEY, "")):
+                raise ValueError("ORIGINAL_SNAPSHOT_TOPOLOGY_CHANGED")
+            positions = _original_snapshot(source)
+            _workflow_write_source_positions(source, positions, _workflow_dependencies())
+            if controller is not None:
+                _sync_proxy(source, controller)
+            _OVERLAY_CACHE.clear()
+            _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+            _set_scene_context(context, source, controller)
+            context.scene.dan_form_status = "Đã reset model về dáng gốc lúc Init DANP"
+            self.report({"INFO"}, "Source restored to the original Init pose")
+            return {"FINISHED"}
+        except (RuntimeError, ValueError) as exc:
+            if str(exc) == "ORIGINAL_SNAPSHOT_TOPOLOGY_CHANGED":
+                message = "Không thể reset dáng gốc vì topology đã đổi; hãy Undo hoặc Reset DANP trước."
+            elif str(exc) in {"ORIGINAL_SNAPSHOT_MISSING", "ORIGINAL_SNAPSHOT_INVALID"}:
+                message = "Mesh này chưa có snapshot Init; hãy Remove rồi Init DANP lại."
+            else:
+                message = _friendly_error(exc)
+            context.scene.dan_form_status = message
+            self.report({"ERROR"}, message)
             return {"CANCELLED"}
 
 
@@ -1410,17 +1482,8 @@ def _register_control_keymaps():
     for operator, key, modifiers in (
         ("dan_form.hide_selected", "H", {}),
         ("dan_form.reveal_controller", "H", {"alt": True}),
-        ("dan_form.pick_selection_tool", "S", {"ctrl": True, "alt": True}),
-        ("dan_form.pick_selection_tool", "C", {"ctrl": True, "alt": True}),
-        ("dan_form.select_control_at_cursor", "LEFTMOUSE", {"ctrl": True, "shift": True}),
-        ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True}),
-        ("dan_form.select_segment", "LEFTMOUSE", {"ctrl": True, "alt": True, "shift": True}),
     ):
         item = km.keymap_items.new(operator, key, "PRESS", head=True, **modifiers)
-        if operator == "dan_form.pick_selection_tool":
-            item.properties.tool = "SEGMENT" if key == "S" else "CONTROL"
-        if operator == "dan_form.select_segment":
-            item.properties.extend = modifiers.get("shift", False)
         _CONTROL_KEYMAPS.append((km, item))
 
 
@@ -1569,6 +1632,8 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
                 reset = lifecycle.row(align=True)
                 reset.alert = True
                 reset.operator(DANFORM_OT_reset.bl_idname, text="Reset", icon="FILE_REFRESH")
+                reset_source = lifecycle.row(align=True)
+                reset_source.operator(DANFORM_OT_reset_source.bl_idname, text="Reset Model", icon="LOOP_BACK")
             remove = lifecycle.row(align=True)
             remove.alert = True
             remove.operator(DANFORM_OT_remove.bl_idname, text="Remove DANP Form", icon="TRASH")
@@ -1612,17 +1677,6 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         if active == source:
             display.prop(scene, "dan_form_overlay_hidden", text="Preview Hidden")
         if active == controller and controller.mode == "EDIT":
-            pick_row = setup.row(align=True)
-            segment = pick_row.operator(DANFORM_OT_pick_selection_tool.bl_idname, text="Pick Segment", icon="EDGESEL")
-            segment.tool = "SEGMENT"
-            control = pick_row.operator(DANFORM_OT_pick_selection_tool.bl_idname, text="Pick Control", icon="OUTLINER_OB_MESH")
-            control.tool = "CONTROL"
-            setup.prop(scene, "dan_form_add_to_selection", text="Add to Selection")
-            selection_row = setup.row(align=True)
-            selection_row.operator(DANFORM_OT_clear_selection.bl_idname, text="Clear", icon="X")
-            selection_row.operator(DANFORM_OT_select_all_controls.bl_idname, text="All Controls", icon="SELECT_EXTEND")
-            setup.label(text="LMB chọn · Shift cộng · Ctrl bỏ chọn", icon="INFO")
-            setup.label(text="RMB/Esc dừng · MMB/Wheel điều hướng")
             deform = layout.box()
             deform.label(text="Native G/R/S Proportional", icon="CONSTRAINT_BONE")
             deform.prop(scene, "dan_form_proportional_profile", text="Profile")
@@ -1688,14 +1742,10 @@ CLASSES = (
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
     DANFORM_OT_reset,
+    DANFORM_OT_reset_source,
     DANFORM_OT_topology_locked,
     DANFORM_OT_deform,
     DANFORM_OT_cancel_deform,
-    DANFORM_OT_pick_selection_tool,
-    DANFORM_OT_select_control_at_cursor,
-    DANFORM_OT_select_segment,
-    DANFORM_OT_clear_selection,
-    DANFORM_OT_select_all_controls,
     DANFORM_OT_reveal_controller,
     DANFORM_OT_toggle_viewport_controls,
     DANFORM_OT_focus_source,
@@ -1713,10 +1763,8 @@ __all__ = [
     "DANFORM_OT_sync_control", "DANFORM_OT_move_control", "DANFORM_OT_create_control",
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",
     "DANFORM_OT_delete_control", "DANFORM_OT_hide_selected", "DANFORM_OT_reveal",
-    "DANFORM_OT_remove_controller", "DANFORM_OT_remove", "DANFORM_OT_topology_locked",
-    "DANFORM_OT_deform", "DANFORM_OT_cancel_deform", "DANFORM_OT_pick_selection_tool",
-    "DANFORM_OT_select_control_at_cursor", "DANFORM_OT_select_segment", "DANFORM_OT_clear_selection",
-    "DANFORM_OT_select_all_controls", "DANFORM_OT_reveal_controller", "DANFORM_OT_toggle_viewport_controls",
+    "DANFORM_OT_remove_controller", "DANFORM_OT_remove", "DANFORM_OT_reset", "DANFORM_OT_reset_source", "DANFORM_OT_topology_locked",
+    "DANFORM_OT_deform", "DANFORM_OT_cancel_deform", "DANFORM_OT_reveal_controller", "DANFORM_OT_toggle_viewport_controls",
     "DANFORM_OT_focus_source", "DANFORM_OT_focus_controller",
     "_ui_item_name_update", "_ui_control_index_update", "_register_topology_keymaps",
     "_unregister_topology_keymaps", "_proxy_segment", "_pick_controller_edge_id",

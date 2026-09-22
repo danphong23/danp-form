@@ -36,7 +36,6 @@ def register(api) -> None:
     bpy.types.Scene.dan_form_overlay_hidden = BoolProperty(name="Show Hidden Controls", default=False)
     bpy.types.Scene.dan_form_overlay_xray = BoolProperty(name="X-Ray", default=False, update=api._update_overlay_display)
     bpy.types.Scene.dan_form_overlay_width = FloatProperty(name="Line Width", default=3.0, min=1.0, max=8.0)
-    bpy.types.Scene.dan_form_add_to_selection = BoolProperty(name="Add to Selection", default=False)
     bpy.types.Scene.dan_form_proportional_profile = EnumProperty(
         name="Profile",
         items=(("LINEAR", "Linear", ""), ("SMOOTH", "Smooth", ""), ("UNIFORM", "Uniform", "")),
@@ -105,7 +104,7 @@ def unregister(api) -> None:
     api._runtime.NATIVE_UNDO_DIRECTION = None
     for prop in (
         "dan_form_overlay_width", "dan_form_overlay_xray", "dan_form_overlay_hidden",
-        "dan_form_overlay_enabled", "dan_form_patches_enabled", "dan_form_add_to_selection",
+        "dan_form_overlay_enabled", "dan_form_patches_enabled",
         "dan_form_proportional_profile", "dan_form_proportional_radius", "dan_form_selected_control",
         "dan_form_ui_source_uuid", "dan_form_control_index", "dan_form_control_items",
         "dan_form_status", "dan_form_controller", "dan_form_source",

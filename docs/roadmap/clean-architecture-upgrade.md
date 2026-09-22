@@ -69,7 +69,7 @@ Các dòng trên là đánh giá mã hiện tại, không khẳng định mọi 
 | `Hide Controls` / `Show Controls` | Bật/tắt tất cả định nghĩa; đây là thay đổi mạng hiệu dụng, không phải công tắc vẽ. Tooltip/status nói rõ. Trạng thái ẩn một phần của từng mục được giữ khi bật lại hàng loạt. |
 | `Overlay`, `Patches`, `Preview Hidden` | Chỉ thay đổi hiển thị. Preview Hidden không làm phần ẩn chọn được hoặc trở lại làm ràng buộc. |
 | `X-Ray` | Điều khiển hiển thị, click/Pick của DANP và các công cụ có policy riêng; Box Select native vẫn theo Blender. |
-| `Pick Segment`, `Pick Control`, `Clear`, `All Controls`, `Add to Selection` | Giữ vị trí và thao tác. Tất cả chỉ sửa native selection; kết quả G/R/S không phụ thuộc mục danh sách đang active. |
+| Bộ Pick/Clear/All Controls/Add to Selection | Bỏ khỏi sidebar và keymap. Controller Edit dùng trực tiếp Box/Circle/Lasso/click/Shift/Ctrl native của Blender; UIList vẫn là lối tắt chọn control. |
 | UIList: hàng, mắt, đổi tên, `+`, `−`, lên/xuống, `Sync` | Giữ giao diện. Click hàng chọn membership đang bật; mắt bật/tắt đóng góp của mục; `+` và Sync chỉ trong Source Edit; `−` xóa định nghĩa và phần chỉ nó giữ khỏi proxy; lên/xuống và đổi tên không đổi hình học. |
 | `Profile`, `Radius` | Giữ trong nhóm G/R/S. `Radius = 0` hiển thị rõ là ảnh hưởng toàn patch; Profile mờ đi khi không có tác dụng. Chưa đổi mặc định trước khi so sánh chất lượng. |
 

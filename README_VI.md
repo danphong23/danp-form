@@ -39,6 +39,10 @@ thay đổi, DANP tạm dừng để không ghi theo ID cũ; dùng Undo để qu
 trước đó hoặc bấm **Reset** để bỏ control cũ và tạo mapping mới trên mesh hiện tại.
 Modifier chưa Apply chỉ thay đổi hình hiển thị; mapping vẫn theo Source base.
 
+Khi Init lần đầu, DANP lưu một snapshot tọa độ theo ID của Source. **Reset Model**
+đưa mesh về đúng dáng đó và có thể Undo; **Reset DANP** chỉ tạo lại mapping trên
+topology hiện tại và dùng dáng hiện tại làm snapshot mới.
+
 1. Khởi tạo add-on, sidebar, chọn Source, tạo controller con của Source.
 2. Tạo đường control từ vertex/edge, đồng bộ vị trí, Hide/Reveal và lưu/dựng lại.
 3. Tính patch theo topology và bật/tắt lớp hiển thị patch.

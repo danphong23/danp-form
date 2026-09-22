@@ -39,6 +39,9 @@ Rules:
   by base Source IDs while the overlay may follow evaluated cage geometry. An
   Apply operation that changes base topology pauses DANP and uses the same Undo
   or Reset recovery path;
+- Reset Model restores the coordinate snapshot captured by the first Init on the
+  same topology. It is separate from Reset DANP and is itself undoable. If the
+  topology no longer matches that snapshot, Undo or Reset DANP is required first;
 - user UI receives a short recovery-oriented message;
 - agent receives a stable code plus machine-readable context.
 

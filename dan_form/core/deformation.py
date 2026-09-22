@@ -188,6 +188,16 @@ def compute_preview(
             )
             for control_uuid in incident
         }
+        # Radius 0 means the complete patch participates, while the original
+        # template proportions between the moving and stationary boundaries
+        # are preserved.  A free vertex receives the moving field according to
+        # its normalized graph distance: 0 at the selected boundary and 1 at
+        # the stationary boundary.  Without this factor a pure translation of
+        # one cylinder ring was copied unchanged to every free ring, collapsing
+        # the spacing instead of forming an even taper.
+        selected_distances = distances(edge_vids, patch_vertices, seeds)
+        stationary_boundary = stationary.intersection(patch_vertices)
+        stationary_distances = distances(edge_vids, patch_vertices, stationary_boundary)
         for vertex_id in patch_vertices:
             if vertex_id in selected or vertex_id in stationary:
                 continue
@@ -204,6 +214,13 @@ def compute_preview(
                     continue
                 transformed = transform(p0[vertex_id])
                 displacement = transformed - p0[vertex_id]
+                if radius <= 0.0:
+                    moving_distance = selected_distances.get(vertex_id)
+                    stationary_distance = stationary_distances.get(vertex_id)
+                    if moving_distance is not None and stationary_distance is not None:
+                        span = float(moving_distance + stationary_distance)
+                        blend = (float(stationary_distance) / span) if span > 0.0 else 1.0
+                        displacement = displacement * blend
                 if len(incident) == 1 and radius <= 0.0:
                     contributions = [(displacement, 1.0)]
                     break
