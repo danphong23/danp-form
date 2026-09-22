@@ -1,5 +1,17 @@
 # Design Changelog
 
+## 2026-09-23 — DANP Form 0.5.27 separates selection intent from measured motion
+
+- Keep the initial Controller selection as a transform boundary even when an
+  axis Scale leaves some selected vertices unchanged.
+- Keep Blender Proportional movement as exact targets, including unselected
+  Controller vertices that actually moved.
+- Enabled control vertices outside the selection/moved union remain stationary
+  anchors; patches no longer classify unchanged selected loop points as a
+  separate stationary control.
+- Add X/Y/Z planar loop regressions, a second stationary-loop case, proportional
+  target coverage, and exact no-op coverage.
+
 ## 2026-09-22 — DANP Form 0.5.26 deterministic native sessions and affine patch fitting
 
 - Native Controller G/R/S sessions now use Blender's live modal operator boundary;

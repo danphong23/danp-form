@@ -10,7 +10,7 @@ This specification separates **required product behavior** from **technical cand
 - Operation Rest is the current Source state captured at operation start.
 - Every preview in one operation is computed from the same immutable Operation Rest.
 - Unchanged targets must produce an unchanged Source.
-- Enabled unselected Source control vertices are hard stationary constraints, including omitted dense vertices in sparse mode.
+- Transform boundary is the union of the initial resolved selection and Controller vertices that actually move. Selected-but-unchanged vertices keep exact P0 targets; enabled control vertices outside that union are hard stationary constraints, including omitted dense vertices in sparse mode. Proportional-moved unselected vertices are exact targets.
 - Shared selected junctions move; conflicting selected targets are rejected.
 - DANP Form Hide releases cuts and constraints for whole or partial geometry; Reveal samples current Source positions. Read ADR-008 and core/control-model.md.
 - New deformation is confined to current affected patches; cleanup of older previews stays within the captured incident-patch scope. Targets returning to P0 or radius shrinking must clear residual preview edits.

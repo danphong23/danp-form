@@ -109,10 +109,11 @@ def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector
 
 
 def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
-                   delta=(0.0, 0.0, 0.0), profile="LINEAR", radius=0.0,
-                   targets: dict[int, Vector] | None = None,
-                   sync_controller: bool = True,
-                   operation_transform: OperationTransform | None = None) -> dict:
+                    delta=(0.0, 0.0, 0.0), profile="LINEAR", radius=0.0,
+                    targets: dict[int, Vector] | None = None,
+                    sync_controller: bool = True,
+                    operation_transform: OperationTransform | None = None,
+                    selection_intent: set[int] | None = None) -> dict:
     key = source.as_pointer(); tx = deps.transactions.get(key)
     if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
     if (source.get(TOPOLOGY_KEY) != tx["topology"]
@@ -128,15 +129,19 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         targets = targets_from_transform(p0, tx["selected"], operation_transform)
     if targets is None:
         targets = {vid: p0[vid] + Vector(delta) for vid in tx["selected"]}
-    selected = set(targets)
+    moved = set(targets)
+    intent = set(tx["selected"] if selection_intent is None else selection_intent)
+    active = moved | intent
+    if not intent.issubset(tx["selected"]):
+        raise ValueError("TARGET_INVALID")
     partition = deps.patch_partition(source)
     for patch in partition["patches"]:
-        if selected.intersection(set(patch["vertex_ids"])):
+        if active.intersection(set(patch["vertex_ids"])):
             tx["scope"].update(int(v) for v in patch["vertex_ids"])
-    stationary = set(deps.effective_proxy_elements(source)[0]) - selected
+    stationary = set(deps.effective_proxy_elements(source)[0]) - active
     output, changed_vertices = compute_preview(
         p0,
-        selected,
+        moved,
         set(tx["scope"]),
         partition["patches"],
         deps.source_edge_vids(source),
@@ -145,6 +150,7 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         profile,
         float(radius),
         control_groups=tx.get("control_groups"),
+        selection_intent=intent,
     )
     write_source_positions(source, {vid: output[vid] for vid in tx["scope"] if vid in output}, deps)
     # During native Controller Edit transforms Blender owns the proxy
@@ -155,7 +161,8 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
     deps.overlay_cache.clear(); deps.patch_overlay_cache.pop(source.as_pointer(), None)
     tx["preview"] = output
     return {"changed_vertices": changed_vertices,
-            "selected_vertices": len(selected), "scope_vertices": len(tx["scope"])}
+            "selected_vertices": len(active), "moved_vertices": len(moved),
+            "scope_vertices": len(tx["scope"])}
 
 
 def deform_commit(source: bpy.types.Object, deps) -> None:

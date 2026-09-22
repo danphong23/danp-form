@@ -98,6 +98,14 @@ Create an overlapping definition over hidden geometry: no silent reveal or extra
 Remove one overlapping definition: masks and shared supported geometry remain coherent.
 Remove last membership: no Source topology edit; obsolete masks/handles are pruned.
 
+## G22 — Selection intent and measured movement
+Scale a selected planar loop along each world/local axis that leaves some selected
+vertices unchanged. Those points retain P0 exactly but remain part of the transforming
+boundary, so the one-control patch uses the full selected loop as its transform samples.
+Repeat with Blender Proportional Editing moving unselected proxy points; they become exact
+targets. Add a second unselected enabled loop and verify it remains an exact stationary
+anchor. Returning all moved targets to P0 is an exact no-op.
+
 ## Measurement contract
 For pure numerical fixtures record a scale L=max(rest bounding-box diagonal, 1e-12).
 Use float64 candidate buffers; an initial comparison tolerance 1e-8*L is a prototype

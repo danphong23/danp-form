@@ -4,18 +4,21 @@
 
 ## Product requirements
 
-Inputs are immutable current patch P0, actual patch topology, the Controller vertices
-that actually moved, unchanged enabled control vertices, and proportional settings. Hidden geometry is
-ordinary Source geometry. Names/logical grouping must not affect the result.
+Inputs are immutable current patch P0, actual patch topology, the initial selection
+intent, Controller vertices that actually moved, enabled controls outside their union,
+and proportional settings. Hidden geometry is ordinary Source geometry.
+Names/logical grouping must not affect the result.
 
 Keep current patch form as the geometric starting point. Generate its deformation from
 control movement and the user proportional setting; never reconstruct a patch solely
 from sparse endpoint positions or pull toward the historical template. Extra detail
 preservation is not mandated; a user can add controls around a feature to edit it separately.
 
-Hard targets: moved vertices equal Q; unchanged enabled vertices equal P0. No-op
-returns P0 and clears old preview motion. New deformation stays in currently affected
-patches; cleanup stays in captured scope. These rules hold for every method.
+Hard targets: moved vertices equal Q; selected-but-unchanged vertices equal P0 and
+remain part of the transforming boundary; enabled control vertices outside the
+selection/moved union equal P0 as stationary anchors. No-op returns P0 and clears old
+preview motion. New deformation stays in currently affected patches; cleanup stays in
+captured scope. These rules hold for every method.
 
 No required formula says a patch midpoint moves half as far as a boundary. Whole Patch
 and finite radius/profile may produce different interior responses. Inspect leg examples
@@ -23,9 +26,10 @@ in product/leg-control-examples.md before interpreting interpolation results.
 
 ## Current interpolation
 
-For every enabled control vertex in an affected patch, take its measured Controller
-displacement `D[i] = Q[i] - P0[i]`; an unchanged vertex has `D[i] = 0`. These are exact
-constraints. For a free vertex, solve a weighted discrete Laplace equation on the
+For every vertex in the transform boundary, take its measured Controller displacement
+`D[i] = Q[i] - P0[i]`; a selected point that Blender leaves unchanged has `D[i] = 0`.
+Enabled control vertices outside the transform boundary are separate zero-displacement
+anchors. For a free vertex, solve a weighted discrete Laplace equation on the
 patch's Source edges:
 
 ```text

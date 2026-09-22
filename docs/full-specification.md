@@ -149,7 +149,7 @@ same operations; automatic silhouette extraction/calibration is a future extensi
 5. **No original-template pull.** Historical positions are not silently blended into normal deformation.
 6. **No-op means no geometry change.** If all resolved control targets equal `P0`, the operation must return `P0` exactly within storage round-trip.
 7. **Patches come from topology.** An open control chain divides a surface only if removing adjacency across its source edges actually disconnects faces.
-8. **Enabled unselected geometry holds.** Every enabled Source control vertex outside explicit resolved node/span/loop selection stays at P0, even when omitted from a sparse proxy. At a shared vertex, a selected target wins.
+8. **Operation boundary is explicit.** The transform boundary is the union of the initial resolved selection and all Controller vertices that actually move, including Proportional motion. Selected-but-unchanged vertices keep exact P0 targets without classifying the patch as having an unselected stationary control. Enabled vertices outside that union stay at P0. At a shared vertex, an actual moved target wins.
 9. **No write outside scope.** Vertices outside captured incident-patch scope are untouched. Preview cleanup resets prior writes within that scope before applying current output.
 10. **Proportional is a patch-propagation control.** It is not silently applied again during sparse target expansion.
 11. **Topology is preserved by deformation.** G/R/S deformation changes coordinates, not Source connectivity.
@@ -340,11 +340,13 @@ a loop, or multiple elements. A named definition is only a selection shortcut.
 3. Selected edges/spans select all represented enabled Source vertices in those spans.
 4. Loop/whole-control selection is the union of its enabled nodes/spans. Hidden segments stay excluded; selection does not silently reveal them.
 5. Deduplicate by Source ID. Selected span endpoints count as selected even without endpoint knot flags. Unselected neighboring spans do not become selected at operation start.
-6. The initial selection starts Blender's native transform. During each preview sample,
+6. Capture the initial selection as `selection_intent`. During each preview sample,
    compare every Controller vertex with its pre-transform pose. Every ID whose
    coordinate changed is an exact target, including unselected vertices moved by
-   Blender Proportional Editing. Enabled control vertices that did not change are
-   stationary for that sample.
+   Blender Proportional Editing. The transforming boundary is the union of
+   `selection_intent` and changed-coordinate IDs. Selected vertices that did not
+   move retain exact P0 targets and remain in that boundary; enabled vertices
+   outside it are stationary for that sample.
 
 Hidden geometry contributes neither targets nor stationary constraints. Explicit edit
 requests for hidden elements return CONTROL_HIDDEN; reveal in a separate command.
@@ -352,12 +354,19 @@ requests for hidden elements return CONTROL_HIDDEN; reveal in a separate command
 ## G/R/S targets
 
 From the operation-start transform, pivot and orientation, Blender produces the live
-Controller coordinates. DANP resolves targets from the changed-coordinate set:
+Controller coordinates. DANP resolves actual moved targets and keeps the starting
+selection separately:
 
 ```text
 Q[i] = Controller[i] for every moved Controller vertex
-Q[i] = P0[i]         for every enabled Controller vertex that did not move
+Q[i] = P0[i]         for every initially selected vertex that did not move
+fixed[i] = P0[i]     for enabled vertices outside selection_intent ∪ moved
 ```
+
+This distinction matters for axis Scale: selected points on the pivot axis can have
+zero measured displacement while still belonging to the transforming boundary. They
+must not make a one-control patch look like it has a second stationary control. Other
+unselected controls remain stationary anchors. A no-op still returns P0 exactly.
 
 A selected coarse edge transforms the existing dense curve, not a reconstructed chord.
 
@@ -369,9 +378,9 @@ transforms. Freeze the frame so equivalent human/agent targets have the same mea
 
 Without Blender Proportional Editing, only the selected knot's bound vertex moves.
 With Blender Proportional Editing, omitted enabled vertices may also move; DANP
-detects their changed coordinates and treats them as targets. To move more of a
-line deliberately, select its strip/span/loop. To let a line follow mesh
-deformation, hide it first.
+detects their changed coordinates and adds them to the transforming boundary as exact
+targets. To move more of a line deliberately, select its strip/span/loop. To let a
+line follow mesh deformation, hide it first.
 
 ## Numeric/agent parity and conflicts
 
@@ -394,9 +403,11 @@ except that endpoint. Names never decide priority. Targets do not need front/sid
 
 ## No-op
 
-All selected Q equal P0 means unchanged Source. Such targets are not nonzero influence
-sources. Numerical comparison tolerance is a prototype parameter, not permission to
-move unselected enabled control vertices.
+If every moved Q equals P0, the entire operation is a no-op. Selected-but-unchanged
+points still remain in the transform boundary when other targets move, though their
+own displacement is zero. They can help identify a coherent transform without adding
+any motion themselves. Numerical comparison tolerance is not permission to move
+enabled controls outside the boundary.
 
 After an earlier nonzero preview, no-op must restore previous writes to P0. Early-out
 skips solving, not cleanup; see operation-semantics.md.
@@ -452,8 +463,9 @@ profile. Prototype comparisons must use identical targets/constraints while chan
 profile/radius. Numerical influence method and quality require evidence.
 
 Blender's native Proportional Editing may move enabled unselected Controller
-vertices. DANP accepts those coordinates as exact targets by comparing the whole
-proxy with its pre-transform pose. DANP's own Radius/profile then controls how the
+vertices. DANP adds those changed IDs to the native transform boundary as exact
+targets. The initial selected IDs stay in the boundary even when a Scale axis leaves
+some of them unchanged. DANP's own Radius/profile then controls how the
 resulting moved targets influence free Source vertices inside the affected patches;
 it does not override Blender's proxy falloff. Sparse representation adds no second
 user proportional.
@@ -468,18 +480,21 @@ user proportional.
 
 ## Product requirements
 
-Inputs are immutable current patch P0, actual patch topology, the Controller vertices
-that actually moved, unchanged enabled control vertices, and proportional settings. Hidden geometry is
-ordinary Source geometry. Names/logical grouping must not affect the result.
+Inputs are immutable current patch P0, actual patch topology, the initial selection
+intent, Controller vertices that actually moved, enabled controls outside their union,
+and proportional settings. Hidden geometry is ordinary Source geometry.
+Names/logical grouping must not affect the result.
 
 Keep current patch form as the geometric starting point. Generate its deformation from
 control movement and the user proportional setting; never reconstruct a patch solely
 from sparse endpoint positions or pull toward the historical template. Extra detail
 preservation is not mandated; a user can add controls around a feature to edit it separately.
 
-Hard targets: moved vertices equal Q; unchanged enabled vertices equal P0. No-op
-returns P0 and clears old preview motion. New deformation stays in currently affected
-patches; cleanup stays in captured scope. These rules hold for every method.
+Hard targets: moved vertices equal Q; selected-but-unchanged vertices equal P0 and
+remain part of the transforming boundary; enabled control vertices outside the
+selection/moved union equal P0 as stationary anchors. No-op returns P0 and clears old
+preview motion. New deformation stays in currently affected patches; cleanup stays in
+captured scope. These rules hold for every method.
 
 No required formula says a patch midpoint moves half as far as a boundary. Whole Patch
 and finite radius/profile may produce different interior responses. Inspect leg examples
@@ -487,9 +502,10 @@ in product/leg-control-examples.md before interpreting interpolation results.
 
 ## Current interpolation
 
-For every enabled control vertex in an affected patch, take its measured Controller
-displacement `D[i] = Q[i] - P0[i]`; an unchanged vertex has `D[i] = 0`. These are exact
-constraints. For a free vertex, solve a weighted discrete Laplace equation on the
+For every vertex in the transform boundary, take its measured Controller displacement
+`D[i] = Q[i] - P0[i]`; a selected point that Blender leaves unchanged has `D[i] = 0`.
+Enabled control vertices outside the transform boundary are separate zero-displacement
+anchors. For a free vertex, solve a weighted discrete Laplace equation on the
 patch's Source edges:
 
 ```text
@@ -569,7 +585,7 @@ where unambiguous; reveal resamples current Source, including omitted vertices.
 ## Capture
 
 Validate editable Source, mapping and supported topology; sync proxy from current Source.
-Resolve selection once and freeze enabled network, selected Source IDs, pivot/orientation,
+Resolve selection once and freeze enabled network, selection intent, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 
 For native Controller Edit `G/R/S`, Blender owns the transform operator and its modal
@@ -587,8 +603,9 @@ and enabled hard constraints. Never change coordinates outside this captured sco
 ## Preview updates
 
 Targets are absolute relative to operation start, not incremental transforms of preview.
-From P0, resolve selected Q, fix other enabled vertices, identify nonzero targets and
-compute affected patch output. Initialize the entire captured-scope output buffer to
+From P0, resolve actual moved targets Q, retain exact P0 targets for selected-but-unchanged
+vertices, and fix enabled vertices outside selection intent plus moved targets. Identify
+nonzero targets and compute affected patch output. Initialize the captured-scope output buffer to
 P0 before inserting this update's results; validate before writing. This resets earlier
 preview displacement when targets return to P0, radius shrinks or affected scope shrinks.
 
@@ -602,6 +619,10 @@ Resetting prior preview writes is cleanup within captured scope, not permission 
 unrelated patches. Identity updates return NO_CHANGE and can keep a transaction open;
 early-out may skip solving but must not skip resetting previous preview writes.
 
+The core coordinate contract is Source-local. A WORLD-space operation must provide an
+explicit Source-to-world matrix and is converted back before Source writeback; a request
+without that matrix fails with `WORLD_SPACE_MATRIX_REQUIRED` rather than being guessed.
+
 ## Confirm/cancel
 
 Confirm validates generations, targets and finite output, writes the accepted method,
@@ -613,12 +634,13 @@ ownership and creates no meaningful undo entry. Confirm with a result identical 
 returns NO_CHANGE instead of claiming an edit. Update/commit/cancel after closure returns
 OPERATION_CLOSED without writes.
 
-The native timer may sample the explicit modal state for the observer bridge. It must
-never commit or cancel from elapsed time, mouse quietness or a fixed poll count. While
-a `TRANSFORM_OT_*` modal operator is present, the transaction remains in Preview. When
-that operator ends, the final absolute Controller pose is Confirmed; a Controller pose
-restored to its captured C0 is Cancel. Native and agent callers share the same
-Confirm/Cancel primitives.
+The native observer may use a timer only to sample Blender's explicit modal operator state.
+It must never commit or cancel from elapsed time, mouse quietness, or a fixed poll count.
+While a `TRANSFORM_OT_*` modal operator is present, the transaction remains in Preview.
+When that operator ends, the final absolute Controller pose is Confirmed; a Controller
+pose restored to its captured C0 is Cancel. If a future native macro supplies an explicit
+Finish step, it may call the same Confirm primitive, but the observer must not invent a
+second operation boundary.
 
 ## Structural state/ownership
 
@@ -1674,6 +1696,14 @@ Create an overlapping definition over hidden geometry: no silent reveal or extra
 Remove one overlapping definition: masks and shared supported geometry remain coherent.
 Remove last membership: no Source topology edit; obsolete masks/handles are pruned.
 
+## G22 — Selection intent and measured movement
+Scale a selected planar loop along each world/local axis that leaves some selected
+vertices unchanged. Those points retain P0 exactly but remain part of the transforming
+boundary, so the one-control patch uses the full selected loop as its transform samples.
+Repeat with Blender Proportional Editing moving unselected proxy points; they become exact
+targets. Add a second unselected enabled loop and verify it remains an exact stationary
+anchor. Returning all moved targets to P0 is an exact no-op.
+
 ## Measurement contract
 For pure numerical fixtures record a scale L=max(rest bounding-box diagonal, 1e-12).
 Use float64 candidate buffers; an initial comparison tolerance 1e-8*L is a prototype
@@ -1797,7 +1827,8 @@ G1/G2/G3/G6/G9/G10/G12/G13/G14/G15/G16 pass their geometry/constraint assertions
 Pure fixtures verify G14 state/resampling; Blender persistence is Gate D. Record
 G4/G5/G11 quality evidence. Sparse G7/G8 is deferred to Gate E.
 
-Also pass G17–G21 preview reset, mask intent, invalid input, coordinate-space and
+Also pass G17–G22 preview reset, mask intent, transform selection-intent/moved-target
+semantics, invalid input, coordinate-space and
 definition-lifecycle assertions. G20 target-space logic can run without Blender;
 object storage/integration follows in Gate D. Use geometry-cases.md measurement contract.
 
@@ -1890,8 +1921,11 @@ it for separate manipulation; the core does not infer a protected feature.
 
 **Status: Accepted by the product owner, 2026-09-18**
 
-**Decision:** enabled unselected Source control vertices are stationary. Selected
-node/span/strip/loop geometry moves; a selected target wins at shared junctions.
+**Decision:** enabled Source control vertices outside the current transform boundary
+are stationary. The boundary contains the initial node/span/strip/loop selection and
+any additional Controller vertices that actually move, such as Blender Proportional
+motion. Selected-but-unchanged vertices retain P0 targets but remain in the same
+transforming boundary; a moved target wins at shared junctions.
 DANP Form Hide removes constraint and cut roles for hidden geometry. Reveal samples
 current Source coordinates, not pre-hide positions. Whole and partial hiding share
 canonical Source element masks defined in core/control-model.md.
@@ -3514,10 +3548,12 @@ agent/user supplies reviewed targets from the reference image.
 An enabled Source patch is controlled by the enabled control definitions incident
 to its boundary. A patch with one incident control receives that control's
 operation transform over its full captured scope. A patch with multiple incident
-controls blends their transforms within the patch. Selected controls provide
-their absolute transform from Operation Rest; enabled unselected controls provide
-the identity transform and are hard stationary constraints. Hidden controls are
-not incident controls.
+controls blends their transforms within the patch. The operation boundary is the
+union of the initial explicit selection and every Controller vertex whose
+coordinates actually change. Selected-but-unchanged vertices retain exact Operation
+Rest targets but remain part of that boundary. Enabled controls outside it provide
+identity and are hard stationary constraints; unselected vertices moved by Blender
+Proportional Editing are exact targets. Hidden controls are not incident controls.
 
 The canonical operation representation is shared by Blender UI and agents:
 operation type, pivot, coordinate space, absolute targets and proportional
@@ -3545,11 +3581,11 @@ target, stationary-boundary, scope, cancel and parity gates before release.
 
 # Kế hoạch nâng cấp DANP Form: Source là hình học duy nhất
 
-**Trạng thái:** Đang triển khai giai đoạn 1–4, 2026-09-21. Người dùng đã xác nhận kiến trúc Source-backed và quy tắc phần hình học trùng vẫn tồn tại khi control khác còn giữ nó. Mã local đã có các thay đổi đầu tiên; dữ liệu `.blend` đang mở chưa được lưu hoặc ghi đè.
+**Trạng thái:** Đang hoàn thiện semantics selection-intent và moved-target, 2026-09-23. Người dùng đã xác nhận kiến trúc Source-backed, overlap-safe control và quy tắc giữ lại vùng selection khi một số điểm không đổi trong Scale.
 
 ### Tiến độ giai đoạn 1–4
 
-- **Giai đoạn 1:** Đã sửa handoff khi đổi selection giữa hai native G/R/S, lưu nhiều bản ghi Undo/Redo và xử lý confirm/cancel theo tập target của phiên cũ. Đã kiểm tra trên scene Blender đang mở bằng phiên local.
+- **Giai đoạn 1:** Đã sửa handoff khi đổi selection giữa hai native G/R/S, lưu nhiều bản ghi Undo/Redo và xử lý confirm/cancel theo tập target của phiên cũ. Ranh giới kết thúc đọc `Window.modal_operators`; không còn commit theo số nhịp yên lặng.
 - **Giai đoạn 2:** Đã gom invalidation runtime cho proxy, overlay, patch và face cache ở Undo/Redo/load; Source edit vẫn là đầu vào để đồng bộ proxy. Cần tiếp tục kiểm tra modifier evaluated cage và chuỗi thao tác UI đầy đủ.
 - **Giai đoạn 3:** Đã kiểm chứng Box Select native của Blender trên Controller Edit. Vì Controller là loose wire mesh không có face, chọn cả phần sau là hành vi native hợp lệ; không override phím `B`. Click/Pick riêng của DANP vẫn giữ chính sách Source occlusion.
 - **Giai đoạn 4:** Đã chuyển trạng thái hide/enabled sang từng ControlDefinition, thêm migration schema 2 → 3 và giữ union hiệu dụng khi control chồng lấn. Hide/delete một definition không xóa phần Source mà definition khác còn giữ.
@@ -3563,7 +3599,7 @@ Giữ bố cục sidebar, các thao tác quen thuộc và Edit Mode của Blende
 1. Source Mesh giữ topology, ID và tọa độ duy nhất. Controller là input proxy có thể dựng lại; overlay là hiển thị dẫn xuất.
 2. Mục trong danh sách là tập membership Source vertex/edge và phím chọn nhanh. Tên, thứ tự, số mục trùng nhau không ảnh hưởng lời giải.
 3. Mạng hiệu dụng là hợp phần hình học của các mục đang bật. Ẩn/xóa một mục chỉ bỏ phần mục đó đóng góp; phần trùng do mục khác giữ vẫn tồn tại. Không bao giờ xóa Source vertex/edge chỉ vì xóa control.
-4. Trong một thao tác, toàn bộ vertex control đang bật chia thành `S` được chọn và `U` không được chọn. `S` nhận target; `U` đứng yên. Patch bắt nguồn từ topology và các cạnh đang bật, không từ tên mục.
+4. Mỗi thao tác giữ riêng `selection_intent` lúc bắt đầu và `moved_targets` đo từ tọa độ Controller. Hợp hai tập là biên đang biến đổi; điểm đã chọn nhưng tình cờ không đổi vẫn ở phía này với target P0. Vertex control ngoài hợp hai tập là mốc đứng yên. Patch bắt nguồn từ topology và các cạnh đang bật, không từ tên mục.
 5. G/R/S có điểm bắt đầu, confirm và cancel rõ ràng; một thao tác tạo một bước Undo. Không suy đoán confirm bằng timer.
 6. Click/Pick của DANP áp dụng chính sách che khuất theo Source; Box Select giữ hành vi native của Blender khi Controller không có face.
 7. Giữ chất lượng biến dạng bề mặt hiện người dùng thấy ổn, nhưng chỉ chốt thuật toán số sau kiểm chứng hình học, proportional và hiệu năng.
@@ -3579,8 +3615,8 @@ Ngoài phạm vi đợt này: sparse control, tự khớp ảnh, solver nâng ca
 | G/R/S và phiên thao tác | `registration.py` để G/R/S native; `lifecycle.py` quan sát depsgraph và trạng thái modal thật; `transform_session.py` giữ `last_targets` và cờ `had_delta`. | Chỉ có một chủ sở hữu Begin/Preview/Confirm/Cancel. Kết thúc phiên trước khi selection mới được dùng; phép kiểm tra delta dựa trên đúng tập ID; không dùng timeout để đoán confirm. |
 | Undo/Redo | `NATIVE_UNDO_RECORDS` là dict theo Source pointer, mỗi commit thay bản ghi trước; handler sửa lại Source sau Undo/Redo bằng timer. | Thiết kế lịch sử nhiều bước gắn với chính Undo của Blender, kiểm chứng không ghi đè trạng thái cũ; invalidation và resync theo thứ tự rõ ràng. Không xóa cơ chế cũ trước khi thay thế qua test live. |
 | Control, hide và overlap | `storage.py` lưu JSON definitions nhưng `HIDDEN_VIDS_KEY`/`HIDDEN_EIDS_KEY` là mask chung; `workflows.py` hide một mục bằng cách ghi vào mask chung. | Tách membership và trạng thái ẩn của từng định nghĩa; effective network là hợp các phần đang bật. Xóa/ẩn A không lấy đi phần B còn giữ; migration từ mask chung phải giữ hình dạng cũ lúc mở file. |
-| Patch và biến dạng | `patches.py` gắn `incident_control_uuids` lên patch; `workflows.py` đưa `control_groups` vào `compute_preview`; `deformation.py` còn cả nhánh transform field và displacement compatibility. | Giữ đầu ra hiện tốt làm baseline; sau đó loại phụ thuộc số định nghĩa của cùng mạng hình học và bỏ đường compatibility chỉ khi test đã bao phủ. Không đổi phương pháp nội suy chỉ để dọn mã. |
-| Source, proxy, overlay | `proxy.py` đồng bộ tọa độ theo Source ID; `overlay.py` vẽ từ Source khi active Source nhưng đọc proxy trực tiếp khi active Controller; cache overlay dùng nhiều token và callback lỗi bị nuốt. | Ngoài phiên transform, proxy và overlay phải hội tụ về Source. Trong lúc kéo, chỉ pose tạm của các đỉnh được chọn là input. Tập trung quy tắc invalidation cho Source edit, mode switch, hide, undo/redo, modifier, load; báo lỗi kiểm chứng thay vì để overlay lệch âm thầm. |
+| Patch và biến dạng | Core nhận measured targets và stationary set, nhưng trước đây không nhận selection intent riêng. | Giữ selection intent và moved targets riêng; đo Scale X/Y/Z khi điểm trên trục không đổi, Proportional, nhiều control neo và control chồng lấn. Không đổi phương pháp nội suy ngoài khác biệt phát sinh từ biên patch. |
+| Source, proxy, overlay | `proxy.py` đồng bộ tọa độ theo Source ID; `overlay.py` vẽ từ Source khi active Source nhưng đọc proxy trực tiếp khi active Controller; cache overlay dùng nhiều token và callback lỗi bị nuốt. | Ngoài phiên transform, proxy và overlay phải hội tụ về Source. Trong lúc kéo, pose Controller và selection ban đầu là input; Source là hình học được ghi. Tập trung quy tắc invalidation cho Source edit, mode switch, hide, undo/redo, modifier, load; báo lỗi kiểm chứng thay vì để overlay lệch âm thầm. |
 | Chọn và X-Ray | Click/pick có `_pick_point_visible` kiểm tra Source che khuất; `Box Select` native của Blender chỉ xét geometry của Controller. Controller không có face nên không có occluder nội bộ. | Giữ native Box Select làm mặc định; chỉ thêm công cụ chọn theo Source nếu sau này người dùng yêu cầu một chế độ riêng. Không thay đổi Edit Mode chuẩn. |
 | Ranh giới module | `operators.py` khoảng 1.768 dòng gồm model mutation, pick, transform macro cũ, keymap và panel; `__init__.py` export nhiều tên private; `bind(api)` chép tên vào global của các module. | Tách theo nghiệp vụ thực và dependency tường minh, đặt registration/handler/keymap ở một nơi, bỏ alias và code chết sau khi test thay thế. Tránh tạo cây thư mục mới chỉ để chuyển vị trí mã. |
 | Dữ liệu và lỗi | `json_get` trả mặc định nếu JSON hỏng; `source_uuid` gán schema hiện tại; nhiều handler bắt lỗi rồi bỏ qua để không làm Blender crash. | Schema có validate/migration rõ; không mặc định dữ liệu hỏng là danh sách rỗng rồi ghi lại. Handler vẫn an toàn với Blender nhưng lưu lỗi có thể chẩn đoán và dừng trước khi ghi sai Source. |
@@ -3594,8 +3630,8 @@ Các dòng trên là đánh giá mã hiện tại, không khẳng định mọi 
 | --- | --- | --- |
 | I1 | Ngoài phiên G/R/S, mọi vertex proxy ánh xạ đúng tọa độ Source theo ID | So sánh toàn bộ ID sau edit, hide, undo, load |
 | I2 | Overlay lấy tọa độ Source hiện tại hoặc hình học hiển thị được đánh giá từ Source | Đối chiếu vị trí đường với mesh ở Object/Edit và modifier cage |
-| I3 | Trong phiên G/R/S, chỉ `S` tạo target; mọi `U` giữ đúng `P0` | Kiểm tra tọa độ từng ID, kể cả junction và phần trùng |
-| I4 | Cùng Source, mạng hiệu dụng, `S`, target và thiết lập cho cùng output dù đổi tên/thứ tự/thêm mục trùng | Fixture bất biến theo membership |
+| I3 | Trong phiên G/R/S, biên biến đổi là selection-intent hợp measured moved-targets; các điểm được chọn nhưng không đổi vẫn nhận P0; control ngoài biên giữ đúng P0 | Kiểm tra tọa độ từng ID, kể cả junction, proportional và phần trùng |
+| I4 | Cùng Source, mạng hiệu dụng, selection-intent, moved-targets và thiết lập cho cùng output dù đổi tên/thứ tự/thêm mục trùng | Fixture bất biến theo membership |
 | I5 | Mỗi preview tính từ cùng `P0` là Source ở đầu thao tác; không tích lũy preview | Kéo qua lại, target trở về `P0`, thu radius |
 | I6 | Không ghi vertex ngoài union patch liên quan đã chụp | So sánh từng ID ngoài scope |
 | I7 | Ẩn/xóa mục A không loại phần vẫn do B giữ; Reveal lấy vị trí Source hiện tại | Fixture trùng node/cạnh và save/load |
@@ -3752,3 +3788,109 @@ Blender 5.2.1 LTS trên Windows. Fixture là bản autosave `girl_chibi_1_18168_
 | Save/reopen sau migration trên bản sao | Schema 3, masks và selection vẫn đúng | NOT RUN |
 
 Native G/R/S hiện phải dùng quan sát depsgraph và cửa sổ yên 1 giây khi Blender không cung cấp operator đang chạy. Cơ chế ghép Source Undo vẫn là bản ghi runtime, bị xóa khi load file. Đây là giới hạn của lớp tương tác, không phải dữ liệu Source lưu trong `.blend`; các chuỗi Ctrl+Z/Redo nhiều bước vẫn để người dùng kiểm tra trực tiếp.
+
+---
+
+<!-- source: docs/decisions/ADR-012-native-transform-boundary-and-affine-patch-fit.md -->
+
+# ADR-012 — Native transform boundary and continuous affine patch fit
+
+**Status: Accepted for implementation, 2026-09-22**
+
+## Decision
+
+Controller Edit remains Blender's native Edit Mode. DANP Form observes the
+Controller's absolute coordinates against one immutable operation rest. A
+runtime poll may schedule the observation, but it does not infer completion from
+elapsed time, mouse quietness, or a fixed number of polls:
+
+- while a `TRANSFORM_OT_*` operator is present in a Window's modal operator list,
+  the transaction stays in Preview;
+- when that modal operator has ended, the final absolute Controller pose is
+  Confirmed;
+- when Blender has restored the captured Controller pose `C0`, the transaction
+  is Cancelled and Source is restored to `P0`.
+
+The native operator state is the lifecycle boundary. Timer callbacks are only a
+way to observe that state because Blender does not expose a separate add-on
+callback for the completion of a built-in transform.
+
+For a patch with no stationary boundary, coherent control samples use one
+regularized affine fit. The samples determine the measured affine field; a
+frame-derived prior supplies only underdetermined directions such as the normal
+of a planar ring. If arbitrary proportional targets cannot be represented by a
+single affine field, the constrained displacement solve is used so hard target
+positions remain exact. This is a semantic distinction between a coherent
+whole-control transform and per-vertex targets, not a leg- or axis-specific
+special case. Patches with fixed boundaries retain the constrained displacement
+solve.
+
+## Consequences
+
+- A second Scale starts from the previous committed Source pose even when it is
+  issued immediately after the first one.
+- Esc/RMB cancellation cannot be committed by a quiet timer tick.
+- Non-uniform Scale on a planar control is represented as one affine field; the
+  free patch does not jump between unrelated interpolation methods.
+- The missing normal of a planar sample is deterministic and based on the
+  measured control frame, not a leg-specific or axis-specific special case.
+- Blender native transform input, axis locks, numeric entry and proportional
+  selection remain owned by Blender.
+
+## Verification required
+
+The live integration gate must cover two consecutive Scale operations on the
+same selection, immediate selection changes, Confirm, RMB/Esc, proportional
+editing, Undo/Redo, and planar rings on both the cylinder and character mesh.
+
+---
+
+<!-- source: docs/decisions/ADR-013-transform-selection-intent.md -->
+
+# ADR-013 — Keep selection intent separate from measured movement
+
+**Status:** Accepted for implementation, 2026-09-23
+
+## Context
+
+Blender reports live Controller coordinates. Proportional Editing can move
+unselected vertices, while an axis Scale can leave some selected vertices at
+their original coordinates. Treating only changed IDs as the transforming
+boundary makes those unchanged selected vertices look like a second stationary
+control, even though they were part of the same native operation.
+
+## Decision
+
+Capture two operation-local sets:
+
+- `selection_intent`: enabled Source IDs selected when the native transform begins;
+- `moved_targets`: every Controller ID whose measured coordinate differs from its
+  captured Controller rest, including unselected Proportional motion.
+
+The transforming boundary is their union. Actual moved IDs use their measured
+Controller coordinates as exact targets. Selected IDs not moved by Blender retain
+exact P0 coordinates, but do not count as an independent stationary-control
+boundary. Enabled control IDs outside the union remain exact stationary anchors.
+Hidden geometry contributes to neither set nor stationary constraints.
+
+All preview samples still solve from immutable P0. A no-op produces P0 exactly.
+The rule applies to every mesh and transform axis; it does not inspect control
+names, object names or anatomical regions. The same intent/target inputs go through
+the shared deformation path for native and agent operations.
+
+## Consequences
+
+- A selected loop scaled along one axis remains one transforming boundary even
+  where some loop vertices lie on the pivot axis and do not move.
+- Unselected vertices moved by Blender Proportional Editing remain exact targets.
+- A separate enabled unselected control remains a stationary anchor.
+- Multiple controls still share one position per Source ID; conflicting moved
+  targets remain an error.
+
+## Verification
+
+Core regressions cover a planar ring under X/Y/Z non-uniform Scale, unchanged
+selected samples, Proportional moved vertices, a second stationary control,
+repeated previews, cancel and immediate consecutive transforms. Blender live
+verification checks Controller/Source/overlay agreement without saving the
+user's scene.

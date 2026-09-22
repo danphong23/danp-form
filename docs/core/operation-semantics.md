@@ -5,7 +5,7 @@
 ## Capture
 
 Validate editable Source, mapping and supported topology; sync proxy from current Source.
-Resolve selection once and freeze enabled network, selected Source IDs, pivot/orientation,
+Resolve selection once and freeze enabled network, selection intent, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 
 For native Controller Edit `G/R/S`, Blender owns the transform operator and its modal
@@ -23,8 +23,9 @@ and enabled hard constraints. Never change coordinates outside this captured sco
 ## Preview updates
 
 Targets are absolute relative to operation start, not incremental transforms of preview.
-From P0, resolve selected Q, fix other enabled vertices, identify nonzero targets and
-compute affected patch output. Initialize the entire captured-scope output buffer to
+From P0, resolve actual moved targets Q, retain exact P0 targets for selected-but-unchanged
+vertices, and fix enabled vertices outside selection intent plus moved targets. Identify
+nonzero targets and compute affected patch output. Initialize the captured-scope output buffer to
 P0 before inserting this update's results; validate before writing. This resets earlier
 preview displacement when targets return to P0, radius shrinks or affected scope shrinks.
 

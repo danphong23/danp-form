@@ -194,7 +194,7 @@ def _transform_from_samples(p0, targets):
 
 def compute_preview(
     p0: dict[int, object],
-    selected: set[int],
+    moved_targets: set[int],
     scope: set[int],
     patches: list[dict],
     edge_vids: dict[int, tuple[int, int]],
@@ -203,24 +203,36 @@ def compute_preview(
     profile: str,
     radius: float,
     control_groups: dict[str, set[int]] | None = None,
+    selection_intent: set[int] | None = None,
 ) -> tuple[dict[int, object], int]:
-    """Compute an absolute preview from individual control-vertex positions.
+    """Compute an absolute preview from the selection and measured positions.
 
-    Logical control groups identify vertices for selection; they do not affect
-    the deformation. Each patch uses exact moved and stationary boundaries.
+    ``moved_targets`` is the set of vertices with measured coordinates that differ
+    from Operation Rest. ``selection_intent`` is the original Blender
+    selection. Both belong to the transforming boundary; selected vertices
+    that happen not to move (for example, points on a Scale pivot axis) retain
+    exact P0 targets but do not turn the patch into a stationary-control patch.
+    Logical control groups do not affect deformation.
     """
-    if set(targets) != set(selected) or selected.intersection(stationary):
+    moved = set(moved_targets)
+    intent = set(moved if selection_intent is None else selection_intent)
+    active = moved | intent
+    if set(targets) != moved or active.intersection(stationary):
+        raise ValueError("TARGET_INVALID")
+    if not active.issubset(p0):
         raise ValueError("TARGET_INVALID")
     if any(not all(math.isfinite(float(component)) for component in value)
            for value in targets.values()):
         raise ValueError("TARGET_INVALID")
 
+    operation_targets = {vertex_id: p0[vertex_id].copy() for vertex_id in intent}
+    operation_targets.update(targets)
     output = dict(p0)
     candidates: dict[int, list[object]] = {}
     for patch in patches:
         patch_vertices = {int(vertex_id) for vertex_id in patch["vertex_ids"]}
-        patch_targets = {vertex_id: targets[vertex_id]
-                         for vertex_id in selected.intersection(patch_vertices)}
+        patch_targets = {vertex_id: operation_targets[vertex_id]
+                         for vertex_id in active.intersection(patch_vertices)}
         if not patch_targets:
             continue
         patch_stationary = stationary.intersection(patch_vertices)
@@ -284,7 +296,7 @@ def compute_preview(
             if any(abs(float(a) - float(b)) > 1e-7 for a, b in zip(reference, candidate)):
                 raise ValueError("TARGET_CONFLICT")
         output[vertex_id] = reference
-    for vertex_id, target in targets.items():
+    for vertex_id, target in operation_targets.items():
         output[vertex_id] = target.copy()
     for vertex_id in stationary:
         output[vertex_id] = p0[vertex_id].copy()

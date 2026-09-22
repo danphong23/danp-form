@@ -1,6 +1,6 @@
 # Kế hoạch nâng cấp DANP Form: Source là hình học duy nhất
 
-**Trạng thái:** Đang củng cố giai đoạn 1–6, 2026-09-22. Người dùng đã xác nhận kiến trúc Source-backed và quy tắc phần hình học trùng vẫn tồn tại khi control khác còn giữ nó. Bản này tập trung vào ranh giới native G/R/S chính xác, nội suy affine liên tục và chặn ghi khi phiên đã cũ.
+**Trạng thái:** Đang hoàn thiện semantics selection-intent và moved-target, 2026-09-23. Người dùng đã xác nhận kiến trúc Source-backed, overlap-safe control và quy tắc giữ lại vùng selection khi một số điểm không đổi trong Scale.
 
 ### Tiến độ giai đoạn 1–4
 
@@ -18,7 +18,7 @@ Giữ bố cục sidebar, các thao tác quen thuộc và Edit Mode của Blende
 1. Source Mesh giữ topology, ID và tọa độ duy nhất. Controller là input proxy có thể dựng lại; overlay là hiển thị dẫn xuất.
 2. Mục trong danh sách là tập membership Source vertex/edge và phím chọn nhanh. Tên, thứ tự, số mục trùng nhau không ảnh hưởng lời giải.
 3. Mạng hiệu dụng là hợp phần hình học của các mục đang bật. Ẩn/xóa một mục chỉ bỏ phần mục đó đóng góp; phần trùng do mục khác giữ vẫn tồn tại. Không bao giờ xóa Source vertex/edge chỉ vì xóa control.
-4. Trong một thao tác, toàn bộ vertex control đang bật chia thành `S` được chọn và `U` không được chọn. `S` nhận target; `U` đứng yên. Patch bắt nguồn từ topology và các cạnh đang bật, không từ tên mục.
+4. Mỗi thao tác giữ riêng `selection_intent` lúc bắt đầu và `moved_targets` đo từ tọa độ Controller. Hợp hai tập là biên đang biến đổi; điểm đã chọn nhưng tình cờ không đổi vẫn ở phía này với target P0. Vertex control ngoài hợp hai tập là mốc đứng yên. Patch bắt nguồn từ topology và các cạnh đang bật, không từ tên mục.
 5. G/R/S có điểm bắt đầu, confirm và cancel rõ ràng; một thao tác tạo một bước Undo. Không suy đoán confirm bằng timer.
 6. Click/Pick của DANP áp dụng chính sách che khuất theo Source; Box Select giữ hành vi native của Blender khi Controller không có face.
 7. Giữ chất lượng biến dạng bề mặt hiện người dùng thấy ổn, nhưng chỉ chốt thuật toán số sau kiểm chứng hình học, proportional và hiệu năng.
@@ -34,8 +34,8 @@ Ngoài phạm vi đợt này: sparse control, tự khớp ảnh, solver nâng ca
 | G/R/S và phiên thao tác | `registration.py` để G/R/S native; `lifecycle.py` quan sát depsgraph và trạng thái modal thật; `transform_session.py` giữ `last_targets` và cờ `had_delta`. | Chỉ có một chủ sở hữu Begin/Preview/Confirm/Cancel. Kết thúc phiên trước khi selection mới được dùng; phép kiểm tra delta dựa trên đúng tập ID; không dùng timeout để đoán confirm. |
 | Undo/Redo | `NATIVE_UNDO_RECORDS` là dict theo Source pointer, mỗi commit thay bản ghi trước; handler sửa lại Source sau Undo/Redo bằng timer. | Thiết kế lịch sử nhiều bước gắn với chính Undo của Blender, kiểm chứng không ghi đè trạng thái cũ; invalidation và resync theo thứ tự rõ ràng. Không xóa cơ chế cũ trước khi thay thế qua test live. |
 | Control, hide và overlap | `storage.py` lưu JSON definitions nhưng `HIDDEN_VIDS_KEY`/`HIDDEN_EIDS_KEY` là mask chung; `workflows.py` hide một mục bằng cách ghi vào mask chung. | Tách membership và trạng thái ẩn của từng định nghĩa; effective network là hợp các phần đang bật. Xóa/ẩn A không lấy đi phần B còn giữ; migration từ mask chung phải giữ hình dạng cũ lúc mở file. |
-| Patch và biến dạng | `patches.py` gắn `incident_control_uuids` lên patch; `workflows.py` đưa `control_groups` vào `compute_preview`; `deformation.py` còn cả nhánh transform field và displacement compatibility. | Giữ đầu ra hiện tốt làm baseline; sau đó loại phụ thuộc số định nghĩa của cùng mạng hình học và bỏ đường compatibility chỉ khi test đã bao phủ. Không đổi phương pháp nội suy chỉ để dọn mã. |
-| Source, proxy, overlay | `proxy.py` đồng bộ tọa độ theo Source ID; `overlay.py` vẽ từ Source khi active Source nhưng đọc proxy trực tiếp khi active Controller; cache overlay dùng nhiều token và callback lỗi bị nuốt. | Ngoài phiên transform, proxy và overlay phải hội tụ về Source. Trong lúc kéo, chỉ pose tạm của các đỉnh được chọn là input. Tập trung quy tắc invalidation cho Source edit, mode switch, hide, undo/redo, modifier, load; báo lỗi kiểm chứng thay vì để overlay lệch âm thầm. |
+| Patch và biến dạng | Core nhận measured targets và stationary set, nhưng trước đây không nhận selection intent riêng. | Giữ selection intent và moved targets riêng; đo Scale X/Y/Z khi điểm trên trục không đổi, Proportional, nhiều control neo và control chồng lấn. Không đổi phương pháp nội suy ngoài khác biệt phát sinh từ biên patch. |
+| Source, proxy, overlay | `proxy.py` đồng bộ tọa độ theo Source ID; `overlay.py` vẽ từ Source khi active Source nhưng đọc proxy trực tiếp khi active Controller; cache overlay dùng nhiều token và callback lỗi bị nuốt. | Ngoài phiên transform, proxy và overlay phải hội tụ về Source. Trong lúc kéo, pose Controller và selection ban đầu là input; Source là hình học được ghi. Tập trung quy tắc invalidation cho Source edit, mode switch, hide, undo/redo, modifier, load; báo lỗi kiểm chứng thay vì để overlay lệch âm thầm. |
 | Chọn và X-Ray | Click/pick có `_pick_point_visible` kiểm tra Source che khuất; `Box Select` native của Blender chỉ xét geometry của Controller. Controller không có face nên không có occluder nội bộ. | Giữ native Box Select làm mặc định; chỉ thêm công cụ chọn theo Source nếu sau này người dùng yêu cầu một chế độ riêng. Không thay đổi Edit Mode chuẩn. |
 | Ranh giới module | `operators.py` khoảng 1.768 dòng gồm model mutation, pick, transform macro cũ, keymap và panel; `__init__.py` export nhiều tên private; `bind(api)` chép tên vào global của các module. | Tách theo nghiệp vụ thực và dependency tường minh, đặt registration/handler/keymap ở một nơi, bỏ alias và code chết sau khi test thay thế. Tránh tạo cây thư mục mới chỉ để chuyển vị trí mã. |
 | Dữ liệu và lỗi | `json_get` trả mặc định nếu JSON hỏng; `source_uuid` gán schema hiện tại; nhiều handler bắt lỗi rồi bỏ qua để không làm Blender crash. | Schema có validate/migration rõ; không mặc định dữ liệu hỏng là danh sách rỗng rồi ghi lại. Handler vẫn an toàn với Blender nhưng lưu lỗi có thể chẩn đoán và dừng trước khi ghi sai Source. |
@@ -49,8 +49,8 @@ Các dòng trên là đánh giá mã hiện tại, không khẳng định mọi 
 | --- | --- | --- |
 | I1 | Ngoài phiên G/R/S, mọi vertex proxy ánh xạ đúng tọa độ Source theo ID | So sánh toàn bộ ID sau edit, hide, undo, load |
 | I2 | Overlay lấy tọa độ Source hiện tại hoặc hình học hiển thị được đánh giá từ Source | Đối chiếu vị trí đường với mesh ở Object/Edit và modifier cage |
-| I3 | Trong phiên G/R/S, chỉ `S` tạo target; mọi `U` giữ đúng `P0` | Kiểm tra tọa độ từng ID, kể cả junction và phần trùng |
-| I4 | Cùng Source, mạng hiệu dụng, `S`, target và thiết lập cho cùng output dù đổi tên/thứ tự/thêm mục trùng | Fixture bất biến theo membership |
+| I3 | Trong phiên G/R/S, biên biến đổi là selection-intent hợp measured moved-targets; các điểm được chọn nhưng không đổi vẫn nhận P0; control ngoài biên giữ đúng P0 | Kiểm tra tọa độ từng ID, kể cả junction, proportional và phần trùng |
+| I4 | Cùng Source, mạng hiệu dụng, selection-intent, moved-targets và thiết lập cho cùng output dù đổi tên/thứ tự/thêm mục trùng | Fixture bất biến theo membership |
 | I5 | Mỗi preview tính từ cùng `P0` là Source ở đầu thao tác; không tích lũy preview | Kéo qua lại, target trở về `P0`, thu radius |
 | I6 | Không ghi vertex ngoài union patch liên quan đã chụp | So sánh từng ID ngoài scope |
 | I7 | Ẩn/xóa mục A không loại phần vẫn do B giữ; Reveal lấy vị trí Source hiện tại | Fixture trùng node/cạnh và save/load |

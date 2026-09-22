@@ -2,8 +2,11 @@
 
 **Status: Accepted by the product owner, 2026-09-18**
 
-**Decision:** enabled unselected Source control vertices are stationary. Selected
-node/span/strip/loop geometry moves; a selected target wins at shared junctions.
+**Decision:** enabled Source control vertices outside the current transform boundary
+are stationary. The boundary contains the initial node/span/strip/loop selection and
+any additional Controller vertices that actually move, such as Blender Proportional
+motion. Selected-but-unchanged vertices retain P0 targets but remain in the same
+transforming boundary; a moved target wins at shared junctions.
 DANP Form Hide removes constraint and cut roles for hidden geometry. Reveal samples
 current Source coordinates, not pre-hide positions. Whole and partial hiding share
 canonical Source element masks defined in core/control-model.md.

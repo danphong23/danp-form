@@ -1,13 +1,13 @@
 [
   {
     "path": "AGENTS.md",
-    "sha256": "5f01ba9178a23ad16bc502a7ce360c650fac95e2d2c4b39628e7870a24ae2081",
-    "bytes": 4214
+    "sha256": "3dd725d59b5a6c97daee4928541f100a061adaacf1b95f038c20aa686da4fbdf",
+    "bytes": 4437
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "7a4abbe9fb139f94ec707e82a35d5abb7b89ec9066c4fff311c8dec66a23b98a",
-    "bytes": 23915
+    "sha256": "c8b1d1629a0d54a6aebaa592dc88e4a3d3818f86c7cc09e24d2cd11951224162",
+    "bytes": 25746
   },
   {
     "path": "CONTRIBUTING.md",
@@ -76,18 +76,18 @@
   },
   {
     "path": "docs/core/interpolation-baseline.md",
-    "sha256": "8d1368357adc942068af194e6a43c80f570ae3d95ab18834977facb250ed621e",
-    "bytes": 3935
+    "sha256": "00bee02436752a2330b18499fb2fea2b31c19e9549abea34dabcb0f093f0cbd3",
+    "bytes": 4187
   },
   {
     "path": "docs/core/invariants.md",
-    "sha256": "52d97d30deb880a74046e70145b90318bea702472b8f765040e00f49f3933853",
-    "bytes": 2577
+    "sha256": "0ddaee45d757d03f37a766002a8792fc7df19bd6fa6314a66aff2a08f331d128",
+    "bytes": 2764
   },
   {
     "path": "docs/core/operation-semantics.md",
-    "sha256": "d2b1be3948b84f8118c77be662085873f80249b546317dd3ea446f23d23c7cc8",
-    "bytes": 4228
+    "sha256": "4543548a09a3ee49929d8f019ca872eb3550435ac70419bddfa5e3dff27daac0",
+    "bytes": 4990
   },
   {
     "path": "docs/core/patch-model.md",
@@ -96,13 +96,13 @@
   },
   {
     "path": "docs/core/proportional.md",
-    "sha256": "f5d14f63231a21665614e45ab31f397e816e88c5913fb1af476385713a6a49a1",
-    "bytes": 2626
+    "sha256": "16b9255a85de3be4c3f1b433982803d6174918fd0cdfede40622b45fe762e343",
+    "bytes": 2699
   },
   {
     "path": "docs/core/selection-and-targets.md",
-    "sha256": "f2d700df250b82c0a534bf03a6c9c96e5d27e5f7d55aba0f70d9c04115e4129d",
-    "bytes": 3772
+    "sha256": "1d7e3cd1d73371ce043542af955139b8ab1857649a44463ce3f40bea9303bb89",
+    "bytes": 4565
   },
   {
     "path": "docs/core/sparse-controls.md",
@@ -146,8 +146,8 @@
   },
   {
     "path": "docs/decisions/ADR-008-hide-releases-control.md",
-    "sha256": "3dc9b168405bf27eaa16ff1b1d93499d4c39f30cc140b6f5ccc75c47e3117537",
-    "bytes": 1565
+    "sha256": "d4afc64f1e3a3e216adfda61098f9e5b6d4666565633e6c8b0f37063157c214b",
+    "bytes": 1799
   },
   {
     "path": "docs/decisions/ADR-009-five-phase-development.md",
@@ -161,8 +161,18 @@
   },
   {
     "path": "docs/decisions/ADR-011-transform-field-ownership.md",
-    "sha256": "246b6d2f4520bc644c2ecdf5f4f2b009769b2910f4a15af157b3493991bf6f7d",
-    "bytes": 1658
+    "sha256": "077116db24ef0877b28f276ade60c740352fedb0e3af9e51035836614649da33",
+    "bytes": 1884
+  },
+  {
+    "path": "docs/decisions/ADR-012-native-transform-boundary-and-affine-patch-fit.md",
+    "sha256": "5fb4de75eea74ecd2e4081c0499bebaab5574d15fd26a5ada6ce454900031874",
+    "bytes": 2473
+  },
+  {
+    "path": "docs/decisions/ADR-013-transform-selection-intent.md",
+    "sha256": "a7d66d327dcae2af327e7d492468a1757137041d10488aa93a66e4a19976db7c",
+    "bytes": 2241
   },
   {
     "path": "docs/decisions/open-decisions.md",
@@ -181,8 +191,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "367d478055a23d6b146c8e8439bf0704e16ffa837002ab8c0cdfb7c9fdb000ef",
-    "bytes": 228418
+    "sha256": "5e15b335a9426b38f177138ed21d5804f882889b4dd580b45f5b2f56944f4fb2",
+    "bytes": 236517
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -216,8 +226,8 @@
   },
   {
     "path": "docs/roadmap/clean-architecture-upgrade.md",
-    "sha256": "fc79c089d2d251c8f28ba3d8d9d42c2fb9a678412c549bf9b433a6677b47ed1a",
-    "bytes": 27186
+    "sha256": "462836b2b5e1b6709c5562382c9152f164ae5fad1a3d3fec70b07a9705e37fa3",
+    "bytes": 27269
   },
   {
     "path": "docs/roadmap/development-contract.md",
@@ -241,8 +251,8 @@
   },
   {
     "path": "docs/testing/acceptance-gates.md",
-    "sha256": "7b762dd65118e85a4c1b826fd34c41030e23dde448c1a4866a9382896d38813c",
-    "bytes": 5864
+    "sha256": "b2d85261bf18170aa1d49c675b2a83d01d192a50d2fd06f66ce47779bc0c4d22",
+    "bytes": 5915
   },
   {
     "path": "docs/testing/blender-integration-cases.md",
@@ -261,8 +271,8 @@
   },
   {
     "path": "docs/testing/geometry-cases.md",
-    "sha256": "0ce7df7f15e05d03c9b40a6292e10af90530bf5c9af01ce57d8d9ea29125d2fe",
-    "bytes": 6074
+    "sha256": "ea56f772172fb9f66915e3f74e37ef12469def5438423754e2a918a0c9dfb836",
+    "bytes": 6624
   },
   {
     "path": "docs/testing/phase-02-controller-lifecycle-report.md",

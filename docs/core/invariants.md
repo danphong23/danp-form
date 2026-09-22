@@ -9,7 +9,7 @@
 5. **No original-template pull.** Historical positions are not silently blended into normal deformation.
 6. **No-op means no geometry change.** If all resolved control targets equal `P0`, the operation must return `P0` exactly within storage round-trip.
 7. **Patches come from topology.** An open control chain divides a surface only if removing adjacency across its source edges actually disconnects faces.
-8. **Enabled unselected geometry holds.** Every enabled Source control vertex outside explicit resolved node/span/loop selection stays at P0, even when omitted from a sparse proxy. At a shared vertex, a selected target wins.
+8. **Operation boundary is explicit.** The transform boundary is the union of the initial resolved selection and all Controller vertices that actually move, including Proportional motion. Selected-but-unchanged vertices keep exact P0 targets without classifying the patch as having an unselected stationary control. Enabled vertices outside that union stay at P0. At a shared vertex, an actual moved target wins.
 9. **No write outside scope.** Vertices outside captured incident-patch scope are untouched. Preview cleanup resets prior writes within that scope before applying current output.
 10. **Proportional is a patch-propagation control.** It is not silently applied again during sparse target expansion.
 11. **Topology is preserved by deformation.** G/R/S deformation changes coordinates, not Source connectivity.

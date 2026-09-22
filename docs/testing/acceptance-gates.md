@@ -50,7 +50,8 @@ G1/G2/G3/G6/G9/G10/G12/G13/G14/G15/G16 pass their geometry/constraint assertions
 Pure fixtures verify G14 state/resampling; Blender persistence is Gate D. Record
 G4/G5/G11 quality evidence. Sparse G7/G8 is deferred to Gate E.
 
-Also pass G17–G21 preview reset, mask intent, invalid input, coordinate-space and
+Also pass G17–G22 preview reset, mask intent, transform selection-intent/moved-target
+semantics, invalid input, coordinate-space and
 definition-lifecycle assertions. G20 target-space logic can run without Blender;
 object storage/integration follows in Gate D. Use geometry-cases.md measurement contract.
 

@@ -12,10 +12,10 @@ def test_phase4_transaction_primitives_exist():
 
 def test_phase4_hard_constraints_and_profiles_are_present():
     assert (
-        "stationary = set(deps.effective_proxy_elements(source)[0]) - selected" in SOURCE
-        or "stationary = set(_effective_proxy_elements(source)[0]) - selected" in SOURCE
+        "stationary = set(deps.effective_proxy_elements(source)[0]) - active" in SOURCE
+        or "stationary = set(_effective_proxy_elements(source)[0]) - active" in SOURCE
     )
-    assert "for vertex_id, target in targets.items():" in SOURCE
+    assert "for vertex_id, target in operation_targets.items():" in SOURCE
     assert "output[vertex_id] = p0[vertex_id].copy()" in SOURCE
     assert "solve_displacements(" in SOURCE
     assert '"SMOOTH"' in SOURCE and '"UNIFORM"' in SOURCE
@@ -104,3 +104,13 @@ def test_topology_lock_uses_the_native_modal_boundary():
 def test_world_transform_cannot_fall_through_as_source_local():
     operation = (ROOT / "dan_form" / "core" / "operation.py").read_text(encoding="utf-8")
     assert "WORLD_SPACE_MATRIX_REQUIRED" in operation
+
+
+def test_transform_selection_intent_is_carried_separately_from_measured_targets():
+    workflows = (ROOT / "dan_form" / "blender" / "workflows.py").read_text(encoding="utf-8")
+    session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
+    deformation = (ROOT / "dan_form" / "core" / "deformation.py").read_text(encoding="utf-8")
+    assert 'selection_intent=intent' in workflows
+    assert 'selection_intent=selection_intent' in session
+    assert 'active = moved | intent' in deformation
+    assert 'stationary = set(deps.effective_proxy_elements(source)[0]) - active' in workflows

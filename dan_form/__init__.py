@@ -130,7 +130,7 @@ _MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 26),
+    "version": (0, 5, 27),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -434,10 +434,10 @@ def _deform_update(source: bpy.types.Object, controller: bpy.types.Object,
                    delta=(0.0, 0.0, 0.0), profile="LINEAR", radius=0.0,
                    targets: dict[int, Vector] | None = None,
                    sync_controller: bool = True,
-                   operation_transform=None) -> dict:
+                   operation_transform=None, selection_intent=None) -> dict:
     return _workflow_deform_update(
         source, controller, _workflow_dependencies(), delta, profile, radius, targets,
-        sync_controller, operation_transform,
+        sync_controller, operation_transform, selection_intent,
     )
 
 

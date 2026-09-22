@@ -7,10 +7,12 @@
 An enabled Source patch is controlled by the enabled control definitions incident
 to its boundary. A patch with one incident control receives that control's
 operation transform over its full captured scope. A patch with multiple incident
-controls blends their transforms within the patch. Selected controls provide
-their absolute transform from Operation Rest; enabled unselected controls provide
-the identity transform and are hard stationary constraints. Hidden controls are
-not incident controls.
+controls blends their transforms within the patch. The operation boundary is the
+union of the initial explicit selection and every Controller vertex whose
+coordinates actually change. Selected-but-unchanged vertices retain exact Operation
+Rest targets but remain part of that boundary. Enabled controls outside it provide
+identity and are hard stationary constraints; unselected vertices moved by Blender
+Proportional Editing are exact targets. Hidden controls are not incident controls.
 
 The canonical operation representation is shared by Blender UI and agents:
 operation type, pivot, coordinate space, absolute targets and proportional

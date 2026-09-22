@@ -105,17 +105,20 @@ def update(source, controller, deps, session, profile="LINEAR", radius=0.0,
            targets=None) -> dict | None:
     if targets is None:
         targets = moved_controller_targets(controller, session.get("controller_rest", {}))
+    selection_intent = set(
+        (session.get("transaction") or {}).get("selection", ())
+    )
     # Controller and Source share local coordinates by construction
     # (controller is parented with an identity basis).  Keep this conversion
     # explicit so a future non-identity controller can add one in one place.
     result = _deform_update(source, controller, (0.0, 0.0, 0.0), profile,
-                            radius, targets=targets, sync_controller=False)
+                            radius, targets=targets, sync_controller=False,
+                            selection_intent=selection_intent)
     session["last_targets"] = {vertex_id: position.copy() for vertex_id, position in targets.items()}
     rest = session.get("controller_rest", {})
-    # ``targets`` only contains the selected vertices.  Comparing it with the
-    # complete controller rest pose makes every partial selection look moved,
-    # even when Blender confirmed a zero-distance transform.  Compare the same
-    # persistent-ID domain so an untouched session can be cancelled cleanly.
+    # ``targets`` contains only vertices Blender actually moved, including
+    # unselected Proportional vertices.  Selection intent is passed separately
+    # so points unchanged by an axis Scale can still belong to its moving side.
     rest_targets = {vertex_id: rest[vertex_id] for vertex_id in targets if vertex_id in rest}
     session["had_delta"] = session.get("had_delta", False) or (
         bool(targets) and not _positions_close(targets, rest_targets)

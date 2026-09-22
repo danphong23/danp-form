@@ -45,8 +45,9 @@ profile. Prototype comparisons must use identical targets/constraints while chan
 profile/radius. Numerical influence method and quality require evidence.
 
 Blender's native Proportional Editing may move enabled unselected Controller
-vertices. DANP accepts those coordinates as exact targets by comparing the whole
-proxy with its pre-transform pose. DANP's own Radius/profile then controls how the
+vertices. DANP adds those changed IDs to the native transform boundary as exact
+targets. The initial selected IDs stay in the boundary even when a Scale axis leaves
+some of them unchanged. DANP's own Radius/profile then controls how the
 resulting moved targets influence free Source vertices inside the affected patches;
 it does not override Blender's proxy falloff. Sparse representation adds no second
 user proportional.

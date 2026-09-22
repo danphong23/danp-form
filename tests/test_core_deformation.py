@@ -64,7 +64,7 @@ def test_moving_boundary_interpolates_toward_stationary_boundary():
     p0 = {index: V(index, 0, 0) for index in range(5)}
     output, changed = DEFORMATION.compute_preview(
         p0,
-        selected={0},
+        moved_targets={0},
         scope=set(p0),
         patches=[{"vertex_ids": list(p0)}],
         edge_vids={index: (index, index + 1) for index in range(4)},
@@ -85,7 +85,7 @@ def test_nonuniform_loop_targets_are_not_reduced_to_one_average_vector():
     p0 = {index: V(index, 0, 0) for index in range(5)}
     output, _ = DEFORMATION.compute_preview(
         p0,
-        selected={0, 4},
+        moved_targets={0, 4},
         scope=set(p0),
         patches=[{"vertex_ids": list(p0)}],
         edge_vids={index: (index, index + 1) for index in range(4)},
@@ -105,7 +105,7 @@ def test_finite_radius_cannot_expand_or_cross_patch_scope():
     p0 = {index: V(index, 0, 0) for index in range(7)}
     output, changed = DEFORMATION.compute_preview(
         p0,
-        selected={0},
+        moved_targets={0},
         scope={0, 1, 2, 3},
         patches=[
             {"vertex_ids": [0, 1, 2, 3]},
@@ -132,7 +132,7 @@ def test_noop_target_clears_to_operation_rest_exactly():
     p0 = {index: V(index, 0, 0) for index in range(4)}
     output, changed = DEFORMATION.compute_preview(
         p0,
-        selected={0},
+        moved_targets={0},
         scope=set(p0),
         patches=[{"vertex_ids": list(p0)}],
         edge_vids={index: (index, index + 1) for index in range(3)},
@@ -157,7 +157,7 @@ def test_shared_free_vertex_conflict_is_rejected_before_writeback():
     try:
         DEFORMATION.compute_preview(
             p0,
-            selected={0, 3},
+            moved_targets={0, 3},
             scope=set(p0),
             patches=patches,
             edge_vids=edges,
@@ -234,6 +234,62 @@ def test_single_planar_control_keeps_axis_scale_continuous_for_free_patch_vertic
     assert abs(output[4].values[1]) < 1e-6
     assert abs(output[4].values[2]) < 1e-6
     assert abs(output[5].values[2] - 1.0) < 1e-6
+
+
+def test_axis_scale_keeps_unchanged_selected_loop_in_the_transforming_region():
+    sides = 8
+    for axis in range(3):
+        across = (axis + 1) % 3
+        p0 = {}
+        edges = {}
+        for ring, radius in enumerate((1.0, 0.75, 0.5)):
+            for side in range(sides):
+                angle = 2.0 * math.pi * side / sides
+                coordinates = [0.0, 0.0, 0.0]
+                coordinates[axis] = radius * math.cos(angle)
+                coordinates[across] = radius * math.sin(angle)
+                vertex_id = ring * sides + side
+                p0[vertex_id] = V(*coordinates)
+                edges[ring * sides + side] = (
+                    vertex_id, ring * sides + (ring * sides + (side + 1) % sides)
+                )
+                if ring:
+                    edges[100 + ring * sides + side] = (
+                        (ring - 1) * sides + side, vertex_id
+                    )
+
+        intent = set(range(sides))
+        moved = {vertex_id for vertex_id in intent
+                 if abs(p0[vertex_id].values[axis]) > 1e-10}
+        targets = {}
+        for vertex_id in moved:
+            coordinates = p0[vertex_id].values.copy()
+            coordinates[axis] *= 1.6
+            targets[vertex_id] = V(*coordinates)
+        patch = [{"vertex_ids": list(p0)}]
+
+        free_patch, _ = DEFORMATION.compute_preview(
+            p0, moved, set(p0), patch, edges, targets, set(), "LINEAR", 0.0,
+            selection_intent=intent,
+        )
+        for side in range(sides):
+            source = p0[sides + side]
+            result = free_patch[sides + side]
+            assert abs(result.values[axis] - source.values[axis] * 1.6) < 1e-6
+            for component in set(range(3)) - {axis}:
+                assert abs(result.values[component] - source.values[component]) < 1e-6
+        for vertex_id in intent - moved:
+            assert free_patch[vertex_id] == p0[vertex_id]
+
+        fixed_loop = set(range(2 * sides, 3 * sides))
+        anchored_patch, _ = DEFORMATION.compute_preview(
+            p0, moved, set(p0), patch, edges, targets, fixed_loop, "LINEAR", 0.0,
+            selection_intent=intent,
+        )
+        assert all(anchored_patch[vertex_id] == p0[vertex_id]
+                   for vertex_id in fixed_loop)
+        assert any(anchored_patch[sides + side] != free_patch[sides + side]
+                   for side in range(sides))
 
 
 def test_radius_zero_preserves_ratio_between_moving_and_stationary_boundaries():
@@ -332,10 +388,13 @@ def test_native_proportional_targets_shape_the_patch_from_each_vertex():
             edges, moved, fixed, "LINEAR", 0.0)
     grouped, _ = DEFORMATION.compute_preview(
         *args, control_groups={"left": {vertex_id(0, y) for y in range(height)},
-                               "right": {vertex_id(6, y) for y in range(height)}}
+                               "right": {vertex_id(6, y) for y in range(height)}},
+        selection_intent={vertex_id(6, 3)},
     )
     regrouped, _ = DEFORMATION.compute_preview(
-        *args, control_groups={"all": set(moved) | fixed}
+        *args,
+        control_groups={"all": set(moved) | fixed},
+        selection_intent={vertex_id(6, 3)},
     )
 
     assert grouped == regrouped
@@ -348,6 +407,17 @@ def test_native_proportional_targets_shape_the_patch_from_each_vertex():
     assert abs(displacement(3, 2) - displacement(3, 4)) < 1e-7
     assert all(-1e-8 <= displacement(x, y) <= 1.0 + 1e-8
                for y in range(height) for x in range(width))
+
+
+def test_no_movement_with_selection_intent_is_exact_no_op():
+    p0 = {index: V(index, index * 0.5, 0) for index in range(4)}
+    output, changed = DEFORMATION.compute_preview(
+        p0, set(), set(p0), [{"vertex_ids": list(p0)}],
+        {index: (index, index + 1) for index in range(3)}, {}, set(),
+        "LINEAR", 0.0, selection_intent={1, 2},
+    )
+    assert output == p0
+    assert changed == 0
 
 
 def test_canonical_operation_resolves_absolute_targets_for_agent_and_ui():
