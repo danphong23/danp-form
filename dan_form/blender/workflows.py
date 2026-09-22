@@ -33,6 +33,7 @@ class WorkflowDeps:
     hidden: Callable
     json_set: Callable
     source_controller_pairs: Callable
+    modifier_signature: Callable
 
 
 def update_revision(source: bpy.types.Object) -> None:
@@ -61,7 +62,10 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
     tx = {
         "source": source.as_pointer(), "controller": controller.as_pointer(),
         "source_uuid": source.get(SOURCE_UUID_KEY), "topology": source.get(TOPOLOGY_KEY),
-        "network": source.get(NETWORK_REVISION_KEY), "p0": current,
+        "network": source.get(NETWORK_REVISION_KEY),
+        "proxy_generation": controller.get(PROXY_GENERATION_KEY),
+        "modifier_signature": deps.modifier_signature(source),
+        "p0": current,
         "selected": selected, "selection": set(selected), "scope": scope,
         "closed": False, "preview": None,
         "control_groups": {
@@ -95,6 +99,12 @@ def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector
                 changed = True
         if changed:
             source.data.update()
+    if changed:
+        # Source coordinates are the overlay's only geometric truth.  This
+        # invalidation also covers deferred Undo/Redo repair, where the normal
+        # depsgraph callback is intentionally guarded against re-entry.
+        deps.overlay_cache.clear()
+        deps.patch_overlay_cache.pop(source.as_pointer(), None)
     return changed
 
 
@@ -105,7 +115,10 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
                    operation_transform: OperationTransform | None = None) -> dict:
     key = source.as_pointer(); tx = deps.transactions.get(key)
     if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
-    if source.get(TOPOLOGY_KEY) != tx["topology"] or source.get(NETWORK_REVISION_KEY) != tx["network"]:
+    if (source.get(TOPOLOGY_KEY) != tx["topology"]
+            or source.get(NETWORK_REVISION_KEY) != tx["network"]
+            or controller.get(PROXY_GENERATION_KEY) != tx["proxy_generation"]
+            or deps.modifier_signature(source) != tx["modifier_signature"]):
         raise ValueError("OPERATION_STALE")
     p0 = tx["p0"]
     # ``None`` means the ordinary delta path.  An explicitly supplied empty

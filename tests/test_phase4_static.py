@@ -66,6 +66,16 @@ def test_native_targets_are_coordinate_deltas_and_source_write_is_idempotent():
     assert "length_squared > 1e-16" in workflows
 
 
+def test_native_completion_uses_blender_modal_boundary_not_quiet_time():
+    lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
+    session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
+    assert "NATIVE_QUIET_POLLS" not in lifecycle
+    assert "idle_polls" not in lifecycle
+    assert "modal_operators" in session
+    assert "The timer only samples Blender's explicit modal state" in lifecycle
+    assert 'and session.get("had_delta")' in session
+
+
 def test_native_undo_keeps_history_and_resyncs_proxy():
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
     session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
@@ -75,3 +85,22 @@ def test_native_undo_keeps_history_and_resyncs_proxy():
     assert "controller_pose_matches" in lifecycle
     assert "_sync_proxy(source, controller)" in lifecycle
     assert "_OVERLAY_CACHE.clear()" in lifecycle
+
+
+def test_operation_freezes_proxy_and_modifier_generations():
+    workflows = (ROOT / "dan_form" / "blender" / "workflows.py").read_text(encoding="utf-8")
+    assert '"proxy_generation"' in workflows
+    assert '"modifier_signature"' in workflows
+    assert "OPERATION_STALE" in workflows
+    assert "deps.overlay_cache.clear()" in workflows
+
+
+def test_topology_lock_uses_the_native_modal_boundary():
+    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    assert "native_transform_active(context)" in operators
+    assert "context.window_manager.operators" not in operators
+
+
+def test_world_transform_cannot_fall_through_as_source_local():
+    operation = (ROOT / "dan_form" / "core" / "operation.py").read_text(encoding="utf-8")
+    assert "WORLD_SPACE_MATRIX_REQUIRED" in operation

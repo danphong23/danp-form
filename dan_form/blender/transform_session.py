@@ -59,8 +59,22 @@ def moved_controller_targets(controller: bpy.types.Object, rest: dict[int, Vecto
 
 
 def _has_native_transform(context: bpy.types.Context) -> bool:
-    return any(str(operator.bl_idname).startswith("TRANSFORM_OT_")
-               for operator in context.window_manager.operators)
+    """Return whether Blender still owns an interactive transform.
+
+    ``WindowManager.operators`` is an execution/history collection and is not
+    a reliable modal-state signal.  Blender exposes the actual live modal
+    operators on each Window instead.  Reading every window also matters when
+    the depsgraph callback is running without the 3D View as its active area.
+    An empty modal-operator collection is the exact end boundary.  We do not
+    fall back to ``active_operator`` because that context field can describe
+    the operator being dispatched rather than a still-running modal transform.
+    """
+    windows = getattr(getattr(context, "window_manager", None), "windows", ())
+    for window in windows:
+        for operator in getattr(window, "modal_operators", ()):
+            if str(getattr(operator, "bl_idname", "")).startswith("TRANSFORM_OT_"):
+                return True
+    return False
 
 
 def begin(source, controller, deps, operation: str, controller_rest=None) -> dict:
@@ -114,7 +128,9 @@ def commit(source, deps) -> None:
     tx = deps.transactions.get(key)
     session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
     if tx is not None:
-        if session is not None and session.get("operation") == "NATIVE":
+        if (session is not None
+                and session.get("operation") == "NATIVE"
+                and session.get("had_delta")):
             record = {
                 "source": key,
                 "source_uuid": source.get(SOURCE_UUID_KEY),

@@ -35,6 +35,12 @@ def _friendly_error(exc: Exception) -> str:
         return "DANP không tìm thấy ID mesh. Hãy Sync hoặc Reset DANP trên mesh hiện tại."
     if code.startswith("CONTROL_DATA_INVALID"):
         return "Dữ liệu control bị lỗi; hãy Undo hoặc Reset DANP để tạo lại control trên mesh hiện tại."
+    if code == "OPERATION_BUSY":
+        return "Đang có thao tác G/R/S; hãy xác nhận hoặc hủy thao tác trước."
+    if code == "OPERATION_STALE":
+        return "Phiên chỉnh sửa đã cũ; hãy xác nhận/hủy thao tác rồi bắt đầu lại."
+    if code == "WORLD_SPACE_MATRIX_REQUIRED":
+        return "Transform WORLD cần ma trận Source; hãy dùng transform Source-local của DANP."
     return code
 
 
@@ -77,6 +83,14 @@ def _discard_source_runtime(source: bpy.types.Object | None) -> None:
         runtime.NATIVE_UNDO_DIRECTION = None
 
 
+def _require_structural_idle(source: bpy.types.Object | None) -> None:
+    """Reject definition/mask/rebuild edits while a native transform is live."""
+    if source is not None and (
+            source.as_pointer() in runtime.NATIVE_TRANSFORM_SESSIONS
+            or source.as_pointer() in runtime.DANP_TRANSACTIONS):
+        raise ValueError("OPERATION_BUSY")
+
+
 class DANFORM_OT_initialize(bpy.types.Operator):
     bl_idname = "dan_form.initialize"
     bl_label = "Initialize DANP Form"
@@ -92,6 +106,7 @@ class DANFORM_OT_initialize(bpy.types.Operator):
         scene = context.scene
         source = context.view_layer.objects.active
         try:
+            _require_structural_idle(source)
             if not _is_valid_source(source):
                 raise ValueError("SOURCE_NOT_EDITABLE")
             controller = _find_controller(source)
@@ -135,6 +150,7 @@ class DANFORM_OT_sync(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
         try:
+            _require_structural_idle(source)
             if not _is_valid_source(source) or controller is None:
                 raise ValueError("SOURCE_OR_CONTROLLER_MISSING")
             _ensure_source_ids(source)
@@ -248,6 +264,11 @@ class DANFORM_OT_sync_control(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         controls = _controls(source) if source is not None else []
         active_control = _active_control(context, source) if source is not None else None
         control = next((item for item in controls if active_control is not None and item.get("control_uuid") == active_control.get("control_uuid")), None)
@@ -294,6 +315,11 @@ class DANFORM_OT_move_control(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         if source is None:
             return {"CANCELLED"}
         controls = _controls(source)
@@ -368,6 +394,7 @@ class DANFORM_OT_create_control(bpy.types.Operator):
         source, controller = _context_source(context)
         scene = context.scene
         try:
+            _require_structural_idle(source)
             active = context.view_layer.objects.active
             if active == source:
                 vertex_ids, edge_ids = _source_selection(source)
@@ -502,6 +529,11 @@ class DANFORM_OT_set_control_visibility(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         control = _control(source, self.control_uuid)
         if source is None or control is None:
             return {"CANCELLED"}
@@ -545,6 +577,11 @@ class DANFORM_OT_delete_control(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         if source is None:
             return {"CANCELLED"}
         if not self.control_uuid:
@@ -585,6 +622,7 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
         try:
+            _require_structural_idle(source)
             vertex_ids, edge_ids = _proxy_selection(controller)
             if context.tool_settings.mesh_select_mode[1]:
                 # Edge endpoints are incidental selection, not explicit node Hide.
@@ -629,6 +667,7 @@ class DANFORM_OT_reveal(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
         try:
+            _require_structural_idle(source)
             payload = json.loads(self.ids_json) if self.ids_json else {}
             vertex_ids = {int(item) for item in payload.get("vertex_ids", [])}
             edge_ids = {int(item) for item in payload.get("edge_ids", [])}
@@ -657,6 +696,11 @@ class DANFORM_OT_remove_controller(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         if controller is None or controller.name not in bpy.data.objects:
             scene.dan_form_controller = None
             scene.dan_form_status = "No controller"
@@ -689,6 +733,11 @@ class DANFORM_OT_remove(bpy.types.Operator):
 
     def execute(self, context):
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         if not self.poll(context):
             return {"CANCELLED"}
         was_edit = source.mode == "EDIT"
@@ -755,6 +804,11 @@ class DANFORM_OT_reset(bpy.types.Operator):
 
     def execute(self, context):
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         if not self.poll(context):
             return {"CANCELLED"}
         was_edit = source.mode == "EDIT"
@@ -839,6 +893,11 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
 
     def execute(self, context):
         source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+        except ValueError as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         if not self.poll(context):
             return {"CANCELLED"}
         try:
@@ -879,10 +938,7 @@ class DANFORM_OT_topology_locked(bpy.types.Operator):
         # Blender's transform modal keymap must receive axis keys directly.
         # Without this guard the controller's topology-lock ``X`` shortcut can
         # consume the first X after G/R/S, forcing users to press it twice.
-        native_transform = any(
-            str(operator.bl_idname).startswith("TRANSFORM_OT_")
-            for operator in context.window_manager.operators
-        )
+        native_transform = _transform_session.native_transform_active(context)
         return (
             not native_transform
             and source is not None

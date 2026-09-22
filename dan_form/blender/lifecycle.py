@@ -17,10 +17,7 @@ from . import transform_session as _transform_session
 from .context import orphaned_owned_objects
 from .workflows import update_revision
 
-NATIVE_POLL_INTERVAL = 0.05
-# Blender's native transform has no add-on confirm callback. In contexts that
-# do not expose the active operator, wait for one second without mesh updates.
-NATIVE_QUIET_POLLS = 20
+NATIVE_POLL_INTERVAL = 0.01
 
 
 def bind(api) -> None:
@@ -181,7 +178,6 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
                 source, controller, deps, "NATIVE",
                 controller_rest=_rest_from_proxy_snapshot(previous_snapshot),
             )
-            session["idle_polls"] = 0
             session["timer_registered"] = False
         else:
             # A user can confirm a native transform and immediately select a
@@ -197,7 +193,6 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
                     source, controller, deps, "NATIVE",
                     controller_rest=_rest_from_proxy_snapshot(previous_snapshot),
                 )
-                session["idle_polls"] = 0
                 session["timer_registered"] = False
         scene = bpy.context.scene
         _transform_session.update(
@@ -208,16 +203,11 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
             profile=getattr(scene, "dan_form_proportional_profile", "LINEAR"),
             radius=float(getattr(scene, "dan_form_proportional_radius", 0.0)),
         )
-        # Every geometry sample means the modal transform is still alive.
-        # Reset the quiet-poll counter here; otherwise a timer can commit a
-        # transform while the mouse is still moving in contexts where
-        # WindowManager.operators does not expose TRANSFORM_OT_*.
-        session["idle_polls"] = 0
         if not session.get("timer_registered"):
             session["timer_registered"] = True
             bpy.app.timers.register(
                 lambda source_ptr=key: _native_transform_timer(source_ptr),
-                first_interval=NATIVE_POLL_INTERVAL,
+                first_interval=0.0,
             )
     except (ValueError, RuntimeError, KeyError):
         runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
@@ -272,19 +262,12 @@ def _native_transform_timer(source_ptr):
             bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
             return None
         if _transform_session.native_transform_active(bpy.context):
-            session["idle_polls"] = 0
+            # The timer only samples Blender's explicit modal state.  It does
+            # not infer confirmation from elapsed time or from a quiet mouse.
             return NATIVE_POLL_INTERVAL
-        session["idle_polls"] = int(session.get("idle_polls", 0)) + 1
-        # Some headless/MCP contexts do not expose the native operator in
-        # WindowManager.Operators.  Require a few quiet polls so a single
-        # dependency update cannot prematurely close a real transform.
-        # Do not treat a short gap between mouse samples as confirmation.
-        # In UI contexts where WindowManager.operators is empty, RMB/Esc can
-        # need several timer ticks to restore the proxy to its rest pose.
-        # A longer quiet window prevents committing an intermediate preview
-        # that would later survive cancel and require Undo to remove.
-        if session["idle_polls"] < NATIVE_QUIET_POLLS:
-            return NATIVE_POLL_INTERVAL
+        # Blender has ended the modal operator.  This is the Confirm boundary;
+        # cancellation is handled above by the exact C0 restoration check.
+        # Update once from the final absolute Controller pose before closing.
         scene = bpy.context.scene
         _transform_session.update(
             source,

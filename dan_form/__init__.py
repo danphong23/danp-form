@@ -130,7 +130,7 @@ _MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 25),
+    "version": (0, 5, 26),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -170,6 +170,7 @@ def _workflow_dependencies() -> _WorkflowDeps:
         hidden=_hidden,
         json_set=_json_set,
         source_controller_pairs=_source_controller_pairs,
+        modifier_signature=_modifier_signature,
     )
 
 

@@ -572,11 +572,13 @@ Validate editable Source, mapping and supported topology; sync proxy from curren
 Resolve selection once and freeze enabled network, selected Source IDs, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 
-For native Controller Edit `G/R/S`, capture happens in the DANP macro's Begin step,
-before Blender's transform operator receives its first mouse delta. Blender's native
-transform remains responsible for axis locks, numeric input, snapping and modal input;
-DANP only observes the absolute Controller pose against the captured rest and writes
-the Source preview. The macro's Finish step is the only native Confirm path.
+For native Controller Edit `G/R/S`, Blender owns the transform operator and its modal
+input. DANP captures the first observed pre-transform Controller pose, then observes
+the absolute Controller pose against that rest and writes the Source preview. A timer
+may sample Blender's explicit `Window.modal_operators` state, but it is not a boundary:
+the active native operator means Preview, its end means Confirm, and exact restoration
+of the captured Controller pose means Cancel. There is one shared Confirm primitive;
+no legacy macro or quiet-poll timeout creates a second history step.
 
 Capture immutable P0 for every vertex in potential operation scope: all patches incident
 to resolved selection, even when the initial transform is zero. Capture proxy start state
@@ -611,10 +613,12 @@ ownership and creates no meaningful undo entry. Confirm with a result identical 
 returns NO_CHANGE instead of claiming an edit. Update/commit/cancel after closure returns
 OPERATION_CLOSED without writes.
 
-The native timer is cancellation-only for macro-managed sessions. It must never commit a
-non-zero preview merely because Blender's operator list is temporarily empty while the
-user pauses the mouse. A Controller pose restored to its captured C0 is treated as Cancel;
-native Confirm is handled exclusively by the macro Finish step.
+The native timer may sample the explicit modal state for the observer bridge. It must
+never commit or cancel from elapsed time, mouse quietness or a fixed poll count. While
+a `TRANSFORM_OT_*` modal operator is present, the transaction remains in Preview. When
+that operator ends, the final absolute Controller pose is Confirmed; a Controller pose
+restored to its captured C0 is Cancel. Native and agent callers share the same
+Confirm/Cancel primitives.
 
 ## Structural state/ownership
 
@@ -3572,7 +3576,7 @@ Ngoài phạm vi đợt này: sparse control, tự khớp ảnh, solver nâng ca
 
 | Khu vực hiện tại | Bằng chứng trong mã | Nâng cấp cần làm |
 | --- | --- | --- |
-| G/R/S và phiên thao tác | `registration.py` để G/R/S native; `lifecycle.py` quan sát depsgraph và đợi 20 nhịp timer để commit; `transform_session.py` giữ `last_targets` và cờ `had_delta`. Bộ macro G/R/S khác vẫn nằm trong `operators.py` nhưng không đăng ký. | Chỉ có một chủ sở hữu Begin/Preview/Confirm/Cancel. Kết thúc phiên trước khi selection mới được dùng; sửa phép kiểm tra delta trên đúng tập ID; bỏ nhánh macro/observer không dùng sau khi có cơ chế thay thế đã qua test. |
+| G/R/S và phiên thao tác | `registration.py` để G/R/S native; `lifecycle.py` quan sát depsgraph và trạng thái modal thật; `transform_session.py` giữ `last_targets` và cờ `had_delta`. | Chỉ có một chủ sở hữu Begin/Preview/Confirm/Cancel. Kết thúc phiên trước khi selection mới được dùng; phép kiểm tra delta dựa trên đúng tập ID; không dùng timeout để đoán confirm. |
 | Undo/Redo | `NATIVE_UNDO_RECORDS` là dict theo Source pointer, mỗi commit thay bản ghi trước; handler sửa lại Source sau Undo/Redo bằng timer. | Thiết kế lịch sử nhiều bước gắn với chính Undo của Blender, kiểm chứng không ghi đè trạng thái cũ; invalidation và resync theo thứ tự rõ ràng. Không xóa cơ chế cũ trước khi thay thế qua test live. |
 | Control, hide và overlap | `storage.py` lưu JSON definitions nhưng `HIDDEN_VIDS_KEY`/`HIDDEN_EIDS_KEY` là mask chung; `workflows.py` hide một mục bằng cách ghi vào mask chung. | Tách membership và trạng thái ẩn của từng định nghĩa; effective network là hợp các phần đang bật. Xóa/ẩn A không lấy đi phần B còn giữ; migration từ mask chung phải giữ hình dạng cũ lúc mở file. |
 | Patch và biến dạng | `patches.py` gắn `incident_control_uuids` lên patch; `workflows.py` đưa `control_groups` vào `compute_preview`; `deformation.py` còn cả nhánh transform field và displacement compatibility. | Giữ đầu ra hiện tốt làm baseline; sau đó loại phụ thuộc số định nghĩa của cùng mạng hình học và bỏ đường compatibility chỉ khi test đã bao phủ. Không đổi phương pháp nội suy chỉ để dọn mã. |

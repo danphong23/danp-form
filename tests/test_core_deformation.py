@@ -208,6 +208,34 @@ def test_single_control_owns_scale_of_the_whole_patch():
     assert abs(output[2].values[2] - 1.0) < 1e-6
 
 
+def test_single_planar_control_keeps_axis_scale_continuous_for_free_patch_vertices():
+    # Four non-collinear samples define an in-plane non-uniform Scale.  The
+    # free center must follow that same affine field; a coherent whole-control
+    # transform must not be mistaken for unrelated per-vertex targets.
+    p0 = {
+        0: V(-1, -1, 0), 1: V(1, -1, 0), 2: V(1, 1, 0),
+        3: V(-1, 1, 0), 4: V(0, 0, 0), 5: V(0, 0, 1),
+    }
+    edges = {
+        0: (0, 1), 1: (1, 2), 2: (2, 3), 3: (3, 0),
+        4: (0, 4), 5: (1, 4), 6: (2, 4), 7: (3, 4),
+    }
+    selected = {0, 1, 2, 3}
+    targets = {vertex_id: V(p0[vertex_id].values[0] * 1.7,
+                            p0[vertex_id].values[1] * 0.45, 0)
+               for vertex_id in selected}
+    output, _ = DEFORMATION.compute_preview(
+        p0, selected, set(p0),
+        [{"vertex_ids": list(p0), "incident_control_uuids": ["RING"]}],
+        edges, targets, set(), "LINEAR", 0.0,
+        control_groups={"RING": selected},
+    )
+    assert abs(output[4].values[0]) < 1e-6
+    assert abs(output[4].values[1]) < 1e-6
+    assert abs(output[4].values[2]) < 1e-6
+    assert abs(output[5].values[2] - 1.0) < 1e-6
+
+
 def test_radius_zero_preserves_ratio_between_moving_and_stationary_boundaries():
     # A one-dimensional patch models a cylinder section: the top boundary
     # moves, the bottom boundary is an unselected control, and the middle
@@ -332,3 +360,29 @@ def test_canonical_operation_resolves_absolute_targets_for_agent_and_ui():
     assert abs(targets[0].values[1]) < 1e-6
     assert abs(targets[1].values[0]) < 1e-6
     assert abs(targets[1].values[1] - 1.0) < 1e-6
+
+
+def test_canonical_operation_matches_xyz_rotation_order_on_each_axis():
+    cases = (
+        ((math.pi / 2, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
+        ((0.0, math.pi / 2, 0.0), (0.0, 0.0, 1.0), (1.0, 0.0, 0.0)),
+        ((0.0, 0.0, math.pi / 2), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)),
+    )
+    for rotation, source, expected in cases:
+        transform = OPERATION.OperationTransform(
+            operation="ROTATE", rotation=rotation,
+        )
+        target = OPERATION.targets_from_transform({0: V(*source)}, {0}, transform)[0]
+        assert all(abs(actual - wanted) < 1e-6
+                   for actual, wanted in zip(target.values, expected))
+
+
+def test_world_space_requires_an_explicit_source_matrix():
+    transform = OPERATION.OperationTransform(operation="MOVE", space="WORLD",
+                                             translation=(1.0, 0.0, 0.0))
+    try:
+        OPERATION.targets_from_transform({0: V(0, 0, 0)}, {0}, transform)
+    except ValueError as exc:
+        assert str(exc) == "WORLD_SPACE_MATRIX_REQUIRED"
+    else:
+        raise AssertionError("WORLD transforms must not be silently treated as local")

@@ -1,5 +1,18 @@
 # Design Changelog
 
+## 2026-09-22 — DANP Form 0.5.26 deterministic native sessions and affine patch fitting
+
+- Native Controller G/R/S sessions now use Blender's live modal operator boundary;
+  elapsed time and quiet-poll counts no longer confirm an operation.
+- Consecutive transforms commit the previous target set before a new selection is
+  interpreted; no-op confirmations do not add a native history record.
+- Proxy generation and modifier identity are frozen during a transaction, while
+  Source writes invalidate overlay and patch caches immediately.
+- Planar non-uniform Scale uses one regularized affine fit instead of switching at a
+  residual threshold, keeping free patch vertices continuous with the moved control.
+- Structural control edits are rejected while G/R/S is active, and unsupported WORLD
+  transforms fail explicitly instead of being silently interpreted as Source-local.
+
 ## 2026-09-22 — DANP Form 0.5.24 moved-target transform bridge
 
 - Native Controller transforms now derive targets from every proxy vertex whose

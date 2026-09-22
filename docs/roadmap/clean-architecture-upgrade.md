@@ -1,10 +1,10 @@
 # Kế hoạch nâng cấp DANP Form: Source là hình học duy nhất
 
-**Trạng thái:** Đang triển khai giai đoạn 1–4, 2026-09-21. Người dùng đã xác nhận kiến trúc Source-backed và quy tắc phần hình học trùng vẫn tồn tại khi control khác còn giữ nó. Mã local đã có các thay đổi đầu tiên; dữ liệu `.blend` đang mở chưa được lưu hoặc ghi đè.
+**Trạng thái:** Đang củng cố giai đoạn 1–6, 2026-09-22. Người dùng đã xác nhận kiến trúc Source-backed và quy tắc phần hình học trùng vẫn tồn tại khi control khác còn giữ nó. Bản này tập trung vào ranh giới native G/R/S chính xác, nội suy affine liên tục và chặn ghi khi phiên đã cũ.
 
 ### Tiến độ giai đoạn 1–4
 
-- **Giai đoạn 1:** Đã sửa handoff khi đổi selection giữa hai native G/R/S, lưu nhiều bản ghi Undo/Redo và xử lý confirm/cancel theo tập target của phiên cũ. Đã kiểm tra trên scene Blender đang mở bằng phiên local.
+- **Giai đoạn 1:** Đã sửa handoff khi đổi selection giữa hai native G/R/S, lưu nhiều bản ghi Undo/Redo và xử lý confirm/cancel theo tập target của phiên cũ. Ranh giới kết thúc đọc `Window.modal_operators`; không còn commit theo số nhịp yên lặng.
 - **Giai đoạn 2:** Đã gom invalidation runtime cho proxy, overlay, patch và face cache ở Undo/Redo/load; Source edit vẫn là đầu vào để đồng bộ proxy. Cần tiếp tục kiểm tra modifier evaluated cage và chuỗi thao tác UI đầy đủ.
 - **Giai đoạn 3:** Đã kiểm chứng Box Select native của Blender trên Controller Edit. Vì Controller là loose wire mesh không có face, chọn cả phần sau là hành vi native hợp lệ; không override phím `B`. Click/Pick riêng của DANP vẫn giữ chính sách Source occlusion.
 - **Giai đoạn 4:** Đã chuyển trạng thái hide/enabled sang từng ControlDefinition, thêm migration schema 2 → 3 và giữ union hiệu dụng khi control chồng lấn. Hide/delete một definition không xóa phần Source mà definition khác còn giữ.
@@ -31,7 +31,7 @@ Ngoài phạm vi đợt này: sparse control, tự khớp ảnh, solver nâng ca
 
 | Khu vực hiện tại | Bằng chứng trong mã | Nâng cấp cần làm |
 | --- | --- | --- |
-| G/R/S và phiên thao tác | `registration.py` để G/R/S native; `lifecycle.py` quan sát depsgraph và đợi 20 nhịp timer để commit; `transform_session.py` giữ `last_targets` và cờ `had_delta`. Bộ macro G/R/S khác vẫn nằm trong `operators.py` nhưng không đăng ký. | Chỉ có một chủ sở hữu Begin/Preview/Confirm/Cancel. Kết thúc phiên trước khi selection mới được dùng; sửa phép kiểm tra delta trên đúng tập ID; bỏ nhánh macro/observer không dùng sau khi có cơ chế thay thế đã qua test. |
+| G/R/S và phiên thao tác | `registration.py` để G/R/S native; `lifecycle.py` quan sát depsgraph và trạng thái modal thật; `transform_session.py` giữ `last_targets` và cờ `had_delta`. | Chỉ có một chủ sở hữu Begin/Preview/Confirm/Cancel. Kết thúc phiên trước khi selection mới được dùng; phép kiểm tra delta dựa trên đúng tập ID; không dùng timeout để đoán confirm. |
 | Undo/Redo | `NATIVE_UNDO_RECORDS` là dict theo Source pointer, mỗi commit thay bản ghi trước; handler sửa lại Source sau Undo/Redo bằng timer. | Thiết kế lịch sử nhiều bước gắn với chính Undo của Blender, kiểm chứng không ghi đè trạng thái cũ; invalidation và resync theo thứ tự rõ ràng. Không xóa cơ chế cũ trước khi thay thế qua test live. |
 | Control, hide và overlap | `storage.py` lưu JSON definitions nhưng `HIDDEN_VIDS_KEY`/`HIDDEN_EIDS_KEY` là mask chung; `workflows.py` hide một mục bằng cách ghi vào mask chung. | Tách membership và trạng thái ẩn của từng định nghĩa; effective network là hợp các phần đang bật. Xóa/ẩn A không lấy đi phần B còn giữ; migration từ mask chung phải giữ hình dạng cũ lúc mở file. |
 | Patch và biến dạng | `patches.py` gắn `incident_control_uuids` lên patch; `workflows.py` đưa `control_groups` vào `compute_preview`; `deformation.py` còn cả nhánh transform field và displacement compatibility. | Giữ đầu ra hiện tốt làm baseline; sau đó loại phụ thuộc số định nghĩa của cùng mạng hình học và bỏ đường compatibility chỉ khi test đã bao phủ. Không đổi phương pháp nội suy chỉ để dọn mã. |

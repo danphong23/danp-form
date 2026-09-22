@@ -57,6 +57,29 @@ def _scale(value, scalar):
     return tuple(component * scalar for component in value)
 
 
+def _solve_3x3(matrix, rhs):
+    """Solve one 3x3 linear system with deterministic pivoting."""
+    augmented = [list(matrix[row]) + [float(rhs[row])] for row in range(3)]
+    for column in range(3):
+        pivot = max(range(column, 3), key=lambda row: abs(augmented[row][column]))
+        if abs(augmented[pivot][column]) <= 1e-14:
+            return None
+        if pivot != column:
+            augmented[column], augmented[pivot] = augmented[pivot], augmented[column]
+        divisor = augmented[column][column]
+        for index in range(column, 4):
+            augmented[column][index] /= divisor
+        for row in range(3):
+            if row == column:
+                continue
+            factor = augmented[row][column]
+            if factor == 0.0:
+                continue
+            for index in range(column, 4):
+                augmented[row][index] -= factor * augmented[column][index]
+    return tuple(augmented[row][3] for row in range(3))
+
+
 def _frame(points, center):
     """Build a stable orthonormal frame from a non-collinear point set."""
     vectors = [_subtract(_coords(point), center) for point in points]
@@ -78,14 +101,15 @@ def _frame(points, center):
 
 
 def _transform_from_samples(p0, targets):
-    """Fit a translation/rotation/scale transform from one control's samples.
+    """Fit one continuous affine transform from one control's samples.
 
-    A frame-based fit deliberately avoids averaging displacement vectors.  It
-    remains well-defined for the common ring-control case where all samples
-    lie in one plane, while preserving the transform along the missing normal.
-    The returned callable maps a Source-rest coordinate to the transformed
-    coordinate.  With fewer than three useful samples it degrades to a
-    translation, which is the only unambiguous transform available.
+    Blender's non-uniform Scale can contain shear when viewed in a control's
+    local plane.  A frame-only fit represents only rotation plus three axis
+    scales, so its residual used to switch abruptly to the harmonic solver.
+    Here the measured samples determine the affine part directly.  A small
+    regularization toward the frame fit supplies the missing normal of a
+    planar ring without changing the measured in-plane targets.  The same
+    formula is used for every scale/rotation and every control shape.
     """
     source_values = [_coords(p0[vertex_id]) for vertex_id in sorted(targets)]
     target_values = [_coords(targets[vertex_id]) for vertex_id in sorted(targets)]
@@ -95,9 +119,7 @@ def _transform_from_samples(p0, targets):
                           for index in range(3))
     target_center = tuple(sum(value[index] for value in target_values) / len(target_values)
                           for index in range(3))
-    source_frame = _frame(source_values, source_center)
-    target_frame = _frame(target_values, target_center)
-    if source_frame is None or target_frame is None:
+    if len(source_values) < 3:
         delta = _subtract(target_center, source_center)
 
         def translate(point):
@@ -105,23 +127,66 @@ def _transform_from_samples(p0, targets):
 
         return translate
 
-    source_axes = source_frame
-    target_axes = target_frame
-    scales = []
-    for axis in range(3):
-        source_lengths = []
-        target_lengths = []
-        for source, target in zip(source_values, target_values):
-            source_lengths.append(abs(_dot(_subtract(source, source_center), source_axes[axis])))
-            target_lengths.append(abs(_dot(_subtract(target, target_center), target_axes[axis])))
-        source_sum = sum(source_lengths)
-        scales.append(sum(target_lengths) / source_sum if source_sum > 1e-10 else 1.0)
+    source_frame = _frame(source_values, source_center)
+    target_frame = _frame(target_values, target_center)
+    prior = ((1.0, 0.0, 0.0),
+             (0.0, 1.0, 0.0),
+             (0.0, 0.0, 1.0))
+    if source_frame is not None and target_frame is not None:
+        source_axes = source_frame
+        target_axes = target_frame
+        scales = []
+        for axis in range(3):
+            source_sum = sum(
+                abs(_dot(_subtract(source, source_center), source_axes[axis]))
+                for source in source_values
+            )
+            target_sum = sum(
+                abs(_dot(_subtract(target, target_center), target_axes[axis]))
+                for target in target_values
+            )
+            scales.append(target_sum / source_sum if source_sum > 1e-10 else 1.0)
+        prior = tuple(
+            tuple(sum(target_axes[axis][row] * source_axes[axis][column] * scales[axis]
+                      for axis in range(3)) for column in range(3))
+            for row in range(3)
+        )
+
+    covariance = [[0.0] * 3 for _ in range(3)]
+    cross = [[0.0] * 3 for _ in range(3)]
+    for source, target in zip(source_values, target_values):
+        source_delta = _subtract(source, source_center)
+        target_delta = _subtract(target, target_center)
+        for row in range(3):
+            for column in range(3):
+                covariance[row][column] += source_delta[row] * source_delta[column]
+                cross[row][column] += target_delta[row] * source_delta[column]
+    regularization = max(1.0, sum(covariance[index][index] for index in range(3))) * 1e-10
+    system = [
+        [covariance[row][column] + (regularization if row == column else 0.0)
+         for column in range(3)]
+        for row in range(3)
+    ]
+    affine_rows = []
+    for row in range(3):
+        rhs = tuple(cross[row][column] + regularization * prior[row][column]
+                    for column in range(3))
+        solved = _solve_3x3(system, rhs)
+        if solved is None:
+            delta = _subtract(target_center, source_center)
+
+            def translate(point):
+                return _vec(point, _add(_coords(point), delta))
+
+            return translate
+        affine_rows.append(solved)
 
     def apply(point):
         local = _subtract(_coords(point), source_center)
-        result = target_center
-        for axis in range(3):
-            result = _add(result, _scale(target_axes[axis], _dot(local, source_axes[axis]) * scales[axis]))
+        result = tuple(
+            target_center[row] + sum(affine_rows[row][column] * local[column] for column in range(3))
+            for row in range(3)
+        )
         return _vec(point, result)
 
     return apply
@@ -168,6 +233,12 @@ def compute_preview(
         if not patch_stationary:
             transform = _transform_from_samples(p0, patch_targets)
             if transform is not None and len(patch_targets) > 2:
+                # An affine field is valid only when it reproduces every
+                # moved sample.  Proportional Editing may intentionally give
+                # each vertex a different target; those targets need the
+                # constrained displacement solve below so hard samples stay
+                # exact.  This is a target-shape check, not a time or
+                # scene-specific heuristic.
                 for vertex_id, target in patch_targets.items():
                     predicted = transform(p0[vertex_id])
                     if math.dist(tuple(predicted), tuple(target)) > 1e-6:

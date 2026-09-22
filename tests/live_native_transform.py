@@ -45,6 +45,11 @@ def _restore_controller(controller, positions, addon):
     controller.data.update()
 
 
+def _finish_native(lifecycle, source):
+    """Commit exactly at Blender's modal boundary; no quiet-poll loop."""
+    lifecycle._native_transform_timer(source.as_pointer())
+
+
 def run():
     addon = _addon()
     if addon is None:
@@ -105,10 +110,9 @@ def run():
         check(_max_delta(source_before, source_preview, nonselected_ids) > 1e-6,
               "native proportional radius deforms nearby patch vertices")
 
-        # Drive the same quiet-poll callback used by Blender's timer. Calling
-        # it directly keeps this regression deterministic inside one MCP call.
-        for _ in range(20):
-            lifecycle._native_transform_timer(source.as_pointer())
+        # The native operator has finished, so one timer sample reaches the
+        # explicit Confirm boundary deterministically.
+        _finish_native(lifecycle, source)
         check(source.as_pointer() not in addon._NATIVE_TRANSFORM_SESSIONS
               and source.as_pointer() not in addon._DANP_TRANSACTIONS,
               "native transform commits and closes runtime transaction")
@@ -151,8 +155,7 @@ def run():
                   f"native {label} transform deforms Source")
             check(_max_delta(variant_source, preview, adjacent_vids) <= 1e-7,
                   f"adjacent control remains stationary during {label}")
-            for _ in range(20):
-                lifecycle._native_transform_timer(source.as_pointer())
+            _finish_native(lifecycle, source)
             check(source.as_pointer() not in addon._DANP_TRANSACTIONS,
                   f"native {label} transform commits")
             addon._runtime.SYNC_GUARD = True
@@ -175,6 +178,38 @@ def run():
                 "EXEC_DEFAULT", value=(1.01, 1.01, 1.01), orient_type="GLOBAL"
             ),
         )
+
+        # Two confirmed Scale operations on the same control must compose from
+        # the first committed pose.  The second preview must not rebuild from
+        # the original controller rest (the historical scale-reset bug).
+        consecutive_source = {
+            key: value.copy() for key, value in addon._source_positions(source).items()
+        }
+        consecutive_controller = {
+            key: value.copy()
+            for key, value in addon._transform_session.controller_positions(controller).items()
+        }
+        bpy.ops.transform.resize("EXEC_DEFAULT", value=(1.03, 1.0, 1.0), orient_type="GLOBAL")
+        bpy.context.view_layer.update()
+        _finish_native(lifecycle, source)
+        first_scale = {
+            key: value.copy() for key, value in addon._source_positions(source).items()
+        }
+        bpy.ops.transform.resize("EXEC_DEFAULT", value=(1.04, 1.0, 1.0), orient_type="GLOBAL")
+        bpy.context.view_layer.update()
+        _finish_native(lifecycle, source)
+        second_scale = addon._source_positions(source)
+        check(_max_delta(first_scale, second_scale) > 1e-6,
+              "consecutive native Scale starts from the committed pose")
+        addon._runtime.SYNC_GUARD = True
+        try:
+            addon._write_source_positions(source, consecutive_source)
+            _restore_controller(controller, consecutive_controller, addon)
+        finally:
+            addon._runtime.SYNC_GUARD = False
+        addon._NATIVE_TRANSFORM_SESSIONS.pop(source.as_pointer(), None)
+        addon._NATIVE_UNDO_RECORDS.pop(source.as_pointer(), None)
+        addon._select_proxy_ids(controller, set(selected_vids), set(selected_eids))
 
         # Cancellation API: preview a second edit, then ensure both meshes
         # return to the committed pose without leaving a transaction behind.
