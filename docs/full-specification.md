@@ -863,25 +863,45 @@ justify coordinate-dependent reuse. Source metadata cannot be overwritten from p
 
 # Multiple Templates and Context
 
-**Status: Normative**
+**Status: Normative — see [ADR-014](../decisions/ADR-014-source-controller-ownership.md).**
 
-Each registered Source has a stable template UUID and at most one primary Control Proxy.
+Each registered Source has a stable template UUID and at most one primary
+Controller. The Controller is the Source's direct child and shares its local
+coordinate frame. The parent relation is the ownership link; there is no manual
+linking step and no second Source-to-Controller pointer.
 
 Context resolution:
 
-- active Source → resolve its SourceRecord and Proxy;
-- active Proxy → resolve its owning Source UUID;
-- agent call → explicit Source/template UUID.
+- active Source → inspect its direct DANP-marked mesh children and accept exactly
+  one child whose owner marker matches the Source UUID;
+- active Controller → resolve only its direct parent, then validate the same
+  one-child rule and UUID marker;
+- agent call → resolve a unique, valid bound Source UUID; ambiguous UUIDs fail
+  closed.
 
-Never rely on object names as identity.
+Never use object names, collection order, or the first UUID match as identity.
+UUID is a namespace for persistent element/control IDs and agent handles; it does
+not override the parent relation. A usable pair also requires unique Source UUID
+among bound pairs and single-user editable Source and Controller mesh data.
 
-The prototype rejects shared editable meshes with SOURCE_NOT_EDITABLE and a Make Single
-User recovery action, not an automatic copy. Source UUID plus local element/control ID
-is the canonical key. Independent duplicates may retain local IDs/masks but need a new
-Source UUID and independent proxy. Validate duplicate UUID collisions before editing;
-never choose owners by name/list order or let a copied proxy target the original Source.
+Duplicate behavior is based on the scene state, independent of which Blender
+operation created it:
 
-If a Source is duplicated as an independent editable mesh, the duplicate receives a new template UUID while retaining copied control definitions/persistent topology IDs within its own namespace. Shared editable mesh datablocks should be made single-user before registration to avoid two Sources mutating the same geometry unexpectedly.
+- Mesh-only duplicate → unbound mesh. It cannot resolve the original
+  Controller. DANP marks it as an unbound copy; Initialize clears copied DANP
+  definitions/IDs and creates a fresh, empty pair.
+- Complete Source/Controller pair → independent pair with a fresh UUID. The
+  pair retains its local definitions and persistent IDs. The Controller remains
+  parented to the copied Source.
+- Controller-only duplicate → it does not acquire Source ownership. In a live
+  session, the known extra Controller is detached while preserving its world
+  transform; an ambiguous file loaded without that history is presented for
+  explicit resolution.
+- Shared editable mesh data → reject writes and require Make Single User.
+
+If multiple valid pairs already share a UUID when a file is loaded, no creation
+history exists to identify the original. DANP must block UUID-based operations
+until the user chooses the pair to keep or make independent. It must never guess.
 
 ---
 
@@ -901,6 +921,9 @@ OPERATION_BUSY
 OPERATION_CLOSED
 NO_ACTIVE_SOURCE
 SOURCE_NOT_EDITABLE
+UUID_CONFLICT
+CONTROLLER_CONFLICT
+SHARED_DATA
 PROXY_MISSING
 PROXY_CORRUPT
 STALE_MAPPING (legacy diagnostic; translated to TOPOLOGY_CHANGED in the UI)
@@ -918,6 +941,13 @@ UNSUPPORTED_FEATURE
 Rules:
 
 - mapping/proxy failure never writes Source;
+- Source/Controller ownership is resolved through direct parentage, a single
+  DANP-marked child, matching owner marker, unique identity among bound pairs,
+  and single-user mesh data. UUID-only first-match lookup never grants ownership;
+- a mesh-only duplicate remains unbound even if Blender copied its Source UUID.
+  Initialize gives it a new UUID and clean definitions. A complete duplicate pair
+  gets its own UUID while preserving its local controls/IDs. Ambiguous collisions
+  fail before any Source or Controller write and expose a pair-resolution action;
 - non-finite result with unchanged identity/topology restores P0/proxy and cancels; topology/deletion failures follow operation-semantics.md limits;
 - missing proxy is recoverable by rebuild if Source definitions are valid;
 - a Source topology change pauses DANP without writing stale IDs. Undo restores
@@ -1280,7 +1310,9 @@ Results report status, changed vertex count, warnings and Source/network revisio
 Hide/reveal returns zero coordinate changes and invalidates scope. Human and agent
 use the same targets, constraints and interpolation, including shared-vertex priority.
 
-Bind operation handles to Source UUID, topology fingerprint/generation, network revision,
+Resolve `source_id` only to a unique bound Source. A Source owns exactly one direct
+Controller child; duplicate or shared-data conflicts return a stable error before any
+write. Bind operation handles to Source UUID, topology fingerprint/generation, network revision,
 proxy generation and owner token; check on every action. Rebuild can invalidate old
 node/span handles without changing the effective network. Queries return revisions,
 current positions and Source-scoped IDs.
@@ -1744,6 +1776,22 @@ recording images without deciding acceptance does not pass Gate C.
 - Normal cancel with unchanged identity/topology → exact operation-start Source/Proxy restored.
 - Confirm changed geometry → one logical undoable operation; identity confirm → successful NO_CHANGE without a meaningful extra undo edit.
 - Two independent Sources in one scene → context never crosses.
+- Duplicate only a Source mesh → the copy is marked unbound, has no active controls,
+  and Initialize gives it a fresh empty namespace without changing the original
+  Source coordinates, controls, UUID, Controller, or proxy pose.
+- Duplicate a complete Source/Controller pair while the original pair is registered
+  → reconcile from direct parentage, assign a fresh UUID to the new pair, preserve
+  its local definitions/IDs, and confirm that edits on either pair leave the other
+  pair unchanged.
+- Duplicate only a Controller → the original remains the sole bound child; the
+  extra object becomes unbound with its visible transform preserved.
+- Load a file containing ambiguous duplicate pairs or multiple marked Controller
+  children → all ambiguous writes fail closed; explicitly choosing a pair resolves
+  the collision without changing either mesh's coordinates.
+- Alt+D/shared Source or Controller mesh data → DANP rejects writes before either
+  object changes; Make Single User allows independent registration.
+- Delete/reset/undo/redo and agent UUID lookup with mesh-only or full-pair copies
+  → no first-match binding, cross-pair cleanup, stale cache reuse, or Source change.
 - Hide/reveal whole or partial control → zero Source coordinate change; masks and patch connectivity update together.
 - Hidden contour deforms with Source → reveal follows the committed positions, including after rebuild/save/reload.
 - Hide/reveal undo/redo → exact masks restored, caches invalidated, no extra recovery undo entry.
@@ -1757,7 +1805,8 @@ recording images without deciding acceptance does not pass Gate C.
 - Same counts but changed face connectivity / duplicated element IDs → fingerprint/mapping validation blocks stale edits.
 - Rebuild generation / closed operation token / second commit → no stale handles or repeated writes.
 - Shape Keys, Multires, shared editable and read-only data → explicit prototype rejection before writes.
-- Independent Source duplicate → new Source UUID/proxy, local IDs/masks preserved without cross-control.
+- Full Source/Controller pair duplicate → new Source UUID/proxy and local IDs/masks
+  preserved without cross-control. A mesh-only duplicate starts unbound and clean.
 
 ## User/agent validation — phase 5
 
@@ -1790,7 +1839,7 @@ that tests have already run. Detailed steps are in [tasks](../../tasks/README.md
 
 | Gate | Required evidence |
 | --- | --- |
-| P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one child controller; Source transforms follow once; initialization preserves geometry; undo/save/load/unregister |
+| P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one direct child controller; Source transforms follow once; initialization preserves geometry; mesh-only/full-pair/controller-only duplicate isolation; undo/save/load/unregister |
 | P2 — Controls/sync | Persistent IDs and topology validation; exact Source/proxy mapping; Source edits visibly refresh proxy; canonical whole/partial masks and overlaps; rebuild/save/load/undo without geometry changes |
 | P2-UX — Phase 2 upgrade | Active-model sidebar; repeated Make Control stays Source Edit Mode; definition list/select/rename; derived On/Partial/Hidden; overlap-safe delete; clear Source control overlay; live multi-model/context/lifecycle regression |
 | P3 — Patch UX | Face-connectivity fixtures, incident-patch lookup and invalidation; overlay follows Source; Show Patches changes display only, not masks/partition/geometry |
@@ -2307,10 +2356,14 @@ buffer P0, preview, cache khoảng cách và overlay là runtime, không lưu nh
 Cache partition phụ thuộc topology và effective network; cache khoảng cách/weights
 còn phụ thuộc P0 và proportional. Đổi tên logical control không đổi lời giải.
 
-Parent controller giữ cùng hệ tọa độ local với Source, không thêm offset/scale riêng.
-Transform object Source không phải biến dạng control. Proxy rebuild giữ định nghĩa/
-mask, không Reveal All. Duplicate Source có Source UUID mới; kiểm tra không bind vào
-Source gốc. Các generation/closed-operation checks phải có trước phase 4 ghi preview.
+Controller là con trực tiếp của Source và giữ cùng hệ tọa độ local, không thêm
+offset/scale riêng. Transform object Source không phải biến dạng control. Quan hệ
+parent là liên kết sở hữu duy nhất; UUID không được dùng để chọn Controller. Proxy
+rebuild giữ định nghĩa/mask, không Reveal All. Mesh duplicate riêng lẻ ở trạng thái
+chưa liên kết và Init với control mới; duplicate cả cặp nhận UUID mới và giữ định
+nghĩa/ID cục bộ. Việc hòa giải duplicate dựa trên quan hệ trong scene, không dựa
+vào thao tác Blender tạo object. Collision mơ hồ khi mở file phải chặn ghi. Các
+generation/closed-operation checks phải có trước phase 4 ghi preview.
 
 ## Đồng bộ và thao tác
 
@@ -3894,3 +3947,66 @@ selected samples, Proportional moved vertices, a second stationary control,
 repeated previews, cancel and immediate consecutive transforms. Blender live
 verification checks Controller/Source/overlay agreement without saving the
 user's scene.
+
+---
+
+<!-- source: docs/decisions/ADR-014-source-controller-ownership.md -->
+
+# ADR-014 — Source and Controller ownership
+
+**Status: Accepted — user agreement, 2026-09-23.**
+
+## Context
+
+Source custom properties are copied by Blender object duplication. A copied
+Source therefore keeps `dan_form_source_uuid`; resolving its Controller by UUID
+alone can select the original Source's Controller. Deformation, reset, cleanup,
+or background synchronization can then cross object boundaries.
+
+## Decision
+
+- A DANP Form Controller is owned by exactly one Source: its direct Blender
+  parent. The Source is the geometric source of truth and the Controller stays
+  in the Source's local coordinate frame.
+- The Source does not store a second Controller pointer. Users do not perform a
+  manual link step; the existing parent relation is the ownership link.
+- `dan_form_controller` remains a validation marker and `dan_form_source_uuid`
+  remains a namespace for persisted IDs, controls, and agent handles. Neither
+  property overrides a mismatching parent.
+- A usable pair has exactly one DANP-marked mesh Controller parented directly to
+  the Source, matching Source UUIDs, unique Source UUID among usable pairs, and
+  single-user editable Source geometry. Ambiguous or shared geometry is rejected
+  before writes.
+- A mesh-only duplicate is unbound. It cannot resolve or operate the original
+  Controller. Initializing it gives it a fresh UUID and fresh control mapping.
+- Duplicating a complete Source/Controller pair creates an independent pair. The
+  duplicate retains its local control definitions and persistent element IDs,
+  receives a fresh Source UUID, and its child Controller receives the same new
+  owner marker.
+- Copying a Controller alone never transfers ownership. When the original
+  binding is known in the current session, the new Controller is left unbound.
+  If a saved file contains an ambiguous set of child Controllers, DANP Form
+  fails closed and asks the user to resolve the ambiguity; it never guesses by
+  object name, collection order, or UUID search order.
+- Binding discovery and duplicate reconciliation are based on the resulting
+  scene graph and data ownership, not on a particular Blender operator or input
+  gesture.
+- Cleanup, undo restoration, UI callbacks, lifecycle handlers, and agent
+  lookups must use the same validated binding rules. UUID-only cleanup or lookup
+  must not select a first match.
+
+## Consequences
+
+Parenting remains the only user-facing ownership link and keeps Source/Controller
+transforms aligned. UUID remains necessary for persistent control data and API
+handles, but is not an object pointer. A mesh-only duplicate can carry stale
+copied properties until initialized; it stays inert while unbound. A duplicate
+UUID collision already present when a file is loaded may be ambiguous because
+the original creation history is unavailable; such a file is blocked from
+ambiguous writes until its pair is resolved.
+
+## Validation
+
+Add Blender integration cases for mesh-only, full-pair, and Controller-only
+duplicates; shared mesh data; same-UUID conflicts; save/load; and isolation of
+Source coordinates, control data, Controller state, reset, and cleanup.

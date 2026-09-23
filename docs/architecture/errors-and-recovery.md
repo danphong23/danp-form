@@ -12,6 +12,9 @@ OPERATION_BUSY
 OPERATION_CLOSED
 NO_ACTIVE_SOURCE
 SOURCE_NOT_EDITABLE
+UUID_CONFLICT
+CONTROLLER_CONFLICT
+SHARED_DATA
 PROXY_MISSING
 PROXY_CORRUPT
 STALE_MAPPING (legacy diagnostic; translated to TOPOLOGY_CHANGED in the UI)
@@ -29,6 +32,13 @@ UNSUPPORTED_FEATURE
 Rules:
 
 - mapping/proxy failure never writes Source;
+- Source/Controller ownership is resolved through direct parentage, a single
+  DANP-marked child, matching owner marker, unique identity among bound pairs,
+  and single-user mesh data. UUID-only first-match lookup never grants ownership;
+- a mesh-only duplicate remains unbound even if Blender copied its Source UUID.
+  Initialize gives it a new UUID and clean definitions. A complete duplicate pair
+  gets its own UUID while preserving its local controls/IDs. Ambiguous collisions
+  fail before any Source or Controller write and expose a pair-resolution action;
 - non-finite result with unchanged identity/topology restores P0/proxy and cancels; topology/deletion failures follow operation-semantics.md limits;
 - missing proxy is recoverable by rebuild if Source definitions are valid;
 - a Source topology change pauses DANP without writing stale IDs. Undo restores

@@ -22,6 +22,22 @@
 - Normal cancel with unchanged identity/topology → exact operation-start Source/Proxy restored.
 - Confirm changed geometry → one logical undoable operation; identity confirm → successful NO_CHANGE without a meaningful extra undo edit.
 - Two independent Sources in one scene → context never crosses.
+- Duplicate only a Source mesh → the copy is marked unbound, has no active controls,
+  and Initialize gives it a fresh empty namespace without changing the original
+  Source coordinates, controls, UUID, Controller, or proxy pose.
+- Duplicate a complete Source/Controller pair while the original pair is registered
+  → reconcile from direct parentage, assign a fresh UUID to the new pair, preserve
+  its local definitions/IDs, and confirm that edits on either pair leave the other
+  pair unchanged.
+- Duplicate only a Controller → the original remains the sole bound child; the
+  extra object becomes unbound with its visible transform preserved.
+- Load a file containing ambiguous duplicate pairs or multiple marked Controller
+  children → all ambiguous writes fail closed; explicitly choosing a pair resolves
+  the collision without changing either mesh's coordinates.
+- Alt+D/shared Source or Controller mesh data → DANP rejects writes before either
+  object changes; Make Single User allows independent registration.
+- Delete/reset/undo/redo and agent UUID lookup with mesh-only or full-pair copies
+  → no first-match binding, cross-pair cleanup, stale cache reuse, or Source change.
 - Hide/reveal whole or partial control → zero Source coordinate change; masks and patch connectivity update together.
 - Hidden contour deforms with Source → reveal follows the committed positions, including after rebuild/save/reload.
 - Hide/reveal undo/redo → exact masks restored, caches invalidated, no extra recovery undo entry.
@@ -35,7 +51,8 @@
 - Same counts but changed face connectivity / duplicated element IDs → fingerprint/mapping validation blocks stale edits.
 - Rebuild generation / closed operation token / second commit → no stale handles or repeated writes.
 - Shape Keys, Multires, shared editable and read-only data → explicit prototype rejection before writes.
-- Independent Source duplicate → new Source UUID/proxy, local IDs/masks preserved without cross-control.
+- Full Source/Controller pair duplicate → new Source UUID/proxy and local IDs/masks
+  preserved without cross-control. A mesh-only duplicate starts unbound and clean.
 
 ## User/agent validation — phase 5
 

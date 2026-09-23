@@ -13,7 +13,7 @@ that tests have already run. Detailed steps are in [tasks](../../tasks/README.md
 
 | Gate | Required evidence |
 | --- | --- |
-| P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one child controller; Source transforms follow once; initialization preserves geometry; undo/save/load/unregister |
+| P1 — Bootstrap | Actual extension install/register/sidebar; valid Source bind; one direct child controller; Source transforms follow once; initialization preserves geometry; mesh-only/full-pair/controller-only duplicate isolation; undo/save/load/unregister |
 | P2 — Controls/sync | Persistent IDs and topology validation; exact Source/proxy mapping; Source edits visibly refresh proxy; canonical whole/partial masks and overlaps; rebuild/save/load/undo without geometry changes |
 | P2-UX — Phase 2 upgrade | Active-model sidebar; repeated Make Control stays Source Edit Mode; definition list/select/rename; derived On/Partial/Hidden; overlap-safe delete; clear Source control overlay; live multi-model/context/lifecycle regression |
 | P3 — Patch UX | Face-connectivity fixtures, incident-patch lookup and invalidation; overlay follows Source; Show Patches changes display only, not masks/partition/geometry |

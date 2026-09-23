@@ -37,7 +37,9 @@ Results report status, changed vertex count, warnings and Source/network revisio
 Hide/reveal returns zero coordinate changes and invalidates scope. Human and agent
 use the same targets, constraints and interpolation, including shared-vertex priority.
 
-Bind operation handles to Source UUID, topology fingerprint/generation, network revision,
+Resolve `source_id` only to a unique bound Source. A Source owns exactly one direct
+Controller child; duplicate or shared-data conflicts return a stable error before any
+write. Bind operation handles to Source UUID, topology fingerprint/generation, network revision,
 proxy generation and owner token; check on every action. Rebuild can invalidate old
 node/span handles without changing the effective network. Queries return revisions,
 current positions and Source-scoped IDs.

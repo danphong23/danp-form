@@ -30,8 +30,11 @@ from .core.proportional import alpha as _core_proportional_alpha
 from .core.graph import distances as _core_graph_distances
 from .core.deformation import compute_preview as _core_compute_preview
 from .blender.context import context_source as _context_source
+from .blender.context import binding_status as _binding_status
+from .blender.context import controller_children as _controller_children
 from .blender.context import find_controller as _find_controller
 from .blender.context import find_source_by_uuid as _find_source_by_uuid
+from .blender.context import source_objects_by_uuid as _source_objects_by_uuid
 from .blender.context import source_for_controller as _source_for_controller
 from .blender.context import controller_collection as _controller_collection
 from .blender.context import select_only as _select_only
@@ -130,7 +133,7 @@ _MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 27),
+    "version": (0, 5, 28),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",

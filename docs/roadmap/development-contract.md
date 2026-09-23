@@ -43,10 +43,14 @@ buffer P0, preview, cache khoảng cách và overlay là runtime, không lưu nh
 Cache partition phụ thuộc topology và effective network; cache khoảng cách/weights
 còn phụ thuộc P0 và proportional. Đổi tên logical control không đổi lời giải.
 
-Parent controller giữ cùng hệ tọa độ local với Source, không thêm offset/scale riêng.
-Transform object Source không phải biến dạng control. Proxy rebuild giữ định nghĩa/
-mask, không Reveal All. Duplicate Source có Source UUID mới; kiểm tra không bind vào
-Source gốc. Các generation/closed-operation checks phải có trước phase 4 ghi preview.
+Controller là con trực tiếp của Source và giữ cùng hệ tọa độ local, không thêm
+offset/scale riêng. Transform object Source không phải biến dạng control. Quan hệ
+parent là liên kết sở hữu duy nhất; UUID không được dùng để chọn Controller. Proxy
+rebuild giữ định nghĩa/mask, không Reveal All. Mesh duplicate riêng lẻ ở trạng thái
+chưa liên kết và Init với control mới; duplicate cả cặp nhận UUID mới và giữ định
+nghĩa/ID cục bộ. Việc hòa giải duplicate dựa trên quan hệ trong scene, không dựa
+vào thao tác Blender tạo object. Collision mơ hồ khi mở file phải chặn ghi. Các
+generation/closed-operation checks phải có trước phase 4 ghi preview.
 
 ## Đồng bộ và thao tác
 

@@ -16,8 +16,8 @@
   },
   {
     "path": "docs/agent/api-contract.md",
-    "sha256": "90e9606561013a5b7a0701d8cc603bce3633af032ba0aca9edf91abedac059f0",
-    "bytes": 5496
+    "sha256": "6493b0fcf60dcc15257fa5c59a7daf4e6198eb9dbc2acbd9bad980cc9adc4c1a",
+    "bytes": 5673
   },
   {
     "path": "docs/agent/shared-primitives.md",
@@ -31,8 +31,8 @@
   },
   {
     "path": "docs/architecture/errors-and-recovery.md",
-    "sha256": "ee73ecf85f35ba310954ac44cdea57bf963aa40765123c9ec883f534e8edee65",
-    "bytes": 2317
+    "sha256": "752324a4002220e60ec9b63d7b7a9c0b2479421f3b7339b2438963d66fc9a7a9",
+    "bytes": 2927
   },
   {
     "path": "docs/architecture/mapping-and-sync.md",
@@ -46,8 +46,8 @@
   },
   {
     "path": "docs/architecture/multi-template.md",
-    "sha256": "3e32b92aca3aa89551cdf8b6344a4d741ffa2e6f588b5d89e4bc1594f5187889",
-    "bytes": 1139
+    "sha256": "0f619eca4657685b9d92d425b9453c19897948d3d4342448f8ffaf1b937fc9c9",
+    "bytes": 2168
   },
   {
     "path": "docs/architecture/system-overview.md",
@@ -175,6 +175,11 @@
     "bytes": 2241
   },
   {
+    "path": "docs/decisions/ADR-014-source-controller-ownership.md",
+    "sha256": "00908f1cbbe9f0deb500ac3d4d8c8a5704697aad29771fe220b1217e42ae35a7",
+    "bytes": 3138
+  },
+  {
     "path": "docs/decisions/open-decisions.md",
     "sha256": "e68f6baf67f3e4c5d65c2d2876560f72c10383bc57a39ae04a27ca7e21cf5da8",
     "bytes": 2305
@@ -191,8 +196,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "5e15b335a9426b38f177138ed21d5804f882889b4dd580b45f5b2f56944f4fb2",
-    "bytes": 236517
+    "sha256": "b542e4eb48c6bb1fb73e51e4e818b07f8e5a83c88702c64a7daaa586651465e4",
+    "bytes": 243254
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -231,8 +236,8 @@
   },
   {
     "path": "docs/roadmap/development-contract.md",
-    "sha256": "08bda0fe2d6b56af2d3a08acbffbb0b22c97cf7b0ba6c92206a565f3e495935b",
-    "bytes": 4950
+    "sha256": "4af6f4de6d807fed4537164231b9e6ac1515d916c21be62794e47d7e1b0951fb",
+    "bytes": 5332
   },
   {
     "path": "docs/roadmap/implementation-plan.md",
@@ -251,13 +256,13 @@
   },
   {
     "path": "docs/testing/acceptance-gates.md",
-    "sha256": "b2d85261bf18170aa1d49c675b2a83d01d192a50d2fd06f66ce47779bc0c4d22",
-    "bytes": 5915
+    "sha256": "2915dc4b469b48b8ff3db40b0a6f4b79bff8d091781ae34e83e3f5ca944b3d0c",
+    "bytes": 5979
   },
   {
     "path": "docs/testing/blender-integration-cases.md",
-    "sha256": "05e8b34bb051961e4ed28156092773f69b3bfc439a45fbad44d8d43676c9cc60",
-    "bytes": 4109
+    "sha256": "513c280d1e77eecdd02aa5829733533f843c379ba8a72541c18255c1dad5934c",
+    "bytes": 5368
   },
   {
     "path": "docs/testing/cleanup-2026-09-21.md",

@@ -10,6 +10,7 @@ from __future__ import annotations
 import bpy
 from bpy.app.handlers import persistent
 from mathutils import Vector
+import uuid
 
 from .. import runtime
 from ..constants import *
@@ -32,6 +33,7 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
         return
     runtime.SYNC_GUARD = True
     try:
+        _reconcile_duplicate_bindings()
         _cleanup_orphaned_owned_objects()
         changed_geometry = {update.id.original.as_pointer() for update in depsgraph.updates if update.is_updated_geometry}
         for source, controller in _source_controller_pairs():
@@ -99,6 +101,127 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             bpy.context.scene.dan_form_status = f"Error: {exc}"
     finally:
         runtime.SYNC_GUARD = False
+
+
+def _remember_binding(source, controller) -> None:
+    source_uuid = str(source.get(SOURCE_UUID_KEY, "")) if source is not None else ""
+    if source_uuid and controller is not None and controller.parent == source:
+        runtime.BINDING_OWNERS[source_uuid] = (source.as_pointer(), controller.as_pointer())
+
+
+def _forget_binding(source) -> None:
+    if source is None:
+        return
+    pointer = source.as_pointer()
+    for source_uuid, record in list(runtime.BINDING_OWNERS.items()):
+        if record[0] == pointer:
+            runtime.BINDING_OWNERS.pop(source_uuid, None)
+
+
+def _find_object_by_pointer(pointer):
+    if not pointer:
+        return None
+    return next((obj for obj in bpy.data.objects if obj.as_pointer() == pointer), None)
+
+
+def _source_has_matching_child(source, source_uuid):
+    children = _controller_children(source)
+    return len(children) == 1 and children[0].get(CONTROLLER_KEY) == source_uuid
+
+
+def _reconcile_duplicate_bindings() -> int:
+    """Rekey new complete pairs by observed ownership, independent of copy gesture."""
+    changed = 0
+    seen_uuids = {
+        str(obj.get(SOURCE_UUID_KEY))
+        for obj in bpy.data.objects
+        if obj.type == "MESH" and obj.get(CONTROLLER_KEY) is None and obj.get(SOURCE_UUID_KEY)
+    }
+    # A single direct parent/child pair plus one or more childless meshes is
+    # unambiguous: the childless objects are mesh-only copies. Strip only their
+    # object-local DANP state and unique mesh ID attributes, then leave them
+    # explicitly unbound. This also repairs such files on load without needing
+    # operator history.
+    for source_uuid in seen_uuids:
+        sources = _source_objects_by_uuid(source_uuid)
+        if len(sources) < 2:
+            continue
+        owners = [source for source in sources if _source_has_matching_child(source, source_uuid)]
+        if len(owners) != 1:
+            continue
+        owner = owners[0]
+        for duplicate_source in sources:
+            if duplicate_source == owner or _controller_children(duplicate_source):
+                continue
+            _clear_duplicate_source_state(duplicate_source)
+            duplicate_source[UNBOUND_COPY_KEY] = True
+            changed += 1
+
+    for source_uuid, owner_record in list(runtime.BINDING_OWNERS.items()):
+        owner = _find_object_by_pointer(owner_record[0])
+        owner_controller = _find_object_by_pointer(owner_record[1])
+        if (owner is None or owner.get(SOURCE_UUID_KEY) != source_uuid
+                or owner_controller is None or owner_controller.parent != owner
+                or owner_controller.get(CONTROLLER_KEY) != source_uuid):
+            runtime.BINDING_OWNERS.pop(source_uuid, None)
+            continue
+
+        # A Controller-only copy creates an extra marked child. The already
+        # registered child remains authoritative for this running session.
+        # Demote only the newly observed child; do not touch its geometry.
+        for child in _controller_children(owner):
+            if child != owner_controller and child.get(CONTROLLER_KEY) == source_uuid:
+                world = child.matrix_world.copy()
+                child.parent = None
+                child.matrix_world = world
+                child[UNBOUND_COPY_KEY] = True
+                changed += 1
+
+        for duplicate_source in _source_objects_by_uuid(source_uuid):
+            if duplicate_source == owner:
+                continue
+            children = _controller_children(duplicate_source)
+            if not children:
+                # Mesh-only copies remain unbound and inert. Their copied UUID
+                # is handled by the Source resolver and Initialize action.
+                duplicate_source[UNBOUND_COPY_KEY] = True
+                changed += 1
+                continue
+            if not _source_has_matching_child(duplicate_source, source_uuid):
+                continue
+            duplicate_controller = children[0]
+            if (getattr(duplicate_source.data, "users", 1) > 1
+                    or getattr(duplicate_controller.data, "users", 1) > 1):
+                continue
+            fresh_uuid = uuid.uuid4().hex
+            while _source_objects_by_uuid(fresh_uuid):
+                fresh_uuid = uuid.uuid4().hex
+            duplicate_source[SOURCE_UUID_KEY] = fresh_uuid
+            duplicate_source.pop(UNBOUND_COPY_KEY, None)
+            duplicate_controller[CONTROLLER_KEY] = fresh_uuid
+            duplicate_source["dan_form_controller_name"] = duplicate_controller.name
+            duplicate_controller["dan_form_source_name"] = duplicate_source.name
+            runtime.BINDING_OWNERS[fresh_uuid] = (
+                duplicate_source.as_pointer(), duplicate_controller.as_pointer()
+            )
+            changed += 1
+
+    # Register newly initialized pairs while retaining known owners through
+    # ordinary depsgraph updates. Conflicted loaded files are deliberately not
+    # assigned an arbitrary winner.
+    for source, controller in _source_controller_pairs():
+        current = runtime.BINDING_OWNERS.get(str(source.get(SOURCE_UUID_KEY, "")))
+        if current is None or current == (source.as_pointer(), controller.as_pointer()):
+            _remember_binding(source, controller)
+    return changed
+
+
+def _refresh_binding_registry(clear: bool = False) -> None:
+    if clear:
+        runtime.BINDING_OWNERS.clear()
+    _reconcile_duplicate_bindings()
+    for source, controller in _source_controller_pairs():
+        _remember_binding(source, controller)
 
 
 def _set_topology_paused_status(source) -> None:
@@ -302,6 +425,7 @@ def _refresh_runtime(_unused=None, direction=None) -> None:
     _PATCH_OVERLAY_CACHE.clear()
     _FACE_CACHE.clear()
     _OVERLAY_CACHE.clear()
+    _refresh_binding_registry()
     # Undo/redo handlers run inside Blender's undo stack.  Defer Source mesh
     # writeback until the handler has returned; writing BMesh data re-entrantly
     # from undo_post can deadlock or invalidate the active edit mesh.
@@ -327,6 +451,7 @@ def _redo_post(_unused=None) -> None:
 @persistent
 def _load_post(_unused=None) -> None:
     runtime.NATIVE_UNDO_RECORDS.clear()
+    _refresh_binding_registry(clear=True)
     _refresh_runtime(_unused)
     _PICK_PREVIEW.clear()
     _MAPPING_CACHE.clear()
@@ -368,9 +493,7 @@ def _restore_native_undo_records(direction: str):
         for source_ptr, record in list(runtime.NATIVE_UNDO_RECORDS.items()):
             source = next((obj for obj in bpy.data.objects if obj.as_pointer() == source_ptr), None)
             if source is None and record.get("source_uuid"):
-                matches = [obj for obj in bpy.data.objects
-                           if obj.get(SOURCE_UUID_KEY) == record["source_uuid"]]
-                source = matches[0] if len(matches) == 1 else None
+                source = _find_source_by_uuid(record["source_uuid"])
             if source is None:
                 runtime.NATIVE_UNDO_RECORDS.pop(source_ptr, None)
                 continue
@@ -385,9 +508,7 @@ def _restore_native_undo_records(direction: str):
                     controller = controllers.get(item.get("controller"))
                     if controller is not None:
                         return controller
-                    matches = [obj for obj in bpy.data.objects
-                               if obj.get(CONTROLLER_KEY) == source.get(SOURCE_UUID_KEY)]
-                    return matches[0] if len(matches) == 1 else None
+                    return _find_controller(source)
 
                 def controller_pose_matches(item, expected_key):
                     controller = controller_for(item)
@@ -454,4 +575,4 @@ def _restore_native_undo_records(direction: str):
         runtime.NATIVE_UNDO_DIRECTION = None
 
 
-__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision", "_cleanup_orphaned_owned_objects"]
+__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision", "_cleanup_orphaned_owned_objects", "_remember_binding", "_forget_binding", "_reconcile_duplicate_bindings", "_refresh_binding_registry"]

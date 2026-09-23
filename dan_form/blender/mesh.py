@@ -50,6 +50,8 @@ def _validate_source_topology(source: bpy.types.Object) -> None:
 def _topology_state(source: bpy.types.Object | None) -> dict:
     if source is None:
         return {"state": "UNBOUND"}
+    if source.get(UNBOUND_COPY_KEY):
+        return {"state": "UNBOUND"}
     state = runtime.TOPOLOGY_STATES.get(source.as_pointer())
     if state is not None:
         return dict(state)

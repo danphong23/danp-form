@@ -41,7 +41,41 @@ def _friendly_error(exc: Exception) -> str:
         return "Phiên chỉnh sửa đã cũ; hãy xác nhận/hủy thao tác rồi bắt đầu lại."
     if code == "WORLD_SPACE_MATRIX_REQUIRED":
         return "Transform WORLD cần ma trận Source; hãy dùng transform Source-local của DANP."
+    if code in {"UUID_CONFLICT", "CONTROLLER_CONFLICT"}:
+        return "DANP phát hiện nhiều cặp trùng hoặc Controller không rõ chủ sở hữu. Hãy chọn cặp cần giữ và tách danh tính trước khi sửa."
+    if code == "SHARED_DATA":
+        return "Mesh hoặc Controller đang dùng chung dữ liệu. Hãy Make Single User trước khi chỉnh bằng DANP."
     return code
+
+
+_SOURCE_DANP_KEYS = (
+    SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
+    HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
+    NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY, ORIGINAL_TOPOLOGY_KEY,
+    "dan_form_controller_name", UNBOUND_COPY_KEY,
+)
+
+
+def _clear_duplicate_source_state(source) -> None:
+    """Turn a mesh-only duplicate into a clean Source without touching its owner."""
+    source_uuid = str(source.get(SOURCE_UUID_KEY, ""))
+    uuid_is_shared = any(other != source for other in _source_objects_by_uuid(source_uuid)) if source_uuid else False
+    _discard_source_runtime(source)
+    for key in _SOURCE_DANP_KEYS:
+        if key in source:
+            del source[key]
+    if getattr(source.data, "users", 1) == 1:
+        for name in (VID_ATTR, EID_ATTR):
+            attribute = source.data.attributes.get(name)
+            if attribute is not None:
+                source.data.attributes.remove(attribute)
+    _MAPPING_CACHE.pop(source.as_pointer(), None)
+    _NETWORK_CACHE.pop(source.as_pointer(), None)
+    _invalidate_patch_cache(source)
+    _OVERLAY_CACHE.clear()
+    if not uuid_is_shared:
+        _ACTIVE_CONTROL_UUIDS.pop(source_uuid, None)
+        _RETURN_MODES.pop(source_uuid, None)
 
 
 def _capture_original_snapshot(source) -> None:
@@ -74,6 +108,7 @@ def _discard_source_runtime(source: bpy.types.Object | None) -> None:
     if source is None:
         return
     key = source.as_pointer()
+    _forget_binding(source)
     runtime.DANP_TRANSACTIONS.pop(key, None)
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
     runtime.NATIVE_UNDO_RECORDS.pop(key, None)
@@ -106,9 +141,20 @@ class DANFORM_OT_initialize(bpy.types.Operator):
         scene = context.scene
         source = context.view_layer.objects.active
         try:
+            _reconcile_duplicate_bindings()
             _require_structural_idle(source)
             if not _is_valid_source(source):
                 raise ValueError("SOURCE_NOT_EDITABLE")
+            binding = _binding_status(source)
+            if binding == "DUPLICATE_UNBOUND":
+                _clear_duplicate_source_state(source)
+            elif binding == "UUID_CONFLICT" and not _controller_children(source):
+                # With no child Controller, the selected mesh can be explicitly
+                # initialized as a clean independent Source; sibling objects
+                # keep their own stored data and geometry.
+                _clear_duplicate_source_state(source)
+            elif binding in {"UUID_CONFLICT", "CONTROLLER_CONFLICT", "SHARED_DATA"}:
+                raise ValueError(binding)
             controller = _find_controller(source)
             if controller is None:
                 _ensure_source_ids(source)
@@ -131,12 +177,88 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 _guard_proxy_topology(source, controller)
                 _capture_original_snapshot(source)
             source["dan_form_controller_name"] = controller.name
+            source.pop(UNBOUND_COPY_KEY, None)
+            _remember_binding(source, controller)
             _set_scene_context(context, source, controller)
             scene.dan_form_status = f"Ready: {source.name} / {controller.name}"
             self.report({"INFO"}, "DANP Form controller ready")
             return {"FINISHED"}
         except ValueError as exc:
             scene.dan_form_status = _friendly_error(exc)
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_resolve_duplicate_pair(bpy.types.Operator):
+    bl_idname = "dan_form.resolve_duplicate_pair"
+    bl_label = "Keep This DANP Pair"
+    bl_description = "Keep the selected Source/Controller relationship and assign a unique DANP identity"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        active = context.view_layer.objects.active
+        if active is None or active.type != "MESH":
+            return False
+        source = active.parent if active.get(CONTROLLER_KEY) is not None else active
+        return (
+            source is not None and source.type == "MESH"
+            and _binding_status(source) in {"UUID_CONFLICT", "CONTROLLER_CONFLICT"}
+        )
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
+
+    def execute(self, context):
+        active = context.view_layer.objects.active
+        source = active.parent if active.get(CONTROLLER_KEY) is not None else active
+        try:
+            candidates = _controller_children(source)
+            controller = active if active.get(CONTROLLER_KEY) is not None else None
+            if controller is None:
+                if len(candidates) != 1:
+                    raise ValueError("CONTROLLER_CONFLICT")
+                controller = candidates[0]
+            if controller.parent != source or controller not in candidates:
+                raise ValueError("CONTROLLER_CONFLICT")
+            if getattr(source.data, "users", 1) > 1 or getattr(controller.data, "users", 1) > 1:
+                raise ValueError("SHARED_DATA")
+            source_uuid = str(source.get(SOURCE_UUID_KEY, ""))
+            if not source_uuid:
+                raise ValueError("CONTROLLER_CONFLICT")
+
+            # The active Controller is an explicit choice when a Source has
+            # several children. Detach other DANP-marked children while keeping
+            # their visible world transforms and mesh data intact.
+            for other in candidates:
+                if other == controller:
+                    continue
+                world = other.matrix_world.copy()
+                other.parent = None
+                other.matrix_world = world
+                other[UNBOUND_COPY_KEY] = True
+
+            new_uuid = uuid.uuid4().hex
+            while _source_objects_by_uuid(new_uuid):
+                new_uuid = uuid.uuid4().hex
+            source[SOURCE_UUID_KEY] = new_uuid
+            source.pop(UNBOUND_COPY_KEY, None)
+            controller[CONTROLLER_KEY] = new_uuid
+            source["dan_form_controller_name"] = controller.name
+            controller["dan_form_source_name"] = source.name
+            for obj in bpy.data.objects:
+                if obj.parent == source and obj.get(FACE_SOURCE_UUID_KEY) == source_uuid:
+                    obj[FACE_SOURCE_UUID_KEY] = new_uuid
+            for key, record in list(runtime.BINDING_OWNERS.items()):
+                if record[0] == source.as_pointer():
+                    runtime.BINDING_OWNERS.pop(key, None)
+            _remember_binding(source, controller)
+            _set_scene_context(context, source, controller)
+            context.scene.dan_form_status = f"DANP pair resolved: {source.name}"
+            self.report({"INFO"}, "Đã giữ cặp DANP được chọn và cấp danh tính riêng")
+            return {"FINISHED"}
+        except ValueError as exc:
+            context.scene.dan_form_status = _friendly_error(exc)
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -756,10 +878,7 @@ class DANFORM_OT_remove(bpy.types.Operator):
                 attr = source.data.attributes.get(name)
                 if attr is not None:
                     source.data.attributes.remove(attr)
-            for key in (SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
-                        HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
-                        NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY,
-                        ORIGINAL_TOPOLOGY_KEY, "dan_form_controller_name"):
+            for key in _SOURCE_DANP_KEYS:
                 if key in source:
                     del source[key]
             _MAPPING_CACHE.pop(source.as_pointer(), None)
@@ -833,10 +952,7 @@ class DANFORM_OT_reset(bpy.types.Operator):
                 attr = source.data.attributes.get(name)
                 if attr is not None:
                     source.data.attributes.remove(attr)
-            for key in (SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
-                        HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
-                        NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY,
-                        ORIGINAL_TOPOLOGY_KEY, "dan_form_controller_name"):
+            for key in _SOURCE_DANP_KEYS:
                 if key in source:
                     del source[key]
             _MAPPING_CACHE.pop(source.as_pointer(), None)
@@ -860,6 +976,7 @@ class DANFORM_OT_reset(bpy.types.Operator):
             fresh.display_type = "WIRE"
             fresh.hide_render = True
             _rebuild_proxy(source, fresh)
+            _remember_binding(source, fresh)
             source["dan_form_controller_name"] = fresh.name
             _set_scene_context(context, source, fresh)
             _select_only(context, source)
@@ -1689,6 +1806,27 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         source, controller = _context_source(context)
         active = context.view_layer.objects.active
         if source is None:
+            if active is not None and active.type == "MESH":
+                state_source = active.parent if active.get(CONTROLLER_KEY) is not None else active
+                state = _binding_status(state_source)
+                if state == "DUPLICATE_UNBOUND":
+                    layout.label(text="Bản sao mesh chưa có Controller DANP", icon="INFO")
+                    layout.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
+                    return
+                if state in {"UUID_CONFLICT", "CONTROLLER_CONFLICT"}:
+                    layout.label(text="Quan hệ DANP đang trùng hoặc chưa rõ", icon="ERROR")
+                    if active.get(CONTROLLER_KEY) is not None or len(_controller_children(state_source)) == 1:
+                        layout.operator(DANFORM_OT_resolve_duplicate_pair.bl_idname, text="Keep This Pair", icon="LINKED")
+                    elif not _controller_children(state_source):
+                        layout.label(text="Init mesh này sẽ tạo DANP riêng, control cũ trên mesh này bị xóa")
+                        layout.operator(DANFORM_OT_initialize.bl_idname, text="Init Mesh Riêng", icon="ADD")
+                    else:
+                        layout.label(text="Chọn Controller muốn giữ rồi giải quyết cặp", icon="INFO")
+                    return
+                if state == "SHARED_DATA":
+                    layout.label(text="Mesh/Controller dùng chung dữ liệu", icon="ERROR")
+                    layout.label(text="Make Single User trước khi dùng DANP")
+                    return
             layout.label(text="Chọn một mesh DANP Form hoặc controller", icon="INFO")
             return
         if active == source:
@@ -1794,6 +1932,7 @@ CLASSES = (
     DANFORM_PG_ControlItem,
     DANFORM_UL_controls,
     DANFORM_OT_initialize,
+    DANFORM_OT_resolve_duplicate_pair,
     DANFORM_OT_sync,
     DANFORM_OT_create_control,
     DANFORM_OT_sync_control,
@@ -1824,8 +1963,9 @@ CLASSES = (
 
 __all__ = [
     "bind", "CLASSES",
+    "_clear_duplicate_source_state",
     "DANFORM_PG_ControlItem", "DANFORM_UL_controls", "DANFORM_MT_control_menu", "DANFORM_MT_manage",
-    "DANFORM_PT_sidebar", "DANFORM_OT_initialize", "DANFORM_OT_sync",
+    "DANFORM_PT_sidebar", "DANFORM_OT_initialize", "DANFORM_OT_resolve_duplicate_pair", "DANFORM_OT_sync",
     "DANFORM_OT_sync_control", "DANFORM_OT_move_control", "DANFORM_OT_create_control",
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",
     "DANFORM_OT_delete_control", "DANFORM_OT_hide_selected", "DANFORM_OT_reveal",

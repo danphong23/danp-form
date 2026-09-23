@@ -33,3 +33,7 @@ NATIVE_UNDO_TIMER = False
 NATIVE_UNDO_DIRECTION = None
 TOPOLOGY_STATES = {}
 MODIFIER_SIGNATURES = {}
+# Current-session evidence for duplicate reconciliation.  This is deliberately
+# runtime-only: a file loaded with an already ambiguous UUID/parent graph must
+# fail closed because its creation history is unavailable.
+BINDING_OWNERS = {}

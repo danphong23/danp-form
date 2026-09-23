@@ -90,8 +90,12 @@ def run():
         check(bpy.ops.dan_form.initialize() == {'FINISHED'}, 'Init model')
         controller = addon._find_controller(model)
         records = panel_records()
-        check(any(r[0] == 'dan_form.initialize' for r in records), 'bound model keeps Init')
-        check(any(r[0] == 'dan_form.remove' and r[2] for r in records), 'model shows red Remove DANP Form')
+        check(any(r[0] == 'dan_form.reset_source' for r in records)
+              and not any(r[0] == 'dan_form.initialize' for r in records),
+              'bound model shows Reset Model instead of Init')
+        manage_records = []
+        addon.DANFORM_MT_manage.draw(SimpleNamespace(layout=LayoutRecorder(manage_records)), ctx)
+        check(any(r[0] == 'dan_form.remove' for r in manage_records), 'Manage menu exposes Remove DANP Form')
         original_controller = controller
         check(bpy.ops.dan_form.initialize() == {'FINISHED'} and addon._find_controller(model) == original_controller, 'repeat Init reuses controller')
         bpy.ops.object.mode_set(mode='EDIT')
