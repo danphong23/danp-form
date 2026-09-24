@@ -13,6 +13,8 @@ from ..constants import *
 from ..core.deformation import compute_preview
 from ..core.operation import OperationTransform, targets_from_transform
 
+_USE_ACTIVE_SHAPE_KEY = object()
+
 
 @dataclass(frozen=True)
 class WorkflowDeps:
@@ -22,6 +24,11 @@ class WorkflowDeps:
     validate_source_topology: Callable
     controller_selected_source_ids: Callable
     source_positions: Callable
+    source_vertices: Callable
+    active_shape_key: Callable
+    shape_key_signature: Callable
+    controller_positions: Callable
+    undo_records: dict
     patch_partition: Callable
     effective_proxy_elements: Callable
     source_edge_vids: Callable
@@ -42,14 +49,18 @@ def update_revision(source: bpy.types.Object) -> None:
 
 def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -> dict:
     """Capture one immutable operation rest and its incident patch scope."""
-    key = source.as_pointer()
-    if key in deps.transactions and not deps.transactions[key].get("closed"):
+    source_ptr = source.as_pointer()
+    if source_ptr in deps.transactions and not deps.transactions[source_ptr].get("closed"):
         raise ValueError("OPERATION_BUSY")
     if source.mode not in {"OBJECT", "EDIT"} or controller.mode != "EDIT":
         raise ValueError("CONTROLLER_EDIT_MODE_REQUIRED")
     deps.validate_source_topology(source)
     selected = deps.controller_selected_source_ids(controller)
-    current = deps.source_positions(source)
+    active_key = deps.active_shape_key(source)
+    if active_key is not None and bool(active_key.lock_shape):
+        raise ValueError("SHAPE_KEY_LOCKED")
+    shape_key_target = active_key if active_key is not None else BASE_MESH_TARGET
+    current = deps.source_positions(source, shape_key_target)
     hidden = deps.hidden(source, HIDDEN_VIDS_KEY)
     selected.difference_update(hidden)
     if not selected:
@@ -65,6 +76,9 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
         "network": source.get(NETWORK_REVISION_KEY),
         "proxy_generation": controller.get(PROXY_GENERATION_KEY),
         "modifier_signature": deps.modifier_signature(source),
+        "shape_key_signature": deps.shape_key_signature(source),
+        "shape_key_target": shape_key_target,
+        "controller_pre": deps.controller_positions(controller),
         "p0": current,
         "selected": selected, "selection": set(selected), "scope": scope,
         "closed": False, "preview": None,
@@ -73,12 +87,18 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
             for control in deps.controls(source)
         },
     }
-    deps.transactions[key] = tx
+    deps.transactions[source_ptr] = tx
     return tx
 
 
-def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector], deps) -> bool:
+def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector], deps,
+                           allow_locked: bool = False, shape_key=_USE_ACTIVE_SHAPE_KEY) -> bool:
     vids, _ = deps.source_id_maps(source)
+    key = deps.active_shape_key(source) if shape_key is _USE_ACTIVE_SHAPE_KEY else shape_key
+    is_base_mesh = isinstance(key, str) and key == BASE_MESH_TARGET
+    if key is not None and not is_base_mesh and bool(key.lock_shape) and not allow_locked:
+        raise ValueError("SHAPE_KEY_LOCKED")
+    vertices = deps.source_vertices(source, key)
     changed = False
     if source.mode == "EDIT":
         bm = bmesh.from_edit_mesh(source.data)
@@ -94,11 +114,15 @@ def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector
     else:
         for vid, position in positions.items():
             index = vids.get(int(vid))
-            if index is not None and (source.data.vertices[index].co - position).length_squared > 1e-16:
-                source.data.vertices[index].co = position
+            if index is not None and (vertices[index].co - position).length_squared > 1e-16:
+                vertices[index].co = position
                 changed = True
         if changed:
             source.data.update()
+            shape_keys = source.data.shape_keys
+            if shape_keys is not None:
+                shape_keys.update_tag()
+            source.update_tag(refresh={"DATA"})
     if changed:
         # Source coordinates are the overlay's only geometric truth.  This
         # invalidation also covers deferred Undo/Redo repair, where the normal
@@ -116,6 +140,14 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
                     selection_intent: set[int] | None = None) -> dict:
     key = source.as_pointer(); tx = deps.transactions.get(key)
     if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
+    current_shape_signature = deps.shape_key_signature(source)
+    expected_shape_signature = tx["shape_key_signature"]
+    if current_shape_signature[:3] != expected_shape_signature[:3]:
+        raise ValueError("SHAPE_KEY_TARGET_CHANGED")
+    if current_shape_signature[3]:
+        raise ValueError("SHAPE_KEY_LOCKED")
+    if current_shape_signature[4:] != expected_shape_signature[4:]:
+        raise ValueError("OPERATION_STALE")
     if (source.get(TOPOLOGY_KEY) != tx["topology"]
             or source.get(NETWORK_REVISION_KEY) != tx["network"]
             or controller.get(PROXY_GENERATION_KEY) != tx["proxy_generation"]
@@ -152,7 +184,8 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         control_groups=tx.get("control_groups"),
         selection_intent=intent,
     )
-    write_source_positions(source, {vid: output[vid] for vid in tx["scope"] if vid in output}, deps)
+    write_source_positions(source, {vid: output[vid] for vid in tx["scope"] if vid in output},
+                           deps, shape_key=tx.get("shape_key_target"))
     # During native Controller Edit transforms Blender owns the proxy
     # coordinates.  Syncing it back here would erase the live G/R/S preview;
     # the bridge commits/cancels the proxy only after Blender finishes.
@@ -168,13 +201,40 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
 def deform_commit(source: bpy.types.Object, deps) -> None:
     tx = deps.transactions.get(source.as_pointer())
     if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
+    controller = next((obj for obj in bpy.data.objects
+                       if obj.as_pointer() == tx.get("controller")), None)
+    source_post = deps.source_positions(source, tx.get("shape_key_target"))
+    source_pre = tx.get("p0", {})
+    changed = any(
+        vertex_id in source_pre and (position - source_pre[vertex_id]).length_squared > 1e-14
+        for vertex_id, position in source_post.items()
+    )
+    if changed and controller is not None:
+        record = {
+            "source": source.as_pointer(),
+            "source_uuid": source.get(SOURCE_UUID_KEY),
+            "controller": controller.as_pointer(),
+            "shape_key_target": tx.get("shape_key_target"),
+            "source_pre": {int(vid): position.copy() for vid, position in source_pre.items()},
+            "source_post": {int(vid): position.copy() for vid, position in source_post.items()},
+            "controller_pre": {
+                int(vid): position.copy()
+                for vid, position in tx.get("controller_pre", {}).items()
+            },
+            "controller_post": deps.controller_positions(controller),
+            "state": "committed",
+        }
+        history = deps.undo_records.setdefault(source.as_pointer(), {}).setdefault("history", [])
+        history.append(record)
+        deps.undo_records[source.as_pointer()].update(record)
     tx["closed"] = True; deps.transactions.pop(source.as_pointer(), None)
 
 
 def deform_cancel(source: bpy.types.Object, controller: bpy.types.Object, deps) -> None:
     tx = deps.transactions.get(source.as_pointer())
     if tx is None or tx.get("closed"): raise ValueError("OPERATION_CLOSED")
-    write_source_positions(source, tx["p0"], deps)
+    write_source_positions(source, tx["p0"], deps, allow_locked=True,
+                           shape_key=tx.get("shape_key_target"))
     deps.sync_proxy(source, controller)
     tx["closed"] = True; deps.transactions.pop(source.as_pointer(), None)
 

@@ -220,13 +220,42 @@ def _source_edge_vids(source):
     return runtime.MAPPING_CACHE[source.as_pointer()][4]
 
 
-def _source_vertices(source):
-    """Borrow vertices for one synchronous read, never across callbacks or undo."""
+def _source_vertices(source, shape_key=None):
+    """Borrow the selected Shape Key coordinates, or base vertices when absent."""
     if source.mode == "EDIT":
         bm = bmesh.from_edit_mesh(source.data)
         bm.verts.ensure_lookup_table()
         return bm.verts
+    if isinstance(shape_key, str) and shape_key == BASE_MESH_TARGET:
+        return source.data.vertices
+    key = shape_key if shape_key is not None else _active_shape_key(source)
+    if key is not None:
+        return key.data
     return source.data.vertices
+
+
+def _active_shape_key(source: bpy.types.Object | None):
+    """Return Source's active key; ShapeKey.data is the editable coordinate store."""
+    if source is None or source.type != "MESH" or source.data is None:
+        return None
+    shape_keys = source.data.shape_keys
+    if shape_keys is None or not shape_keys.key_blocks:
+        return None
+    index = int(source.active_shape_key_index)
+    if not 0 <= index < len(shape_keys.key_blocks):
+        raise ValueError("SHAPE_KEY_TARGET_INVALID")
+    return shape_keys.key_blocks[index]
+
+
+def _shape_key_signature(source: bpy.types.Object) -> tuple:
+    """Capture the active target identity and write permission for one operation."""
+    key = _active_shape_key(source)
+    if key is None:
+        return (source.data.as_pointer(), None, "", False, len(source.data.vertices))
+    return (
+        source.data.as_pointer(), key.as_pointer(), str(key.name),
+        bool(key.lock_shape), len(key.data), bool(source.data.shape_keys.use_relative),
+    )
 
 
 def _source_vid(source: bpy.types.Object, vertex_index: int) -> int:
@@ -245,4 +274,4 @@ def _source_co(source: bpy.types.Object, vertex_index: int):
         bm = bmesh.from_edit_mesh(source.data)
         bm.verts.ensure_lookup_table()
         return bm.verts[vertex_index].co
-    return source.data.vertices[vertex_index].co
+    return _source_vertices(source)[vertex_index].co

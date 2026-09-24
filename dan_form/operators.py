@@ -41,6 +41,12 @@ def _friendly_error(exc: Exception) -> str:
         return "Phiên chỉnh sửa đã cũ; hãy xác nhận/hủy thao tác rồi bắt đầu lại."
     if code == "WORLD_SPACE_MATRIX_REQUIRED":
         return "Transform WORLD cần ma trận Source; hãy dùng transform Source-local của DANP."
+    if code == "SHAPE_KEY_LOCKED":
+        return "Shape Key đang chọn bị khóa. Hãy mở khóa key rồi chọn Edit Control."
+    if code == "SHAPE_KEY_TARGET_INVALID":
+        return "Shape Key đích không còn hợp lệ. Hãy chọn lại key trên Source."
+    if code in {"SHAPE_KEY_TARGET_CHANGED", "OPERATION_STALE_SHAPE_KEY"}:
+        return "Shape Key đã đổi trong lúc thao tác; DANP đã hủy lần kéo này."
     if code in {"UUID_CONFLICT", "CONTROLLER_CONFLICT"}:
         return "DANP phát hiện nhiều cặp trùng hoặc Controller không rõ chủ sở hữu. Hãy chọn cặp cần giữ và tách danh tính trước khi sửa."
     if code == "SHARED_DATA":
@@ -52,6 +58,7 @@ _SOURCE_DANP_KEYS = (
     SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
     HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
     NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY, ORIGINAL_TOPOLOGY_KEY,
+    ORIGINAL_SHAPE_KEY_NAME_KEY,
     "dan_form_controller_name", UNBOUND_COPY_KEY,
 )
 
@@ -81,6 +88,9 @@ def _clear_duplicate_source_state(source) -> None:
 def _capture_original_snapshot(source) -> None:
     """Capture the first Init pose by persistent Source vertex ID."""
     if source.get(ORIGINAL_POSITIONS_KEY):
+        if ORIGINAL_SHAPE_KEY_NAME_KEY not in source:
+            key = _active_shape_key(source)
+            source[ORIGINAL_SHAPE_KEY_NAME_KEY] = str(key.name) if key is not None else ""
         return
     positions = _source_positions(source)
     _json_set(source, ORIGINAL_POSITIONS_KEY, {
@@ -88,6 +98,8 @@ def _capture_original_snapshot(source) -> None:
         for vertex_id, coordinates in positions.items()
     })
     source[ORIGINAL_TOPOLOGY_KEY] = str(source.get(TOPOLOGY_KEY, ""))
+    key = _active_shape_key(source)
+    source[ORIGINAL_SHAPE_KEY_NAME_KEY] = str(key.name) if key is not None else ""
 
 
 def _original_snapshot(source) -> dict[int, Vector]:
@@ -1021,6 +1033,10 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
             _validate_source_topology(source)
             if str(source.get(ORIGINAL_TOPOLOGY_KEY, "")) != str(source.get(TOPOLOGY_KEY, "")):
                 raise ValueError("ORIGINAL_SNAPSHOT_TOPOLOGY_CHANGED")
+            active_key = _active_shape_key(source)
+            target_name = str(active_key.name) if active_key is not None else ""
+            if target_name != str(source.get(ORIGINAL_SHAPE_KEY_NAME_KEY, "")):
+                raise ValueError("ORIGINAL_SNAPSHOT_TARGET_MISMATCH")
             positions = _original_snapshot(source)
             _workflow_write_source_positions(source, positions, _workflow_dependencies())
             if controller is not None:
@@ -1034,6 +1050,8 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
         except (RuntimeError, ValueError) as exc:
             if str(exc) == "ORIGINAL_SNAPSHOT_TOPOLOGY_CHANGED":
                 message = "Không thể reset dáng gốc vì topology đã đổi; hãy Undo hoặc Reset DANP trước."
+            elif str(exc) == "ORIGINAL_SNAPSHOT_TARGET_MISMATCH":
+                message = "Snapshot Init thuộc Shape Key khác. Hãy chọn key ban đầu trước khi Reset Model."
             elif str(exc) in {"ORIGINAL_SNAPSHOT_MISSING", "ORIGINAL_SNAPSHOT_INVALID"}:
                 message = "Mesh này chưa có snapshot Init; hãy Remove rồi Init DANP lại."
             else:
@@ -1743,13 +1761,16 @@ class DANFORM_OT_focus_source(bpy.types.Operator):
                         _transform_session.cancel(source, controller, _workflow_dependencies())
             if active is not None and active.mode != "OBJECT":
                 bpy.ops.object.mode_set(mode="OBJECT")
+            previous_preview = runtime.SHAPE_PREVIEW_STATES.pop(source.as_pointer(), None)
+            if previous_preview is not None:
+                source.show_only_shape_key = bool(previous_preview)
             _select_only(context, source)
             if _RETURN_MODES.pop(source.get(SOURCE_UUID_KEY), "OBJECT") == "EDIT":
                 bpy.ops.object.mode_set(mode="EDIT")
             _set_scene_context(context, source, controller)
             _sync_context_ui_list(context)
             return {"FINISHED"}
-        except RuntimeError as exc:
+        except (RuntimeError, ValueError) as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -1771,11 +1792,18 @@ class DANFORM_OT_focus_controller(bpy.types.Operator):
         if source is None or controller is None:
             return {"CANCELLED"}
         try:
+            key = _active_shape_key(source)
+            if key is not None and key.lock_shape:
+                raise ValueError("SHAPE_KEY_LOCKED")
             active = context.view_layer.objects.active
             if active == source:
                 _RETURN_MODES[source.get(SOURCE_UUID_KEY)] = source.mode
             if active is not None and active.mode != "OBJECT":
                 bpy.ops.object.mode_set(mode="OBJECT")
+            _sync_proxy(source, controller)
+            runtime.SHAPE_PREVIEW_STATES.setdefault(source.as_pointer(), bool(source.show_only_shape_key))
+            if key is not None:
+                source.show_only_shape_key = True
             controller.hide_set(False, view_layer=context.view_layer)
             _select_only(context, controller)
             bpy.ops.object.mode_set(mode="EDIT")
@@ -1787,9 +1815,63 @@ class DANFORM_OT_focus_controller(bpy.types.Operator):
             _set_scene_context(context, source, controller)
             _sync_context_ui_list(context)
             return {"FINISHED"}
-        except RuntimeError as exc:
+        except (RuntimeError, ValueError) as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
+
+
+class DANFORM_OT_select_shape_key(bpy.types.Operator):
+    bl_idname = "dan_form.select_shape_key"
+    bl_label = "Select Shape Key"
+    bl_description = "Choose which Source Shape Key DANP Form edits"
+    key_index: IntProperty(name="Shape Key Index", min=0)
+
+    @classmethod
+    def poll(cls, context):
+        source, _controller = _context_source(context)
+        return source is not None and source.data.shape_keys is not None
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        if source is None or source.data.shape_keys is None:
+            return {"CANCELLED"}
+        try:
+            _require_structural_idle(source)
+            blocks = source.data.shape_keys.key_blocks
+            if not 0 <= self.key_index < len(blocks):
+                raise ValueError("SHAPE_KEY_TARGET_INVALID")
+            source.active_shape_key_index = self.key_index
+            _sync_proxy(source, controller)
+            if controller is not None and controller.mode == "EDIT":
+                source.show_only_shape_key = True
+            key = _active_shape_key(source)
+            context.scene.dan_form_status = f"Đang chỉnh Shape Key: {key.name}"
+            _tag_viewport_redraw(context)
+            return {"FINISHED"}
+        except (RuntimeError, ValueError) as exc:
+            context.scene.dan_form_status = _friendly_error(exc)
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_MT_shape_keys(bpy.types.Menu):
+    bl_label = "Chọn Shape Key"
+    bl_idname = "DANFORM_MT_shape_keys"
+
+    def draw(self, context):
+        layout = self.layout
+        source, _controller = _context_source(context)
+        if source is None or source.data.shape_keys is None:
+            layout.label(text="Mesh không có Shape Key")
+            return
+        for index, key in enumerate(source.data.shape_keys.key_blocks):
+            op = layout.operator(
+                DANFORM_OT_select_shape_key.bl_idname,
+                text=key.name,
+                icon="LOCKED" if key.lock_shape else "SHAPEKEY_DATA",
+                depress=index == source.active_shape_key_index,
+            )
+            op.key_index = index
 
 
 class DANFORM_PT_sidebar(bpy.types.Panel):
@@ -1851,6 +1933,17 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         if controller is None:
             layout.label(text="Nhấn Init để dựng lại controller", icon="INFO")
             return
+        key = _active_shape_key(source)
+        key_row = layout.row(align=True)
+        key_row.label(text="Đang chỉnh:")
+        key_row.label(text=key.name if key is not None else "Mesh gốc", icon="SHAPEKEY_DATA" if key is not None else "MESH_DATA")
+        if source.data.shape_keys is not None:
+            key_row.menu(DANFORM_MT_shape_keys.bl_idname, text="", icon="DOWNARROW_HLT")
+        if key is not None and key.lock_shape:
+            warning = layout.box()
+            warning.alert = True
+            warning.label(text=f"Shape Key ‘{key.name}’ đang khóa", icon="LOCKED")
+            warning.label(text="Mở khóa key để chỉnh bằng Controller")
         header = layout.row()
         header.label(text=source.name, icon="MESH_DATA")
         if active == source and source.mode == "EDIT":
@@ -1864,9 +1957,11 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         if active == controller:
             navigation.operator(DANFORM_OT_focus_source.bl_idname, text="Back to Model", icon="LOOP_BACK")
             if controller.mode == "OBJECT":
-                navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
+                edit = navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
+                edit.enabled = key is None or not key.lock_shape
         else:
-            navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
+            edit = navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
+            edit.enabled = key is None or not key.lock_shape
         effective_vertices, effective_edges = _effective_proxy_elements(source)
         hidden = not bool(effective_vertices or effective_edges)
         navigation.operator(DANFORM_OT_toggle_viewport_controls.bl_idname, text="Show Controls" if hidden else "Hide Controls", icon="HIDE_ON" if hidden else "HIDE_OFF")
@@ -1954,6 +2049,8 @@ CLASSES = (
     DANFORM_OT_toggle_viewport_controls,
     DANFORM_OT_focus_source,
     DANFORM_OT_focus_controller,
+    DANFORM_OT_select_shape_key,
+    DANFORM_MT_shape_keys,
     DANFORM_MT_control_menu,
     DANFORM_MT_manage,
     DANFORM_PT_sidebar,
@@ -1964,7 +2061,8 @@ CLASSES = (
 __all__ = [
     "bind", "CLASSES",
     "_clear_duplicate_source_state",
-    "DANFORM_PG_ControlItem", "DANFORM_UL_controls", "DANFORM_MT_control_menu", "DANFORM_MT_manage",
+    "DANFORM_PG_ControlItem", "DANFORM_UL_controls", "DANFORM_MT_control_menu", "DANFORM_MT_shape_keys", "DANFORM_MT_manage",
+    "DANFORM_OT_select_shape_key",
     "DANFORM_PT_sidebar", "DANFORM_OT_initialize", "DANFORM_OT_resolve_duplicate_pair", "DANFORM_OT_sync",
     "DANFORM_OT_sync_control", "DANFORM_OT_move_control", "DANFORM_OT_create_control",
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",

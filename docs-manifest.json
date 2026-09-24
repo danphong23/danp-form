@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "c8b1d1629a0d54a6aebaa592dc88e4a3d3818f86c7cc09e24d2cd11951224162",
-    "bytes": 25746
+    "sha256": "e377689d2f1f6b285382e5dc5e1b7f8a5198d6ae6082f86199441bd3de589204",
+    "bytes": 26606
   },
   {
     "path": "CONTRIBUTING.md",
@@ -180,9 +180,14 @@
     "bytes": 3138
   },
   {
+    "path": "docs/decisions/ADR-015-shape-key-edit-target.md",
+    "sha256": "f5984ea907d165b101dcc6f3e5ac967d77be8503f4a8d6849befe1c3b71baf8a",
+    "bytes": 2233
+  },
+  {
     "path": "docs/decisions/open-decisions.md",
-    "sha256": "e68f6baf67f3e4c5d65c2d2876560f72c10383bc57a39ae04a27ca7e21cf5da8",
-    "bytes": 2305
+    "sha256": "82561b5d2b023e8b83a6e88b0d90fbaaafad1ee34fe67e6375d1420267d4a939",
+    "bytes": 2302
   },
   {
     "path": "docs/extensions/advanced-interpolation.md",
@@ -196,8 +201,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "b542e4eb48c6bb1fb73e51e4e818b07f8e5a83c88702c64a7daaa586651465e4",
-    "bytes": 243254
+    "sha256": "bd116d393625eb489eefefe93f877fc1f12f663ab12d7c70f265afdc51371553",
+    "bytes": 245556
   },
   {
     "path": "docs/product/leg-control-examples.md",

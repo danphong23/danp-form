@@ -1,5 +1,19 @@
 # Design Changelog
 
+## 2026-09-24 — DANP Form 0.5.29 edits the active Source Shape Key
+
+- Route controller reads, preview writes, cancellation and proxy synchronization
+  through the Source's active Shape Key; meshes without Shape Keys still use base
+  mesh coordinates.
+- Add a Shape Key picker in the DANP Form sidebar and show the selected key at full
+  influence during controller editing, restoring the previous display setting on exit.
+- Reject locked keys and cancel stale operations if the active key changes or becomes
+  locked; pair native Undo/Redo repair with the key captured by the operation.
+- Bind Reset Model snapshots to the Shape Key present at Init so Basis coordinates
+  cannot be written accidentally into another key.
+- Add a Blender background integration gate for Basis/expression edits, lock handling,
+  key switching, cancel and display restoration.
+
 ## 2026-09-23 — DANP Form 0.5.27 separates selection intent from measured motion
 
 - Keep the initial Controller selection as a transform boundary even when an

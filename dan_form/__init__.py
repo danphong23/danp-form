@@ -42,6 +42,8 @@ from .blender.context import source_controller_pairs as _source_controller_pairs
 from .blender.mesh import _ensure_attribute as _ensure_attribute
 from .blender.mesh import _ensure_source_ids as _ensure_source_ids
 from .blender.mesh import _is_valid_source as _is_valid_source
+from .blender.mesh import _active_shape_key as _active_shape_key
+from .blender.mesh import _shape_key_signature as _shape_key_signature
 from .blender.mesh import _source_co as _source_co
 from .blender.mesh import _source_edge_vids as _source_edge_vids
 from .blender.mesh import _source_id_maps as _source_id_maps
@@ -133,7 +135,7 @@ _MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 28),
+    "version": (0, 5, 29),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
@@ -162,6 +164,11 @@ def _workflow_dependencies() -> _WorkflowDeps:
         validate_source_topology=_validate_source_topology,
         controller_selected_source_ids=_controller_selected_source_ids,
         source_positions=_source_positions,
+        source_vertices=_source_vertices,
+        active_shape_key=_active_shape_key,
+        shape_key_signature=_shape_key_signature,
+        controller_positions=_transform_session.controller_positions,
+        undo_records=_NATIVE_UNDO_RECORDS,
         patch_partition=_patch_partition,
         effective_proxy_elements=_effective_proxy_elements,
         source_edge_vids=_source_edge_vids,
@@ -429,8 +436,12 @@ def _deform_begin(source: bpy.types.Object, controller: bpy.types.Object) -> dic
     return _workflow_deform_begin(source, controller, _workflow_dependencies())
 
 
-def _write_source_positions(source: bpy.types.Object, positions: dict[int, Vector]) -> None:
-    return _workflow_write_source_positions(source, positions, _workflow_dependencies())
+def _write_source_positions(source: bpy.types.Object, positions: dict[int, Vector],
+                            allow_locked: bool = False, shape_key=None) -> None:
+    return _workflow_write_source_positions(
+        source, positions, _workflow_dependencies(),
+        allow_locked=allow_locked, shape_key=shape_key,
+    )
 
 
 def _deform_update(source: bpy.types.Object, controller: bpy.types.Object,

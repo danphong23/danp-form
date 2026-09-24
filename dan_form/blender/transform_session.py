@@ -97,6 +97,11 @@ def begin(source, controller, deps, operation: str, controller_rest=None) -> dic
         "controller_rest": controller_rest or _controller_positions(controller),
         "had_delta": False,
     }
+    if controller_rest:
+        tx["controller_pre"] = {
+            int(vertex_id): position.copy()
+            for vertex_id, position in controller_rest.items()
+        }
     runtime.NATIVE_TRANSFORM_SESSIONS[key] = session
     return session
 
@@ -129,31 +134,7 @@ def update(source, controller, deps, session, profile="LINEAR", radius=0.0,
 def commit(source, deps) -> None:
     key = source.as_pointer()
     tx = deps.transactions.get(key)
-    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
     if tx is not None:
-        if (session is not None
-                and session.get("operation") == "NATIVE"
-                and session.get("had_delta")):
-            record = {
-                "source": key,
-                "source_uuid": source.get(SOURCE_UUID_KEY),
-                "controller": session["controller"],
-                "source_pre": {int(vid): position.copy() for vid, position in tx["p0"].items()},
-                "source_post": {int(vid): position.copy() for vid, position in _source_positions(source).items()},
-                "controller_pre": {
-                    int(vid): position.copy()
-                    for vid, position in session.get("controller_rest", {}).items()
-                },
-                "controller_post": _controller_positions(
-                    next((obj for obj in bpy.data.objects if obj.as_pointer() == session["controller"]), source)
-                ),
-                "state": "committed",
-            }
-            history = runtime.NATIVE_UNDO_RECORDS.setdefault(key, {}).setdefault("history", [])
-            history.append(record)
-            # Keep the newest record fields at the top level for existing
-            # diagnostics while retaining every committed step for Undo/Redo.
-            runtime.NATIVE_UNDO_RECORDS[key].update(record)
         _deform_commit(source)
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
 

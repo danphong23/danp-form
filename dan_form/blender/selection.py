@@ -81,7 +81,7 @@ def _proxy_selection(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
     return selected_vids, selected_eids
 
 
-def _source_positions(source: bpy.types.Object) -> dict[int, Vector]:
+def _source_positions(source: bpy.types.Object, shape_key=None) -> dict[int, Vector]:
     """Return the current Source coordinates keyed by persistent vertex ID."""
     vids, _ = _source_id_maps(source)
     if source.mode == "EDIT":
@@ -89,7 +89,13 @@ def _source_positions(source: bpy.types.Object) -> dict[int, Vector]:
         bm.verts.ensure_lookup_table()
         layer = bm.verts.layers.int.get(VID_ATTR)
         return {int(v[layer]): v.co.copy() for v in bm.verts} if layer else {}
-    return {int(vid): source.data.vertices[index].co.copy() for vid, index in vids.items()}
+    vertices = _source_vertices(source)
+    if source.mode == "OBJECT":
+        if isinstance(shape_key, str) and shape_key == BASE_MESH_TARGET:
+            vertices = source.data.vertices
+        elif shape_key is not None:
+            vertices = shape_key.data
+    return {int(vid): vertices[index].co.copy() for vid, index in vids.items()}
 
 
 def _controller_selected_source_ids(controller: bpy.types.Object) -> set[int]:
@@ -155,4 +161,3 @@ def _select_proxy_ids(controller: bpy.types.Object, vertex_ids: set[int], edge_i
         if int(edge[eid_layer]) in edge_ids:
             edge.select = True
     bmesh.update_edit_mesh(controller.data, loop_triangles=False, destructive=False)
-

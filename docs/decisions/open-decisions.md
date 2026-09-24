@@ -7,7 +7,7 @@
 3. **Simplify scope for the first public build.** Exact controls may ship before automatic simplify/refine if interaction remains usable.
 4. **Simplify knot-selection heuristic.** Endpoints/junctions must remain, but the automatic choice of additional Source knots is not yet product behavior.
 5. **Future non-manifold support.** Prototype rejects ambiguous/non-manifold cases. Expanding correctness beyond manifold surfaces needs dedicated evidence.
-6. **Future Shape Keys / Multires support.** Prototype rejects before writes. Later support needs dedicated semantics/tests; it is not required to start the core prototype.
+6. **Future Multires support.** Shape Key editing is settled by ADR-015. Multires support needs separate semantics/tests and is not required to start the core prototype.
 7. **Interpolation candidate and quality.** Prototype numeric methods remain replaceable;
    compare proportional response/current patch form without changing settled constraints.
 

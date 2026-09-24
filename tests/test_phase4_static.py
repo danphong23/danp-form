@@ -73,14 +73,15 @@ def test_native_completion_uses_blender_modal_boundary_not_quiet_time():
     assert "idle_polls" not in lifecycle
     assert "modal_operators" in session
     assert "The timer only samples Blender's explicit modal state" in lifecycle
-    assert 'and session.get("had_delta")' in session
+    assert 'if session.get("had_delta"):' in lifecycle
 
 
 def test_native_undo_keeps_history_and_resyncs_proxy():
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
-    session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
-    assert "setdefault(key, {}).setdefault(\"history\", [])" in session
-    assert '"controller_pre"' in session
+    workflows = (ROOT / "dan_form" / "blender" / "workflows.py").read_text(encoding="utf-8")
+    assert 'setdefault("history", [])' in workflows
+    assert '"controller_pre"' in workflows
+    assert '"shape_key_target"' in workflows
     assert "for item in reversed(history)" in lifecycle
     assert "controller_pose_matches" in lifecycle
     assert "_sync_proxy(source, controller)" in lifecycle
