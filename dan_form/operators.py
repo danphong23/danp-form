@@ -1956,12 +1956,10 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         navigation.enabled = active.mode in {"OBJECT", "EDIT"}
         if active == controller:
             navigation.operator(DANFORM_OT_focus_source.bl_idname, text="Back to Model", icon="LOOP_BACK")
-            if controller.mode == "OBJECT":
-                edit = navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
-                edit.enabled = key is None or not key.lock_shape
-        else:
-            edit = navigation.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
-            edit.enabled = key is None or not key.lock_shape
+        if active != controller or controller.mode == "OBJECT":
+            edit_row = navigation.row(align=True)
+            edit_row.enabled = key is None or not key.lock_shape
+            edit_row.operator(DANFORM_OT_focus_controller.bl_idname, text="Edit Control", icon="EDITMODE_HLT")
         effective_vertices, effective_edges = _effective_proxy_elements(source)
         hidden = not bool(effective_vertices or effective_edges)
         navigation.operator(DANFORM_OT_toggle_viewport_controls.bl_idname, text="Show Controls" if hidden else "Hide Controls", icon="HIDE_ON" if hidden else "HIDE_OFF")

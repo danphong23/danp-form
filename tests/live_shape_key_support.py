@@ -161,6 +161,29 @@ def run():
         check(bpy.ops.dan_form.focus_source() == {"FINISHED"}, "return to Source")
         check(not source.show_only_shape_key, "return restores prior Shape Key display setting")
 
+        source.shape_key_clear()
+        check(addon._active_shape_key(source) is None, "Source can remove all Shape Keys")
+        addon._sync_proxy(source, controller)
+        addon._select_only(bpy.context, controller)
+        bpy.ops.object.mode_set(mode="EDIT")
+        addon._select_proxy_ids(controller, {vertex_id}, set())
+        base_before = mesh.vertices[source_index].co.copy()
+        addon._deform_begin(source, controller)
+        addon._deform_update(source, controller, delta=(0.0, 0.0, 0.12), radius=1.0)
+        check(not _near(mesh.vertices[source_index].co, base_before),
+              "Controller edits base mesh after all Shape Keys are removed")
+        addon._deform_cancel(source, controller)
+        check(_near(mesh.vertices[source_index].co, base_before),
+              "cancel restores base mesh after Shape Key removal")
+        bpy.ops.object.mode_set(mode="OBJECT")
+        addon._select_only(bpy.context, source)
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        check(bpy.ops.dan_form.create_control() == {"FINISHED"},
+              "Create Control works after all Shape Keys are removed")
+        check(len(addon._controls(source)) == 2,
+              "control list contains the newly created no-key control")
+
         return {"status": "PASS", "checks": checks, "blender_version": bpy.app.version_string}
     finally:
         if bpy.context.object is not None and bpy.context.object.mode != "OBJECT":

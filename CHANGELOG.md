@@ -1,5 +1,11 @@
 # Design Changelog
 
+## 2026-09-24 — DANP Form 0.5.30 restores the control sidebar without Shape Keys
+
+- Disable the Edit Control button through its layout row instead of assigning
+  an unsupported property to the operator button. The sidebar can now draw its
+  control list and Create Control action after all Shape Keys are removed.
+
 ## 2026-09-24 — DANP Form 0.5.29 edits the active Source Shape Key
 
 - Route controller reads, preview writes, cancellation and proxy synchronization
