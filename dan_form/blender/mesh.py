@@ -309,19 +309,23 @@ def _shape_key_evaluation_signature(source: bpy.types.Object) -> tuple:
     )
 
 
-def _positions_by_source_id(mesh, expected_ids) -> dict[int, object]:
+def _positions_by_source_id(mesh, expected_ids, coordinates=None) -> dict[int, object]:
     """Read one-to-one Source coordinates from a mesh carrying DANP vertex IDs."""
     ids = mesh.attributes.get(VID_ATTR)
     if ids is None or ids.domain != "POINT" or ids.data_type != "INT":
         raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
     if len(ids.data) != len(mesh.vertices):
         raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
+    if coordinates is None:
+        coordinates = mesh.vertices
+    if len(coordinates) != len(mesh.vertices):
+        raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
     positions = {}
     for index, item in enumerate(ids.data):
         vertex_id = int(item.value)
         if vertex_id not in expected_ids or vertex_id in positions:
             raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
-        positions[vertex_id] = mesh.vertices[index].co.copy()
+        positions[vertex_id] = coordinates[index].co.copy()
     if positions.keys() != expected_ids.keys():
         raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
     return positions
@@ -332,8 +336,9 @@ def _evaluated_source_positions(source: bpy.types.Object) -> dict[int, object]:
 
     Deforming modifiers can preserve a one-to-one ID mapping and are included.
     Topology-changing modifiers such as Subdivision duplicate or discard Source
-    IDs; in that case, evaluate the same Source Shape Key stack on a temporary
-    copy with its modifiers removed so the Controller remains on cage vertices.
+    IDs. In that case, ask Blender to mix Shape Keys on an independent temporary
+    mesh, keeping the Controller on Source cage vertices. An unlinked object's
+    evaluated_get() does not reliably apply its Shape Key values.
     """
     expected_ids, _ = _source_id_maps(source)
     depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -356,21 +361,18 @@ def _evaluated_source_positions(source: bpy.types.Object) -> dict[int, object]:
         raise ValueError("EVALUATED_SOURCE_UNAVAILABLE")
 
     temporary = source.copy()
+    temporary_mesh = None
     try:
+        temporary_mesh = source.data.copy()
+        temporary.data = temporary_mesh
         for modifier in list(temporary.modifiers):
             temporary.modifiers.remove(modifier)
-        evaluated_cage = temporary.evaluated_get(depsgraph)
-        cage_mesh = evaluated_cage.to_mesh(
-            preserve_all_data_layers=True, depsgraph=depsgraph
-        )
-        if cage_mesh is None:
-            raise ValueError("EVALUATED_SOURCE_UNAVAILABLE")
-        try:
-            return _positions_by_source_id(cage_mesh, expected_ids)
-        finally:
-            evaluated_cage.to_mesh_clear()
+        mixed_key = temporary.shape_key_add(name="DANP Temporary Mix", from_mix=True)
+        return _positions_by_source_id(temporary_mesh, expected_ids, mixed_key.data)
     finally:
         bpy.data.objects.remove(temporary, do_unlink=True)
+        if temporary_mesh is not None and temporary_mesh.users == 0:
+            bpy.data.meshes.remove(temporary_mesh)
 
 
 def _shape_key_target_record(source: bpy.types.Object, target) -> dict:

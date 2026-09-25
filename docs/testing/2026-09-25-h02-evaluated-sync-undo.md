@@ -1,9 +1,8 @@
 # H02 follow-up — evaluated sync and Undo safety
 
-**Status: PASS in Blender 5.2.1 background fixtures and live MCP mapping check;
-interactive native Undo is still pending user acceptance.** This follow-up was prompted by a report that a
-Shape Key value change left the Controller at its previous pose and Blender
-crashed during Undo.
+**Status: Blender 5.2.1 fixture and live MCP Shape Key transition PASS for
+version 0.5.34; native UI Undo acceptance pending.** This follow-up covers reports that a Shape Key value change left the
+Controller at Basis and that Blender crashed during Undo.
 
 ## Findings
 
@@ -14,6 +13,16 @@ crashed during Undo.
 - Idle proxy sync sampled the selected key's stored coordinates. It did not
   observe Shape Key value/blend changes, so a key returning to zero could leave
   the proxy showing the previous key pose.
+- Version 0.5.33 introduced a Subdivision fallback using an unlinked object
+  copy. `evaluated_get()` returned its Basis coordinates even with Key 1 at
+  value 1. On the user's file, the 726 Controller points exactly matched Basis;
+  226 differed from stored Key 1, with a maximum difference of 0.359884 Source
+  units. The Shape Key signature and depsgraph handler were both current, so
+  the fault was the coordinate sample rather than event detection.
+- In that file, the base mesh and Basis both contain 1,698 matching positions.
+  Stored Key 1 differs from Basis at 642 vertices. Subdivision produces 6,786
+  displayed vertices, while Controller contains 726 Source-ID knots. Key value
+  is a display input; it does not overwrite either stored coordinate array.
 
 ## Changes
 
@@ -29,10 +38,11 @@ crashed during Undo.
   or mutation.
 - Entering/leaving Controller Edit refreshes the proxy after Blender evaluates
   the temporary show-only-key state.
-- If a topology-changing modifier duplicates Source IDs, evaluate the same
-  Shape Key pose on an unmodified temporary Source copy. This keeps Controller
-  coordinates on the Source cage and avoids guessing which subdivided point
-  represents an original vertex.
+- If a topology-changing modifier duplicates Source IDs, copy the Source mesh
+  and ask Blender to create a temporary Shape Key from its current mix. Map
+  that native mixed pose by original Source IDs, then remove the temporary
+  object and mesh. This keeps Controller coordinates on the Source cage and
+  avoids guessing which subdivided point represents an original vertex.
 
 ## Evidence
 
@@ -41,18 +51,28 @@ crashed during Undo.
   absolute-key coordinate routing; cancel; safe key identity resolution;
   Undo/Redo bridge including Source Edit Mode; lock, target-change, Reset and
   no-key cases.
-- [PASS] The same fixture with a level-2 Subdivision modifier: Blender produced
-  more evaluated vertices than Source, while Controller kept all Source IDs
-  and followed the full, blended and zero-valued Shape Key poses.
+- [PASS] A level-2 Subdivision fixture compared returned coordinates against
+  independently calculated Basis/key coordinates. Controller followed a
+  partial blend, value zero, and the zero-to-one transition. An absolute-key
+  fixture also verified a half-time blend under Subdivision.
 - [PASS] `tests/live_owned_object_safety.py` and
   `tests/live_duplicate_bindings.py` remain green.
 - [PASS] 59 static test functions; documentation regeneration and validation;
   `git diff --check`.
-- [PASS] Blender MCP inspection of the open comparison file and modifier stack.
-  After loading 0.5.33, cage evaluation returned 1,698 unique IDs; all 726
-  existing Controller points matched the corresponding Source pose exactly
-  (maximum delta 0.0). The installed manifest reports 0.5.33 and the file
-  remained clean. The earlier 0.5.32 probe had reproduced the Subdivision error.
+- [FAIL, corrected in 0.5.34 fixture] The earlier live 0.5.33 check compared
+  Controller positions to the same faulty fallback output, producing a false
+  PASS. The user's zero-to-one test exposed it. A later MCP inspection at
+  Key 1 = 1 showed both Controller and fallback at Basis while stored Key 1
+  coordinates differed. The user's file was already dirty when inspected;
+  the read-only probes did not save it.
+- [PASS] After installing 0.5.34 into the open comparison file, the Source
+  cage evaluation matched stored Key 1 at value 1 (maximum delta 0). Explicit
+  resync repaired all 726 Controller points without changing any stored Source
+  key coordinates. MCP then changed the value 1 → 0 → 1; ordinary depsgraph
+  updates moved Controller to Basis and back to Key 1 with maximum delta 0 at
+  each step. The final value was restored to 1, and the file was not saved.
+  Afterward, object/mesh/Shape Key datablock counts remained 13/9/5, with no
+  temporary object or mesh left behind.
 - [NOT RUN] Native Ctrl+Z/Ctrl+Shift+Z from a real Blender UI after a Controller
   transform. The Blender MCP connection can inspect the live UI, but this
   session does not expose native keyboard input. The open file was inspected
@@ -60,9 +80,6 @@ crashed during Undo.
 
 ## Acceptance
 
-The code and disposable fixtures pass. Version 0.5.33 is installed in the
-current Blender session. H02 is not user-accepted yet: check that changing the
-Shape Key value from 1 to 0 moves the Controller back with the visible Source,
-then perform a real Undo/Redo after a Controller edit and confirm Blender stays
-open and both objects remain in sync. Do not start the next phase until that UI
-check passes.
+The 0.5.34 fixture and live MCP Shape Key transition pass. Native Ctrl+Z/Redo
+after a Controller edit remains a separate user acceptance step. Do not start
+the next phase until that UI check passes.

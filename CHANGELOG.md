@@ -1,12 +1,20 @@
 # Design Changelog
 
+## 2026-09-25 — DANP Form 0.5.34 evaluates Shape Key mixes on the Source cage
+
+- Use Blender's native Shape Key mix on an independent temporary mesh when a
+  modifier changes topology. An unlinked object's evaluated mesh had returned
+  Basis even when the visible Source was at Shape Key value 1.
+- Verify the controller against stored Basis/key coordinates through 0 → 1,
+  partial blends, and absolute-key evaluation under Subdivision.
+
 ## 2026-09-25 — DANP Form 0.5.33 keeps Shape Key sync on the Source cage
 
 - When topology-changing modifiers duplicate or remove persistent Source IDs,
-  evaluate the Shape Key pose on an unmodified temporary copy of the Source.
+  fall back to an unmodified temporary copy of the Source.
 - Keep Controller coordinates on the original Source cage so Subdivision does
-  not break synchronization or change control topology.
-- Add a Blender integration regression for Shape Key sync under Subdivision.
+  not change control topology. The unlinked copy did not evaluate Shape Key
+  values correctly; version 0.5.34 fixes that defect.
 
 ## 2026-09-25 — DANP Form 0.5.32 tracks evaluated Shape Key poses safely
 

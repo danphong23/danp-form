@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "77445528d0f4f3bc06eb1d283a7aed573f749160187e608826db20f974f8f539",
-    "bytes": 28401
+    "sha256": "aa41e637be83af6f4b0eea7f005cc0a108bb07af9e9deb51d88c9b2d403efb83",
+    "bytes": 28823
   },
   {
     "path": "CONTRIBUTING.md",
@@ -41,8 +41,8 @@
   },
   {
     "path": "docs/architecture/mapping-and-sync.md",
-    "sha256": "c80fa6ce1f8c7d5baedc4f6341ecd7eca6efab54c2f1bdea5f1d2e81de900d2e",
-    "bytes": 3911
+    "sha256": "6e1dd66633eb340aef9ca900d80e952f88e58686e5904fb57ce84a4118d4e9d8",
+    "bytes": 5046
   },
   {
     "path": "docs/architecture/module-boundaries.md",
@@ -196,8 +196,8 @@
   },
   {
     "path": "docs/decisions/ADR-017-deformation-target-contract.md",
-    "sha256": "19f8212b5e392f6fb44f8d43d833999f2f2ede3f93a0e1154b528b4d0b5298cc",
-    "bytes": 6071
+    "sha256": "069a92917b07201f327f284f3aee72f2b0961e8052e9a51dbc6cdb631d8fc46b",
+    "bytes": 6447
   },
   {
     "path": "docs/decisions/open-decisions.md",
@@ -216,8 +216,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "aca6c0bfc7758054557efa78d154569cce240ac20aa331730d76da4a84a7bde4",
-    "bytes": 294806
+    "sha256": "b7e61169a5f506696537212a62c8c9db5630f6e55f44799664056b4ddb48783b",
+    "bytes": 297643
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -291,8 +291,8 @@
   },
   {
     "path": "docs/testing/2026-09-25-h02-evaluated-sync-undo.md",
-    "sha256": "8e2f96d155d517124555ae8b358f20a2df101e7d66ba9436eeb50110a2c01144",
-    "bytes": 3763
+    "sha256": "31d63241d6940c6b8503cc2290cc097448bf98529cc513c621f757275596d2a3",
+    "bytes": 5089
   },
   {
     "path": "docs/testing/2026-09-25-h02-target-io-undo.md",

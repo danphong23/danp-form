@@ -32,6 +32,12 @@ from that evaluated result. A transaction captures exactly one stored-coordinate
 target and its immutable P0. Preview, confirm, cancel and Undo/Redo address that
 captured target, never whichever key is active later.
 
+Controller knots correspond to Source cage vertex IDs. A modifier that adds
+vertices, such as Subdivision, has no unique knot mapping for its output.
+Idle sync therefore samples Blender's Shape Key mix on the Source cage before
+that topology expansion. The modifier's visible surface remains derived from
+the same Source pose; Controller coordinates are a rebuildable cache.
+
 ## Identity and failure rule
 
 A runtime transaction captures the Source mesh owner and the actual KeyBlock

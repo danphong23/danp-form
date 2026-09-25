@@ -157,8 +157,17 @@ def run():
         visible_subdivided = addon._evaluated_source_positions(source)
         addon._sync_proxy(source, controller)
         proxy_subdivided = _controller_positions(controller)
+        source_vids, _ = addon._source_id_maps(source)
+        expected_half = {
+            vid: basis.data[index].co + 0.5 *
+                 (expression.data[index].co - basis.data[index].co)
+            for vid, index in source_vids.items()
+        }
         check(len(visible_subdivided) == len(source.data.vertices),
               "topology-changing modifiers retain one coordinate per Source ID")
+        check(all(_near(visible_subdivided[vid], expected_half[vid])
+                  for vid in expected_half),
+              "Subdivision fallback evaluates the real blended Shape Key pose")
         check(all(_near(proxy_subdivided[vid], co)
                   for vid, co in visible_subdivided.items()),
               "controller follows Shape Keys on the Source cage under Subdivision")
@@ -170,6 +179,23 @@ def run():
         proxy_basis = _controller_positions(controller)
         check(all(_near(proxy_basis[vid], co) for vid, co in visible_basis.items()),
               "controller returns to the visible Basis pose when key value reaches zero")
+        check(all(_near(visible_basis[vid], basis.data[index].co)
+                  for vid, index in source_vids.items()),
+              "Subdivision fallback evaluates stored Basis at value zero")
+        expression.value = 1.0
+        bpy.context.view_layer.update()
+        lifecycle._depsgraph_update_post(scene, bpy.context.evaluated_depsgraph_get())
+        visible_again = addon._evaluated_source_positions(source)
+        proxy_again = _controller_positions(controller)
+        check(all(_near(visible_again[vid], expression.data[index].co)
+                  for vid, index in source_vids.items()),
+              "Subdivision fallback evaluates stored expression after zero-to-one change")
+        check(all(_near(proxy_again[vid], expression.data[source_vids[vid]].co)
+                  for vid in proxy_again),
+              "controller follows a zero-to-one Shape Key change under Subdivision")
+        expression.value = 0.0
+        bpy.context.view_layer.update()
+        lifecycle._depsgraph_update_post(scene, bpy.context.evaluated_depsgraph_get())
         source.modifiers.remove(subsurf)
         source.active_shape_key_index = 0
         bpy.context.view_layer.update()
@@ -259,6 +285,20 @@ def run():
         keys.use_relative = False
         keys.eval_time = 17.0
         source.active_shape_key_index = 1
+        basis.interpolation = "KEY_LINEAR"
+        expression.interpolation = "KEY_LINEAR"
+        absolute_subsurf = source.modifiers.new("DANP Absolute Subdivision", "SUBSURF")
+        absolute_subsurf.levels = 1
+        keys.eval_time = 5.0
+        bpy.context.view_layer.update()
+        absolute_mid = addon._evaluated_source_positions(source)
+        source_vids, _ = addon._source_id_maps(source)
+        check(all(_near(absolute_mid[vid],
+                        0.5 * (basis.data[index].co + expression.data[index].co))
+                  for vid, index in source_vids.items()),
+              "absolute Shape Key time blends on the Source cage under Subdivision")
+        keys.eval_time = 17.0
+        source.modifiers.remove(absolute_subsurf)
         absolute_before = addon._source_positions(source, expression)
         absolute_after = {vid: co + Vector((0.0, 0.0, 0.07))
                           for vid, co in absolute_before.items()}
