@@ -17,3 +17,12 @@ mọi suite bắt buộc, chạy test UI trên bản sao file an toàn, ghi NOT 
 thực hiện. **Gate:** Gate A–F liên quan và H01–H08 có bằng chứng; không stale test,
 không traceback bị bỏ qua. **Commit:**
 `test(dan-form): establish reproducible release gates`.
+
+**Progress 2026-09-25:** operational gate passes: 9 static suites / 60 checks,
+8 Blender suites / 169 assertions, H04–H07 UI acceptance evidence, and an
+intentional-failure self-test. The full runner correctly reports `INCOMPLETE`
+because GPU overlay fault review and a fresh combined large-mesh P95/peak-memory
+run were not performed. See the
+[H09 report](../../docs/testing/2026-09-25-h09-release-gates.md). H10 may build
+and install a functional candidate, but it must not claim performance-certified
+production readiness.
