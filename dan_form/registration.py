@@ -99,6 +99,8 @@ def unregister(api) -> None:
     api._NATIVE_TRANSFORM_SESSIONS.clear()
     api._NATIVE_UNDO_RECORDS.clear()
     api._runtime.TOPOLOGY_STATES.clear()
+    api._runtime.SHAPE_PREVIEW_STATES.clear()
+    api._runtime.CONTROLLER_EDIT_ACTIVE.clear()
     api._runtime.MODIFIER_SIGNATURES.clear()
     api._runtime.BINDING_OWNERS.clear()
     api._runtime.NATIVE_UNDO_TIMER = False

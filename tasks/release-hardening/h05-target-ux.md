@@ -24,3 +24,22 @@ không có thay đổi ngoài ý muốn. **Commit:**
 `feat(dan-form): complete deformation target workflow`.
 
 Fixture bắt buộc: [T03–T04, T11–T13](../../docs/testing/deformation-target-matrix.md).
+
+**Status 2026-09-25: PASS.** The Blender 5.2.1 background fixture covers new-key
+creation from Base, relative and absolute targets, and preview restoration. It
+also exposed and fixed an early-reset of `show_only_shape_key` during Controller
+entry. Direct UI verification on a safe copy covered target/lock display,
+relative-target creation, Controller Edit switching/exit, and Base-target
+Undo/Redo/save/reopen. The absolute target path uses the same panel operator and
+passed the background fixture, so no extra panel click is treated as a blocker;
+see
+[`2026-09-25-h05-target-ux.md`](../../docs/testing/2026-09-25-h05-target-ux.md).
+
+Direct UI follow-up on a disposable Blender 5.2.1 file: the panel displayed the
+Basis/Smile/locked Blink targets and the lock warning; creating from the
+relative Smile target selected `DANP Shape`; Controller Edit allowed switching
+targets and the Back to Model button returned to Object Mode. A separate prior
+run verified Base-only creation, menu Undo/Redo, Save and File > Revert. The
+absolute-target panel path and data preservation were verified through the
+same operator in the background fixture. No manual acceptance remains open for
+H05.

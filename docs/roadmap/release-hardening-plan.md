@@ -1,8 +1,8 @@
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: H01–H04 và H07 đã pass; người dùng nghiệm thu H02 trên Blender
+**Trạng thái: H01–H05 và H07 đã pass; người dùng nghiệm thu H02 trên Blender
 0.5.34 và xác nhận các gate giao diện H04/H07 hoạt động ổn; H05–H06 và H08–H10
-chưa hoàn tất.** Báo cáo H04/H07 ngày 2026-09-25 ghi riêng kết quả chạy nền và
+chưa hoàn tất (H06, H08–H10).** Báo cáo H04/H07 ngày 2026-09-25 ghi riêng kết quả chạy nền và
 nghiệm thu giao diện của người dùng. Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
@@ -35,7 +35,7 @@ runtime riêng; H05, H06, H08, H09 và H10 còn lại.
 | [H02](../../tasks/release-hardening/h02-target-io-undo.md) — PASS runtime | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
 | [H03](../../tasks/release-hardening/h03-owned-object-safety.md) — PASS lifecycle | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
 | [H04](../../tasks/release-hardening/h04-native-transform.md) — PASS | G/R/S modal ổn định, gồm Scale toàn control | H02, H03 | `fix(dan-form): stabilize native transform transactions` |
-| [H05](../../tasks/release-hardening/h05-target-ux.md) | UI target rõ ràng, tạo Shape Key mới an toàn | H01, H02, H04 | `feat(dan-form): complete deformation target workflow` |
+| [H05](../../tasks/release-hardening/h05-target-ux.md) — PASS | UI target rõ ràng, tạo Shape Key mới an toàn | H01, H02, H04 | `feat(dan-form): complete deformation target workflow` |
 | [H06](../../tasks/release-hardening/h06-agent-parity.md) | Agent API target đạt parity với UI | H01, H02, H05 | `feat(dan-form): expose target-aware agent operations` |
 | [H07](../../tasks/release-hardening/h07-topology-recovery.md) — PASS | Chính sách thay topology và phục hồi tường minh | H01, H03; có thể triển khai song song H05/H06 | `feat(dan-form): make topology recovery explicit` |
 | [H08](../../tasks/release-hardening/h08-runtime-architecture.md) | Handler, cache, lỗi và module boundaries được làm cứng | H03, H04, H07 | `refactor(dan-form): harden runtime boundaries` |

@@ -39,13 +39,16 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
         _cleanup_orphaned_owned_objects()
         changed_geometry = {update.id.original.as_pointer() for update in depsgraph.updates if update.is_updated_geometry}
         for source, controller in _source_controller_pairs():
-            if controller.mode != "EDIT":
+            source_ptr = source.as_pointer()
+            if controller.mode == "EDIT":
+                runtime.CONTROLLER_EDIT_ACTIVE.add(source_ptr)
+            elif source_ptr in runtime.CONTROLLER_EDIT_ACTIVE:
+                runtime.CONTROLLER_EDIT_ACTIVE.discard(source_ptr)
                 previous_preview = runtime.SHAPE_PREVIEW_STATES.pop(source.as_pointer(), None)
                 if previous_preview is not None:
                     source.show_only_shape_key = bool(previous_preview)
             source_changed = source.as_pointer() in changed_geometry or source.data.as_pointer() in changed_geometry
             controller_changed = controller.as_pointer() in changed_geometry or controller.data.as_pointer() in changed_geometry
-            source_ptr = source.as_pointer()
             current_shape_eval = _shape_key_evaluation_signature(source)
             previous_shape_eval = runtime.SHAPE_EVAL_SIGNATURES.get(source_ptr)
             shape_eval_changed = previous_shape_eval != current_shape_eval
@@ -497,6 +500,7 @@ def _load_post(_unused=None) -> None:
     runtime.INIT_TARGET_PROVENANCE.clear()
     runtime.NATIVE_UNDO_RECORDS.clear()
     runtime.SHAPE_PREVIEW_STATES.clear()
+    runtime.CONTROLLER_EDIT_ACTIVE.clear()
     _refresh_binding_registry(clear=True)
     runtime.SHAPE_EVAL_SIGNATURES.clear()
     _refresh_runtime(_unused)
