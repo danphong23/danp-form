@@ -137,6 +137,32 @@ def run():
               "controller follows the visible blended Shape Key pose")
         check(not all(_near(visible_half[vid], visible_full[vid]) for vid in visible_half),
               "partial key value produces an intermediate visible pose")
+
+        # A topology-changing modifier duplicates the persistent Source IDs.
+        # The Controller must still follow the evaluated Shape Key pose on the
+        # Source cage, rather than fail or adopt the subdivided surface.
+        subsurf = source.modifiers.new("DANP Test Subdivision", "SUBSURF")
+        subsurf.levels = 2
+        bpy.context.view_layer.update()
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        evaluated_source = source.evaluated_get(depsgraph)
+        evaluated_mesh = evaluated_source.to_mesh(
+            preserve_all_data_layers=True, depsgraph=depsgraph
+        )
+        try:
+            check(len(evaluated_mesh.vertices) > len(source.data.vertices),
+                  "Subdivision creates a topology-changing evaluated surface")
+        finally:
+            evaluated_source.to_mesh_clear()
+        visible_subdivided = addon._evaluated_source_positions(source)
+        addon._sync_proxy(source, controller)
+        proxy_subdivided = _controller_positions(controller)
+        check(len(visible_subdivided) == len(source.data.vertices),
+              "topology-changing modifiers retain one coordinate per Source ID")
+        check(all(_near(proxy_subdivided[vid], co)
+                  for vid, co in visible_subdivided.items()),
+              "controller follows Shape Keys on the Source cage under Subdivision")
+
         expression.value = 0.0
         bpy.context.view_layer.update()
         lifecycle._depsgraph_update_post(scene, bpy.context.evaluated_depsgraph_get())
@@ -144,6 +170,7 @@ def run():
         proxy_basis = _controller_positions(controller)
         check(all(_near(proxy_basis[vid], co) for vid, co in visible_basis.items()),
               "controller returns to the visible Basis pose when key value reaches zero")
+        source.modifiers.remove(subsurf)
         source.active_shape_key_index = 0
         bpy.context.view_layer.update()
         addon._sync_proxy(source, controller)

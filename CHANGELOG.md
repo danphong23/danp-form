@@ -1,5 +1,13 @@
 # Design Changelog
 
+## 2026-09-25 — DANP Form 0.5.33 keeps Shape Key sync on the Source cage
+
+- When topology-changing modifiers duplicate or remove persistent Source IDs,
+  evaluate the Shape Key pose on an unmodified temporary copy of the Source.
+- Keep Controller coordinates on the original Source cage so Subdivision does
+  not break synchronization or change control topology.
+- Add a Blender integration regression for Shape Key sync under Subdivision.
+
 ## 2026-09-25 — DANP Form 0.5.32 tracks evaluated Shape Key poses safely
 
 - Sync Controller coordinates from the visible evaluated Source mesh, including
