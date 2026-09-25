@@ -10,11 +10,7 @@
 6. **Future Multires support.** Shape Key editing is settled by ADR-015. Multires support needs separate semantics/tests and is not required to start the core prototype.
 7. **Interpolation candidate and quality.** Prototype numeric methods remain replaceable;
    compare proportional response/current patch form without changing settled constraints.
-8. **Shape Key scope after ADR-015.** ADR-015 currently accepts relative and absolute
-   keys through the active-coordinate write path. H01 must decide whether to retain
-   that scope or explicitly supersede it with a relative-only first release,
-   including file compatibility and a stable unsupported-state response.
-9. **Topology repair scope.** Current fingerprint mismatch pauses edits. H07 must
+8. **Topology repair scope.** Current fingerprint mismatch pauses edits. H07 must
    define which topology edits can be validated safely without resetting controls;
    patch connectivity and ambiguous persistent IDs may change away from controls.
 
@@ -34,5 +30,9 @@ workflow/release evidence. Optional sparse/auto-fit decisions do not block these
 
 Everything else that changes source-of-truth, patch derivation, operation rest, target expansion, proportional placement, or same-path human/AI behavior requires a new ADR.
 
+Settled by [ADR-017](ADR-017-deformation-target-contract.md): a key stack uses
+Basis or its active relative/absolute key as target; mesh without keys uses base
+vertices. Target identity is captured and must be proven before every write.
+
 The post-baseline [H01–H10 roadmap](../roadmap/release-hardening-plan.md) records
-verification work and does not silently settle decisions 8–9.
+verification work and does not silently settle remaining topology decision 8.

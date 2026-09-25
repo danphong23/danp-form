@@ -32,8 +32,9 @@ and `tasks/README.md`. Read `docs/roadmap/development-contract.md` and ADR-009 b
 starting. Controller object is Source's child; patch overlay toggles are display-only.
 The post-baseline release-hardening roadmap is `docs/roadmap/release-hardening-plan.md`;
 H01–H10 are separate scoped phases with explicit dependencies, verification and
-commits. They do not waive any unmet P1–P5 gate. Preserve accepted ADR-015 until
-H01 explicitly decides whether its relative/absolute Shape Key scope changes.
+commits. They do not waive any unmet P1–P5 gate. H01 is settled by ADR-017:
+retain ADR-015's relative and absolute Shape Key scope, with target-safe writes
+required before H02 can pass.
 Implement exact controls first; sparse and automatic fitting are optional extensions.
 Choose/test interpolation in phase 4, then validate human/agent MCP workflows in
 phase 5 through the same primitives. Do not resurrect the replaced phase 0–8 tasks.

@@ -5,6 +5,13 @@ không đổi solver hoặc dữ liệu scene. Đối chiếu [ADR-015](../../do
 với đề xuất bên ngoài; nếu đổi phạm vi relative/absolute, phải ghi rõ ADR nào
 được thay và cách xử lý file cũ.
 
+**Trạng thái: PASS gate tài liệu 2026-09-25.** Kết quả nằm ở
+[ADR-017](../../docs/decisions/ADR-017-deformation-target-contract.md),
+[hợp đồng target](../../docs/architecture/deformation-target-contract.md),
+[ma trận fixture](../../docs/testing/deformation-target-matrix.md) và
+[báo cáo H01](../../docs/testing/2026-09-25-h01-target-contract-review.md).
+Các fixture Blender ghi trong ma trận thuộc H02–H06, chưa được tính là PASS H01.
+
 1. Kiểm kê đường target hiện tại: UI, workflow, Source Edit Mode, controller,
    Undo/Redo, reset, duplicate, khóa key và value/mute/show-only.
 2. Định nghĩa target ID ổn định trong một transaction, target được chọn lúc

@@ -15,3 +15,7 @@ network/masks, kết quả lỗi với thao tác UI tương đương; thử targ
 operation, stale handle và multi-Source isolation. **Gate:** parity số học và
 lifecycle; không đường agent nào ghi bypass adapter. **Commit:**
 `feat(dan-form): expose target-aware agent operations`.
+
+Áp dụng [ADR-017](../../docs/decisions/ADR-017-deformation-target-contract.md)
+và [T14–T15](../../docs/testing/deformation-target-matrix.md); API báo đúng
+target `BASE` hoặc `KEY`, không nhận tên/index như bằng chứng đủ để ghi.

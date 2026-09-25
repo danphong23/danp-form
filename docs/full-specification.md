@@ -585,6 +585,10 @@ where unambiguous; reveal resamples current Source, including omitted vertices.
 ## Capture
 
 Validate editable Source, mapping and supported topology; sync proxy from current Source.
+The current Source coordinate target is resolved under
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md), captured with
+P0 and held fixed across preview/commit/cancel. A different active Shape Key
+must never redirect a transaction or its Undo record.
 Resolve selection once and freeze enabled network, selection intent, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 
@@ -776,8 +780,10 @@ translate their geometry into canonical hidden masks and validate overlaps; do n
 a second runtime activation system. No released-code compatibility is implied yet.
 
 `captured_deformation_target` denotes the base mesh or a specific Source Shape Key.
-It is fixed for one transaction under ADR-015; H01 specifies stable identity and
-failure behavior, and H02 consolidates target-specific I/O. It does not add a
+It is fixed for one transaction under ADR-015 and
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md). The
+[target contract](deformation-target-contract.md) specifies identity and failure
+behavior; H02 consolidates target-specific I/O. It does not add a
 second persistent geometry store or change Source-backed control IDs.
 
 Network revision changes on definition/mask edits; proxy generation changes on rebuild
@@ -828,7 +834,8 @@ Before transform, hide/reveal, simplify/refine, agent target query, or explicit 
 
 After commit, resync proxy from the newly committed Source.
 For Shape Keys, "current Source positions" means the captured deformation target
-under ADR-015, not whichever BMesh layer happens to be active. H02 makes the
+under ADR-015 and [ADR-017](../decisions/ADR-017-deformation-target-contract.md),
+not whichever BMesh layer happens to be active. H02 makes the
 explicit target read/write path safe in both Object and Source Edit Mode.
 
 ## Coordinate changes outside DANP Form
@@ -945,6 +952,10 @@ NO_AFFECTED_PATCH
 NON_FINITE_RESULT
 OPERATION_STALE
 UNSUPPORTED_FEATURE
+SHAPE_KEY_TARGET_INVALID
+SHAPE_KEY_TARGET_CHANGED
+SHAPE_KEY_LOCKED
+TARGET_PROVENANCE_UNKNOWN
 ```
 
 Rules:
@@ -970,6 +981,15 @@ Rules:
 - Reset Model restores the coordinate snapshot captured by the first Init on the
   same topology. It is separate from Reset DANP and is itself undoable. If the
   topology no longer matches that snapshot, Undo or Reset DANP is required first;
+- under [ADR-017](../decisions/ADR-017-deformation-target-contract.md), an
+  explicit historical Shape Key write must prove the captured key's identity,
+  not match only its name/index. Invalid/deleted target returns
+  `SHAPE_KEY_TARGET_INVALID`; active target switch/rename returns
+  `SHAPE_KEY_TARGET_CHANGED`; lock returns `SHAPE_KEY_LOCKED`; Reset/Undo with
+  insufficient saved identity returns `TARGET_PROVENANCE_UNKNOWN`. Changed
+  key-stack mode or coordinate count returns `OPERATION_STALE`. None permits
+  a write to another key. Internal rollback after a newly locked key is allowed
+  only with proven target and unchanged topology;
 - user UI receives a short recovery-oriented message;
 - agent receives a stable code plus machine-readable context.
 
@@ -1030,8 +1050,9 @@ or Reset DANP can create a new mapping on the current mesh in one undoable step.
 
 ## Unsupported/uncertain Blender features
 
-Shape Keys are governed by [ADR-015](../decisions/ADR-015-shape-key-edit-target.md),
-with H01/H02 safety work pending. They are no longer a blanket unsupported
+Shape Keys are governed by [ADR-015](../decisions/ADR-015-shape-key-edit-target.md)
+and [ADR-017](../decisions/ADR-017-deformation-target-contract.md), with H02
+target I/O safety work pending. They are no longer a blanket unsupported
 prototype case. Multires, non-manifold corner cases, linked read-only data and
 shared editable meshes still need dedicated evidence or explicit rejection
 before writes. Do not apply/remove modifiers, copy data or make it local
@@ -1135,11 +1156,12 @@ object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation 
 ## Selection and deformation
 
 For Shape Keys, the currently active Source key is the deformation target under
-[ADR-015](../decisions/ADR-015-shape-key-edit-target.md). The controller display
+[ADR-015](../decisions/ADR-015-shape-key-edit-target.md) and
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md). The controller display
 may isolate that key with Blender's show-only setting while editing; value and
 mute must remain untouched and the prior display setting restored afterward.
 H05 completes the visible target workflow and safe New Shape Key action after
-H01/H02 settle and implement target identity. A locked, missing or switched key
+H02 implements target identity. A locked, missing or switched key
 must stop the operation before a Source write.
 
 Selection is ordinary Blender Controller Edit selection. The list selects a stored
@@ -1320,8 +1342,9 @@ reveal_all_controls(source_id)
 rebuild_proxy(...) / simplify_control(...) / refine_control(...)
 ```
 
-Post-baseline H06 adds target-aware queries and selection, subject to H01's
-accepted contract: `list_deformation_targets(source_id)`,
+Post-baseline H06 adds target-aware queries and selection under
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md):
+`list_deformation_targets(source_id)`,
 `get_deformation_target(source_id)`, and a validated target-selection command.
 `begin_operation` captures that target; its handle must fail if the key changes,
 locks or disappears. These names are planned logical calls, not promises that
@@ -1571,11 +1594,7 @@ midpoint response or required harmonic/ARAP backend follows from product intent.
 6. **Future Multires support.** Shape Key editing is settled by ADR-015. Multires support needs separate semantics/tests and is not required to start the core prototype.
 7. **Interpolation candidate and quality.** Prototype numeric methods remain replaceable;
    compare proportional response/current patch form without changing settled constraints.
-8. **Shape Key scope after ADR-015.** ADR-015 currently accepts relative and absolute
-   keys through the active-coordinate write path. H01 must decide whether to retain
-   that scope or explicitly supersede it with a relative-only first release,
-   including file compatibility and a stable unsupported-state response.
-9. **Topology repair scope.** Current fingerprint mismatch pauses edits. H07 must
+8. **Topology repair scope.** Current fingerprint mismatch pauses edits. H07 must
    define which topology edits can be validated safely without resetting controls;
    patch connectivity and ambiguous persistent IDs may change away from controls.
 
@@ -1595,8 +1614,12 @@ workflow/release evidence. Optional sparse/auto-fit decisions do not block these
 
 Everything else that changes source-of-truth, patch derivation, operation rest, target expansion, proportional placement, or same-path human/AI behavior requires a new ADR.
 
+Settled by [ADR-017](ADR-017-deformation-target-contract.md): a key stack uses
+Basis or its active relative/absolute key as target; mesh without keys uses base
+vertices. Target identity is captured and must be proven before every write.
+
 The post-baseline [H01–H10 roadmap](../roadmap/release-hardening-plan.md) records
-verification work and does not silently settle decisions 8–9.
+verification work and does not silently settle remaining topology decision 8.
 
 ---
 
@@ -1955,7 +1978,7 @@ gates without replacing P1–P5:
 
 | Gate | Required evidence |
 | --- | --- |
-| H01–H02 target safety | ADR resolves Shape Key scope; explicit target I/O, Edit Mode, cancel and Undo/Redo never write a different key |
+| H01–H02 target safety | H01 ADR/contract reviewed; H02 explicit target I/O, Edit Mode, cancel and Undo/Redo never write a different key |
 | H03 ownership safety | Stale marker, Source deletion, duplicate and load do not automatically delete scene mesh data |
 | H04–H05 native UI | Physical modal G/R/S, full/partial selection, key selection, display restoration and New Shape Key on a safe copy |
 | H06 agent parity | Actual MCP calls target the same Source/key, controls and transaction path as UI |
@@ -2079,6 +2102,9 @@ Each H task has a separate development, verification and commit gate; P1–P5 re
 the historical baseline and require their own evidence.
 The [2026-09-25 baseline audit](testing/2026-09-25-release-hardening-baseline.md)
 separates code findings from runtime checks still marked NOT RUN.
+H01 is recorded in [ADR-017](decisions/ADR-017-deformation-target-contract.md),
+the [target contract](architecture/deformation-target-contract.md) and the
+[verification matrix](testing/deformation-target-matrix.md).
 
 Current Phase 2 UI uses the [native list UX](roadmap/phase-02-native-list-ux.md),
 with [task checklists](../tasks/phase-02-native-list-ux.md) and Gate P2-UX before Phase 3.
@@ -3542,7 +3568,9 @@ runtime caches and transaction buffers are disposable.
 - `blender/workflows.py` owns deformation transactions, mask mutation and
   Source writeback. It receives mesh/proxy/UI-independent callbacks through
   `WorkflowDeps`.
-  The H01/H02 target adapter will centralize base/Basis/Shape Key coordinate
+  The H02 target adapter specified by
+  [ADR-017](../decisions/ADR-017-deformation-target-contract.md) will centralize
+  base/Basis/Shape Key coordinate
   access for this path, proxy synchronization and Undo. Until that refactor is
   verified, explicit-key reads/writes in Source Edit Mode are a known gap.
 - `registration.py` owns Blender class/property/handler/keymap registration;
@@ -4099,6 +4127,10 @@ Source coordinates, control data, Controller state, reset, and cleanup.
 
 **Status: Accepted for implementation, 2026-09-24**
 
+[ADR-017](ADR-017-deformation-target-contract.md) refines target identity,
+base/Basis separation, adapter boundaries and failure behavior while retaining
+this ADR's relative and absolute Shape Key support.
+
 ## Decision
 
 DANP Form deformation reads and writes the active Shape Key on the Source mesh.
@@ -4116,9 +4148,9 @@ at full value using Blender's show-only-key setting; the previous display settin
 restored when the user returns to the Source or leaves Controller Edit Mode. Shape
 Key values and mute settings are not changed.
 
-Init snapshots record the target Shape Key name. Reset Model can restore that snapshot
-only when the same target is active, preventing a Basis snapshot from being written to
-an expression key. Shape Keys retain their Blender topology constraints; DANP Form
+Init snapshots currently record the target Shape Key name. Reset Model may restore
+that snapshot only when the same target is proven under ADR-017; a matching name
+alone is insufficient to distinguish a replaced key. Shape Keys retain their Blender topology constraints; DANP Form
 does not add, remove, or reorder shape-key points.
 
 ## Rationale
@@ -4145,9 +4177,9 @@ The current add-on has active-target selection and captures target positions at
 operation start. A code review identified an Edit Mode path where an explicit
 Shape Key target may be read/written through the active BMesh layer instead;
 Undo recovery must use the same target-safe adapter. This is tracked in
-[H02](../../tasks/release-hardening/h02-target-io-undo.md). Any change to the
-relative/absolute scope above requires the H01 ADR; this note does not amend
-the accepted decision.
+[H02](../../tasks/release-hardening/h02-target-io-undo.md). H01 retained the
+relative/absolute scope through ADR-017; this implementation note is not a
+claim that the H02 runtime gate has passed.
 
 ---
 
@@ -4266,18 +4298,21 @@ than being counted as passes.
 
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: kế hoạch, 2026-09-25.** Đây là đợt hardening sau baseline 5 phase của
+**Trạng thái: H01 hoàn tất phần hợp đồng 2026-09-25; H02–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
 một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](../../tasks/README.md)
-để triển khai. Chưa phase H nào được đánh dấu hoàn thành.
+để triển khai. H01 được chốt bằng [ADR-017](../decisions/ADR-017-deformation-target-contract.md)
+và [ma trận target](../testing/deformation-target-matrix.md); đây chỉ là gate
+tài liệu, không phải kiểm thử runtime H02–H06.
 
 ## Căn cứ và ranh giới
 
 - Mã hiện tại đã có target Shape Key đang active, P0 theo target và UI chọn key.
-  [ADR-015](../decisions/ADR-015-shape-key-edit-target.md) đang chấp nhận cả
-  relative và absolute. Đề xuất bên ngoài về `Deformation Target` là đầu vào
-  thiết kế, không phải đặc tả tự động thay thế ADR.
+  [ADR-015](../decisions/ADR-015-shape-key-edit-target.md) chấp nhận cả
+  relative và absolute; H01 giữ nguyên phạm vi này trong ADR-017. Đề xuất
+  bên ngoài về `Deformation Target` là đầu vào thiết kế, không phải đặc tả
+  tự động thay thế ADR.
 - Kiểm tra mã 2026-09-25 phát hiện đường đọc/ghi khi Source ở Edit Mode có thể
   dùng BMesh của key đang active dù lệnh yêu cầu một key khác; đường khôi phục
   Undo cần được bao phủ. Handler lifecycle có thể xóa object mang marker DANP
@@ -4292,7 +4327,7 @@ một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](..
 
 | Phase | Kết quả độc lập có thể review | Phụ thuộc bắt buộc | Commit đề xuất |
 | --- | --- | --- | --- |
-| [H01](../../tasks/release-hardening/h01-target-contract.md) | Hợp đồng target và ADR giải quyết relative/absolute, Basis, target ID, thao tác đổi target | Không | `docs(dan-form): settle deformation target contract` |
+| [H01](../../tasks/release-hardening/h01-target-contract.md) — PASS tài liệu | Hợp đồng target và ADR giải quyết relative/absolute, Basis, target ID, thao tác đổi target | Không | `docs(dan-form): settle deformation target contract` |
 | [H02](../../tasks/release-hardening/h02-target-io-undo.md) | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
 | [H03](../../tasks/release-hardening/h03-owned-object-safety.md) | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
 | [H04](../../tasks/release-hardening/h04-native-transform.md) | G/R/S modal ổn định, gồm Scale toàn control | H02, H03 | `fix(dan-form): stabilize native transform transactions` |
@@ -4362,3 +4397,286 @@ until H01 explicitly amends or supersedes it.
 This is a code/document review and earlier test-evidence synthesis. It is not a
 fresh Blender UI test, model edit, or release certification. Existing historical
 reports remain dated records; do not reinterpret their old NOT RUN as PASS.
+
+**Later on 2026-09-25:** H01 accepted
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md), retaining
+relative and absolute keys. Target I/O and all runtime rows remain for H02–H06.
+
+---
+
+<!-- source: docs/architecture/deformation-target-contract.md -->
+
+# Deformation Target contract
+
+**Status: Normative for H02–H06 under [ADR-017](../decisions/ADR-017-deformation-target-contract.md).**
+This describes required behavior, not a claim that current code passes it.
+
+## Target model
+
+| Source state | Selectable target | Coordinate store | Display label |
+| --- | --- | --- | --- |
+| No Shape Key blocks | `BASE` | Source mesh vertices | Mesh gốc |
+| Shape Key stack exists | `KEY(Basis)` | First KeyBlock coordinates | Basis |
+| Relative key stack | `KEY(active)` | Active KeyBlock coordinates | Key name |
+| Absolute key stack | `KEY(active)` | Active KeyBlock coordinates | Key name |
+
+`BASE` and `KEY(Basis)` are distinct. DANP does not expose the hidden base mesh
+as an additional target when key blocks exist. The Source mesh remains the
+structural owner in every row: same persistent IDs, control membership, masks,
+topology fingerprint and patch connectivity. Only coordinate P0/writeback
+changes with target. No per-key control or patch copy is stored.
+
+## Operation sequence and identity
+
+```text
+resolve Source/Controller + selected target
+  → validate owner, topology, target, lock and mode
+  → resync controller from target when idle
+  → capture target descriptor + immutable P0
+  → core computes each preview from P0
+  → adapter writes only captured target
+  → commit or restore captured target; resync controller
+```
+
+The target descriptor has `kind`, Source mesh owner identity, actual KeyBlock
+identity when applicable, original name/index, key-stack mode, vertex count
+and topology signature. The actual object identity is valid only for the live
+session; persisted snapshot/Undo restoration needs independently proven
+provenance. A name or index match alone never authorizes a write. No target
+change is permitted during an active transaction. The adapter validates the
+descriptor before each write, cancel and Undo/Redo restoration. Stale identity
+must produce a stable error before mutation.
+
+Explicit-target reads/writes, including Undo and Reset, must address the
+descriptor's key even if Blender's currently active key differs. In Source Edit
+Mode, the live BMesh is usable only if verified to represent that exact target;
+otherwise use a controlled context-preserving route or reject before writes.
+Internal rollback after a lock/change may use a narrowly scoped lock bypass
+only if target and topology identity are still proven. No rollback by stale
+array index or by a different active key.
+
+## UI, agent and structural actions
+
+The Source active key is the single user-visible selection state; DANP's panel
+must show that same target. Choosing another key is a structural command:
+require no active transform, change active key, validate it and resync controller
+to its coordinates. Entering Controller Edit may temporarily enable
+`show_only_shape_key`; leaving it or an error restores the prior setting.
+Key values, mute, drivers, animation and absolute-key evaluation time remain
+untouched. A locked key can be selected for inspection but cannot begin a new
+deformation. New Shape Key belongs to H05, not to a transform. It copies the
+currently selected target's **stored coordinates**, never evaluated mix. Without
+keys, it creates Basis from base first and then the new key. It selects the new
+key and resyncs the proxy while preserving existing keys and animation state.
+For absolute stacks, it must choose a non-conflicting frame without changing
+evaluation time, or fail before changing the stack. Blender topology constraints
+still apply.
+
+The H06 agent API may list/select targets and begin operations without mouse
+simulation. It must return the same target identity, errors and coordinates as
+the UI path. The core accepts only IDs, coordinates and operation settings.
+
+## Existing implementation versus required adapter
+
+| Current path | Observed behavior | Required follow-up |
+| --- | --- | --- |
+| `blender.mesh._shape_key_signature` | Captures mesh/key pointer, name, lock, count and mode | H02 centralizes descriptor validation and stale recovery |
+| `blender.selection._source_positions` | Edit Mode reads active BMesh even for explicit other key | H02 validates/reroutes explicit target |
+| `blender.workflows.write_source_positions` | Edit Mode writes active BMesh even for explicit other key | H02 prevents wrong-key write; Undo uses same adapter |
+| `blender.workflows.deform_begin/update/cancel` | Captures key/P0 and checks signature | H02 uses one target validation/write path |
+| `blender.lifecycle._restore_native_undo_records` | Stores historical KeyBlock and writes through workflow | H02 verifies key provenance and Edit Mode behavior |
+| `operators.DANFORM_OT_reset_source` | Checks snapshot's key name | H02 adds sufficient provenance or safe refusal |
+| `operators.DANFORM_OT_select_shape_key` | Selects active key, syncs proxy | H05 completes UI and New Shape Key workflow |
+| `dan_form.agent` | Transaction facade exists, target list/select absent | H06 adds target API and MCP parity |
+
+H01 changes only contracts and review evidence. These gaps remain FAIL/NOT RUN
+until the named implementation phase supplies tests.
+
+---
+
+<!-- source: docs/decisions/ADR-017-deformation-target-contract.md -->
+
+# ADR-017 — Deformation Target contract
+
+**Status: Accepted for H01, 2026-09-25.** Refines [ADR-015](ADR-015-shape-key-edit-target.md);
+does not replace its active-key behavior or its support for relative and absolute
+Shape Keys. The [contract](../architecture/deformation-target-contract.md) and
+[test matrix](../testing/deformation-target-matrix.md) are normative for H02–H06.
+
+## Decision
+
+The Source mesh owns topology, persistent vertex/edge IDs, control definitions,
+masks and patch connectivity. A **Deformation Target** supplies one array of
+Source-local coordinates for that same topology. It is either:
+
+1. `BASE`: mesh vertices, only when the mesh has no Shape Key blocks; or
+2. `KEY`: one actual KeyBlock, including Basis (the first block), selected by
+   the Source object's active Shape Key index before an operation begins.
+
+The editable base mesh underneath an existing Shape Key stack is not a second
+user-selectable DANP target. Creating or removing keys is a separate structural
+action, never a side effect of a transform. Relative and absolute key stacks
+remain in scope. Both write the selected KeyBlock's stored coordinates; neither
+implicitly edits other blocks or changes `use_relative`, key values, mute,
+drivers, keyframes or absolute evaluation time.
+
+The controller is a rebuildable input proxy. Its persistent membership and the
+patch graph are shared by all targets; its displayed coordinates are sampled
+from the currently selected target when idle. A transaction captures exactly
+one target and its immutable P0. Preview, confirm, cancel and Undo/Redo must
+address that captured target, never whichever key is active later.
+
+## Identity and failure rule
+
+A runtime transaction captures the Source mesh owner and the actual KeyBlock
+identity (or `BASE`), plus name, index, key-stack mode, vertex count and
+topology signature as guards. Name and index are diagnostics, **not** proof of
+identity. A pointer/reference is valid only while its owning Blender data
+survives in the current session; after Undo/reload, an adapter must re-resolve
+from a proven identity or fail closed. A changed name, active key, lock state,
+mode, owner, count or topology invalidates the active transaction before new
+deformation writes. A key being deleted or replaced is never matched by name
+alone. Internal rollback may bypass a newly set lock only after it proves the
+original target and topology still exist; otherwise it stops without guessing.
+
+Reset Model's Init snapshot is also target-specific. The current name-only
+snapshot guard is not enough to distinguish a renamed/replaced key; H02 must
+make provenance sufficient across save/reopen or refuse Reset when it cannot
+prove the target. This contract does not mandate a particular persistence
+field or Blender API mechanism.
+
+## Adapter boundary
+
+One Blender-side adapter resolves/validates a target and provides target-aware
+coordinate read, write, snapshot and restoration in Object/Edit Mode. An
+explicit historical target must never fall back to the active Edit BMesh layer.
+If Blender cannot safely expose/write that specific layer in the current mode,
+the adapter must take a controlled path that preserves context or reject the
+write before mutation. The core solver receives IDs, connectivity, P0 and
+targets; it does not branch on `BASE`, Basis, relative or absolute key mode.
+
+The UI and agent use the same target resolution and transaction path. A key
+selection command is allowed only while the Source has no active deformation;
+it then resynchronizes the proxy from the new target. During Controller Edit,
+Blender's show-only-key display may isolate the selected key; the previous
+display state is restored on exit/error. It must not change key values/mute.
+
+An explicit **New Shape Key** command (H05) starts from a copy of the selected
+target's stored coordinates, not from the evaluated mix of other keys. If no
+key stack exists, create Basis from the base mesh first, then the new key from
+that same coordinate snapshot. The new key becomes active and the proxy is
+resynchronized. Existing key coordinates, values, mute, drivers, keyframes,
+`use_relative` and absolute evaluation time remain unchanged. For an absolute
+stack, H05 must assign a non-conflicting frame without moving evaluation time;
+if Blender cannot do so safely, it rejects the command before modifying the
+stack. This is a structural command requiring idle state and compatible
+topology, never an implicit transform side effect.
+
+## Rejected alternatives and consequences
+
+- **Relative-only first release:** rejected for H01 because ADR-015 already
+  includes absolute keys and both modes have the same stored-coordinate
+  contract. H02/H05 must test absolute mode; a failing gate blocks release
+  rather than silently withdrawing support.
+- **Separate controls or patch definitions for each key:** rejected because
+  all targets share Source topology and persistent IDs.
+- **Name/index as target identity, or use the current active key for Undo:**
+  rejected because rename, reorder, replacement and mode changes could direct
+  a write to the wrong coordinates.
+- **Force key values to 1 and others to 0:** rejected; display isolation uses
+  `show_only_shape_key` without altering animation state.
+
+This decision creates no new data write in H01. H02 implements safe I/O and
+Reset/Undo provenance; H05 completes target selection and New Shape Key UX;
+H06 exposes equivalent agent operations. `Save As Shape Key`, automatic Basis
+propagation, corrective drivers, multi-object transactions and topology
+remapping remain outside this decision.
+
+---
+
+<!-- source: docs/testing/2026-09-25-h01-target-contract-review.md -->
+
+# H01 review — Deformation Target contract
+
+**Date:** 2026-09-25. **Starting commit:** `e7051dd`.
+**Scope:** documentation and source review only; Blender scene and add-on Python
+were not modified. H01 is a contract gate, not a runtime feature gate.
+
+## Source inventory and decision trace
+
+| Concern | Current code path | H01 decision and following gate |
+| --- | --- | --- |
+| Target discovery | `blender.mesh._active_shape_key`, `_shape_key_signature` | `BASE` only without keys; otherwise active KeyBlock, Basis included; identity guard in ADR-017; H02 |
+| Controller resync | `operators.DANFORM_OT_select_shape_key`, `DANFORM_OT_focus_controller`, `blender.proxy` | Idle target switch resyncs proxy; structural command; H05 |
+| P0/preview/cancel | `blender.workflows.deform_begin/update/cancel` | Captured target and immutable P0; no redirected write; H02/H04 |
+| Source Edit Mode | `blender.selection._source_positions`, `blender.workflows.write_source_positions` | Explicit target must match live BMesh or use safe path/refuse; current path is a known gap; H02 |
+| Native Undo/Redo | `blender.lifecycle._restore_native_undo_records` | Historical captured target, never current active key by convenience; H02 |
+| Reset Model | `operators.DANFORM_OT_reset_source`, Init snapshot name | Name-only match is insufficient provenance; H02 |
+| UI display/lock | `operators.DANFORM_OT_select_shape_key`, `focus_controller`, `show_only_shape_key` | Active key as single selection; show-only may change, values/mute may not; H05 |
+| New Shape Key | No DANP creation command in current build | Explicit idle command copies selected target's stored coordinates; H05 |
+| Agent | `dan_form.agent` transaction facade | Same target resolver and statuses; list/select target missing; H06 |
+| Duplicate/topology | Source ownership and fingerprint adapters | Target owner and count participate in validity; no cross-object write; H02/H07 |
+
+The outside proposal's useful target abstraction is adopted as an adapter
+boundary. Its proposed relative-only first release and setting key values to
+isolate a target are not adopted: ADR-015 already accepts relative and absolute,
+and display isolation must preserve animated values/mute. `Save As Shape Key`,
+corrective drivers and multi-object operations remain outside H01–H10.
+
+## Contract review
+
+- [PASS] ADR-017 distinguishes base mesh, Basis, relative and absolute key.
+- [PASS] Target owner/identity and fail-closed behavior are explicit; name/index
+  alone cannot authorize historical writes or Reset.
+- [PASS] Adapter boundary leaves the core solver target-agnostic and keeps one
+  Source-owned control network and patch graph.
+- [PASS] UI and agent selection, lock/display behavior and error statuses point
+  to the same contract.
+- [PASS] New Shape Key copies the selected target's stored coordinates and
+  preserves animation state; it is a separate H05 structural command.
+- [PASS] [T01–T16 matrix](deformation-target-matrix.md) assigns runtime
+  scenarios to H02/H04/H05/H06/H07, including untouched-key assertions.
+- [NOT RUN] Blender runtime fixtures and physical modal UI checks; their gates
+  belong to H02–H06 and cannot be inferred from this document review.
+- [PASS] `scripts/validate-docs.ps1`: 71 consolidated modules, 98 documents;
+  local links and both documentation hash manifests consistent. Staged diff
+  whitespace validation is recorded at commit time.
+
+**H01 handoff:** ADR-017 and the target contract are accepted for implementation.
+The first code phase, H02, must fix explicit target I/O and provenance before
+any target workflow is considered release-safe.
+
+---
+
+<!-- source: docs/testing/deformation-target-matrix.md -->
+
+# Deformation Target verification matrix
+
+**Status: H01 design review complete; runtime checks are NOT RUN for this phase.**
+Each row is a required follow-up fixture or UI check. `Unchanged` means compare
+actual stored coordinates and animation settings, not only the viewport image.
+
+| Case | Setup/action | Required result | Phase |
+| --- | --- | --- | --- |
+| T01 | Mesh without keys; deform, cancel, commit, Undo/Redo | Only base vertices change; P0/cancel exact | H02 |
+| T02 | Basis plus two relative keys; edit Basis | Only Basis coordinates change; other key blocks/values/mute unchanged | H02 |
+| T03 | Select relative expression key; deform/Undo | Only selected key changes; controller follows that key | H02, H05 |
+| T04 | Absolute stack; select a non-Basis key; deform/Undo | Only that KeyBlock's stored coordinates change; mode/evaluation time unchanged | H02, H05 |
+| T05 | Source Edit Mode active on A; explicit historical read/write B | B is addressed exactly or request fails before write; A unchanged | H02 |
+| T06 | Rename/reorder/delete/replace captured key during operation | No new writes to any other key; safe cancel only if original identity proven | H02 |
+| T07 | Lock active key before begin; lock after preview | Begin rejects; active preview restores only proven original target | H02, H04 |
+| T08 | Switch active key during native G/R/S | Operation stops and old target restores if safe; no write to new key | H02, H04 |
+| T09 | Undo/Redo while a different key is active or Source in Edit Mode | Historical target only, or stable fail before write; current key unchanged | H02 |
+| T10 | Init snapshot; rename/replace original key; Reset Model | Restore only with proven target provenance; otherwise refuse without writes | H02 |
+| T11 | Toggle Controller Edit and target selector | Panel reflects Source active key; proxy matches key; prior show-only state restored | H05 |
+| T12 | Key has animated value/mute/driver; enter/exit Controller Edit | Values, mute, keyframes, drivers unchanged | H05 |
+| T13 | Create new Shape Key from BASE, Basis, relative and absolute active key; save/reopen/Undo | New stored coordinates equal selected target, Basis added first if needed; animation/mode/evaluation time unchanged; control definitions/IDs shared | H05 |
+| T14 | Agent list/select/edit key via MCP; compare UI | Same target, affected IDs, Source result and stable failures | H06 |
+| T15 | Duplicate Source or full pair with multiple keys | No cross-object/key write; one Controller bound to one Source | H02, H06 |
+| T16 | Topology or key point count changes after capture | Reject before stale-index write; no guessed mapping | H02, H07 |
+
+For every coordinate case, capture all KeyBlocks and mesh vertices before/after;
+assert untouched stores bytewise or within the documented float32 tolerance.
+Record Blender version, Source mode, active key, key-stack mode, controller mode,
+expected/actual, PASS/FAIL/NOT RUN, and whether the check ran in background or
+through native UI. Blender background tests do not satisfy modal UI rows T08/T11.

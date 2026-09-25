@@ -86,11 +86,12 @@ object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation 
 ## Selection and deformation
 
 For Shape Keys, the currently active Source key is the deformation target under
-[ADR-015](../decisions/ADR-015-shape-key-edit-target.md). The controller display
+[ADR-015](../decisions/ADR-015-shape-key-edit-target.md) and
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md). The controller display
 may isolate that key with Blender's show-only setting while editing; value and
 mute must remain untouched and the prior display setting restored afterward.
 H05 completes the visible target workflow and safe New Shape Key action after
-H01/H02 settle and implement target identity. A locked, missing or switched key
+H02 implements target identity. A locked, missing or switched key
 must stop the operation before a Source write.
 
 Selection is ordinary Blender Controller Edit selection. The list selects a stored

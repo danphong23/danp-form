@@ -1,8 +1,8 @@
 [
   {
     "path": "AGENTS.md",
-    "sha256": "5ebbda6b13246dbd6d7b163ee6f00c141c12b7e93868a518f145b33108a6298c",
-    "bytes": 4766
+    "sha256": "1e98f4f340496daefcb4e9a863899b3b44991f0891d6833c5ffc59aeb5fdc5fd",
+    "bytes": 4793
   },
   {
     "path": "CHANGELOG.md",
@@ -16,8 +16,8 @@
   },
   {
     "path": "docs/agent/api-contract.md",
-    "sha256": "fbcc1aed8b3e41ea828667884515f0d59cb5480306d0f3e2819206d5d76f3b14",
-    "bytes": 6099
+    "sha256": "86d9bea941da58e65e3881830a7c9bac9f9acffb60a94f18702286eb216c0643",
+    "bytes": 6132
   },
   {
     "path": "docs/agent/shared-primitives.md",
@@ -26,23 +26,28 @@
   },
   {
     "path": "docs/architecture/data-model.md",
-    "sha256": "a5c701ae6e1a45670b199262ba3ccfb73dbe77e5e58deb7ac36260c003c02744",
-    "bytes": 2847
+    "sha256": "e442465ef92853e3ae457878b62365db35aa309eb6da853de0fd236208b4c5b2",
+    "bytes": 2953
+  },
+  {
+    "path": "docs/architecture/deformation-target-contract.md",
+    "sha256": "dcf21b51eb7fabd106f35f1ddf856885cb21097bcbe018a523e788014ed834ae",
+    "bytes": 5143
   },
   {
     "path": "docs/architecture/errors-and-recovery.md",
-    "sha256": "752324a4002220e60ec9b63d7b7a9c0b2479421f3b7339b2438963d66fc9a7a9",
-    "bytes": 2927
+    "sha256": "3095b9cb76dfc383a97690ba106c8b6f0e9f0458fa4614e7822ed1ce7195b60a",
+    "bytes": 3664
   },
   {
     "path": "docs/architecture/mapping-and-sync.md",
-    "sha256": "6ebba1c510ec88604ea568879d335ea96bcac8ecf5bc71c0f4fdb2983f1f3b20",
-    "bytes": 3844
+    "sha256": "c80fa6ce1f8c7d5baedc4f6341ecd7eca6efab54c2f1bdea5f1d2e81de900d2e",
+    "bytes": 3911
   },
   {
     "path": "docs/architecture/module-boundaries.md",
-    "sha256": "a9b182282c8a6e7c99c3d85d6b6e977504cf2d615436f8faef692fc111e32f02",
-    "bytes": 3600
+    "sha256": "fd3f88cbef42a1a51b8618c83335c62c953b0b46ccb11597edaa31680bb90025",
+    "bytes": 3676
   },
   {
     "path": "docs/architecture/multi-template.md",
@@ -56,13 +61,13 @@
   },
   {
     "path": "docs/blender/integration.md",
-    "sha256": "70b53ba1656b4249ec259197083ffff08f91d9ce6e1670c8a911da313d96682b",
-    "bytes": 3111
+    "sha256": "33c468dd1453cd45eec2fcdeeb607a7043483e7fae459d89592181c6c6434a8e",
+    "bytes": 3185
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "0ec76241a920c8f6ca3441e863263703f736798370042fd848ca3cefa532f184",
-    "bytes": 10421
+    "sha256": "c72454d9145075a5ee82b220f538d64dadf3fd287b565f4c32ae714a5bac04a6",
+    "bytes": 10474
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -86,8 +91,8 @@
   },
   {
     "path": "docs/core/operation-semantics.md",
-    "sha256": "4543548a09a3ee49929d8f019ca872eb3550435ac70419bddfa5e3dff27daac0",
-    "bytes": 4990
+    "sha256": "19299c490c2a8003a813899b2c86dbb694d22090ad1b25e51a7c40c084b69cee",
+    "bytes": 5254
   },
   {
     "path": "docs/core/patch-model.md",
@@ -181,8 +186,8 @@
   },
   {
     "path": "docs/decisions/ADR-015-shape-key-edit-target.md",
-    "sha256": "4b9906315b994dc21a5234783c3d583708e6b1c4a51bfe7a314ba46d8c8db499",
-    "bytes": 2778
+    "sha256": "942ddebd64fa202d31a8530fd62f4b89b326c4a677802859c0e338606acbb541",
+    "bytes": 3027
   },
   {
     "path": "docs/decisions/ADR-016-coherent-all-control-transform.md",
@@ -190,9 +195,14 @@
     "bytes": 2225
   },
   {
+    "path": "docs/decisions/ADR-017-deformation-target-contract.md",
+    "sha256": "a484a50d6a91a892b0307a7a3408c300e3a31c40262fd65c3953af5385fd10bd",
+    "bytes": 5601
+  },
+  {
     "path": "docs/decisions/open-decisions.md",
-    "sha256": "0c22536bd9d1a32898b4cbec65b440fce979f587b9ece9d016e4805924661fa1",
-    "bytes": 3018
+    "sha256": "b077a9e7c05e10d6e4994709e1db65e10e4b43574c49705219bcaf8978638fe2",
+    "bytes": 2950
   },
   {
     "path": "docs/extensions/advanced-interpolation.md",
@@ -206,8 +216,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "76d7ea35ef7bcd6a412317ea5bee68c879e930e83ed3f618a744686a6e6cf2d4",
-    "bytes": 265253
+    "sha256": "98db758c10503a6803337e7dff915d5ef512a460a5ff6a5a9a13675a4648b650",
+    "bytes": 285288
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -231,8 +241,8 @@
   },
   {
     "path": "docs/README.md",
-    "sha256": "075ab16baa5f609b8499ff925db74bac17bcec727895a26981b2f0b938b2566b",
-    "bytes": 2892
+    "sha256": "9f8e836609a1829e88b9275cc0b21fa771e1b9828b2a1686e8153718b799734d",
+    "bytes": 3108
   },
   {
     "path": "docs/research/technical-options.md",
@@ -266,8 +276,8 @@
   },
   {
     "path": "docs/roadmap/release-hardening-plan.md",
-    "sha256": "b2d9f7693ccb370ebe47b5530b395991b6f9e28074ca41f99143c84c7d90790c",
-    "bytes": 5952
+    "sha256": "c61ee87392d9c4773eae771967264bdc8217b98311c6bd70012f341ddb9ffe49",
+    "bytes": 6242
   },
   {
     "path": "docs/testing/2026-09-25-all-control-scale-audit.md",
@@ -275,14 +285,19 @@
     "bytes": 3397
   },
   {
+    "path": "docs/testing/2026-09-25-h01-target-contract-review.md",
+    "sha256": "f5d721142c30fc337b79f11a662911b49715509625e4b59cabbf7e98ec624f93",
+    "bytes": 3632
+  },
+  {
     "path": "docs/testing/2026-09-25-release-hardening-baseline.md",
-    "sha256": "2bd0a44442dfe47f5644289bbbb40fac7e20b6d927bed5af554c8a960780ac16",
-    "bytes": 1917
+    "sha256": "00b3d73ec7739410aadb1f3b496da2f456e32f3c01ecd0861df8ea388c93570f",
+    "bytes": 2112
   },
   {
     "path": "docs/testing/acceptance-gates.md",
-    "sha256": "bd5d80b169e7717b4474b5cb9892aab68681a958f3d704fb75ac6612e97a0727",
-    "bytes": 7232
+    "sha256": "135f8ff17e9f56ba63071711a38adb4f063c28d2e1c66914084cadf6443e2a18",
+    "bytes": 7233
   },
   {
     "path": "docs/testing/blender-integration-cases.md",
@@ -293,6 +308,11 @@
     "path": "docs/testing/cleanup-2026-09-21.md",
     "sha256": "2587fb260bca5c8e4e92b9cc2afcd1e0510ada0efbfc0e355cf0115ece99e777",
     "bytes": 1987
+  },
+  {
+    "path": "docs/testing/deformation-target-matrix.md",
+    "sha256": "558012d5fcba28b70d5f84f04a16e31ba88c8aa63720d5290b8b5eda7bdb1419",
+    "bytes": 3071
   },
   {
     "path": "docs/testing/documentation-audit.md",
@@ -366,8 +386,8 @@
   },
   {
     "path": "README.md",
-    "sha256": "08c51a1294be531439be8bd1d9f6ad90d7270788c9b4f73cb04f697d738bdbe7",
-    "bytes": 3933
+    "sha256": "618fb85d426e946a8306c77061a110304a2821000fa07f843bd3fd13702cafe5",
+    "bytes": 4145
   },
   {
     "path": "SECURITY.md",
@@ -421,13 +441,13 @@
   },
   {
     "path": "tasks/release-hardening/h01-target-contract.md",
-    "sha256": "67478e4ab3880a8a7608fcfafe110b27e7de05340529ec40dd871608403b52d3",
-    "bytes": 1449
+    "sha256": "e942c5ec8af0e6b5a16afebcd7a99c4bc2d8908469fdf5e51cc4db8c3b3a1e6c",
+    "bytes": 1923
   },
   {
     "path": "tasks/release-hardening/h02-target-io-undo.md",
-    "sha256": "8de98ee94173a24180b61df5343629b12d19d7d70952b84a1ac4a2b522f6ae0a",
-    "bytes": 1293
+    "sha256": "5dd8a31ed3f6f0c621b9f695250e6485e3a8ed77b02b85630157b013ce9f14c3",
+    "bytes": 1727
   },
   {
     "path": "tasks/release-hardening/h03-owned-object-safety.md",
@@ -441,13 +461,13 @@
   },
   {
     "path": "tasks/release-hardening/h05-target-ux.md",
-    "sha256": "b7fca94de6ce8f0a138f24043698801c8492bdbcb270300b934f67a3c466decb",
-    "bytes": 1245
+    "sha256": "ebbac928d9a597a67cb851cf72e895fb08121d83a0884a5bd86b08675a4026d9",
+    "bytes": 1706
   },
   {
     "path": "tasks/release-hardening/h06-agent-parity.md",
-    "sha256": "8c6db24421dd202ecf50e4cb3af913cba5ede17f79e37dcdda9e12d7f57a2f7d",
-    "bytes": 1089
+    "sha256": "d13de0c983bcba05560b819d449dcf4f9edb98dac83e91ab3361bb36951c3c5f",
+    "bytes": 1344
   },
   {
     "path": "tasks/release-hardening/h07-topology-recovery.md",

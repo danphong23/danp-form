@@ -5,6 +5,10 @@
 ## Capture
 
 Validate editable Source, mapping and supported topology; sync proxy from current Source.
+The current Source coordinate target is resolved under
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md), captured with
+P0 and held fixed across preview/commit/cancel. A different active Shape Key
+must never redirect a transaction or its Undo record.
 Resolve selection once and freeze enabled network, selection intent, pivot/orientation,
 topology fingerprint and network/proxy generations. One transaction owns a Source.
 

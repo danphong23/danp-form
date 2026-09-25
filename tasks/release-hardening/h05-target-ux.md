@@ -6,14 +6,21 @@
 1. Dùng một nguồn trạng thái target (active Source key) cho panel và operator;
    tránh dropdown giữ giá trị khác Blender. Hiển thị base/Basis, tên key,
    locked/stale/unsupported và trạng thái đang preview.
-2. Lệnh New Shape Key tạo từ target được H01 cho phép; không tự đổi giá trị
-   key, mute, drivers hoặc animation. Khôi phục `show_only_shape_key` sau khi
+2. Lệnh New Shape Key chép **tọa độ lưu** của target đang chọn theo ADR-017;
+   nếu chưa có key thì tạo Basis trước, absolute stack phải cấp frame không
+   trùng. Không tự đổi giá trị key, mute, drivers, animation hay `eval_time`.
+   Khôi phục `show_only_shape_key` sau khi
    rời Controller Edit Mode và khi cancel/error.
 3. Quy định phản hồi khi người dùng đổi/xóa/khóa key giữa transaction; chặn
    lệnh trước ghi và giữ selection/mode nhất quán.
+   Theo [ADR-017](../../docs/decisions/ADR-017-deformation-target-contract.md),
+   Basis là KeyBlock đầu tiên; chỉ mesh không có key mới dùng BASE. Kiểm cả
+   relative và absolute, không tự thay `eval_time`.
 
 **Kiểm thử:** background cho tạo/chọn/khóa/lưu-mở; UI thật cho panel, edit,
 chuyển target, rời mode, Undo/Redo trên bản sao an toàn. So sánh key values,
 mute và tọa độ các key không chọn. **Gate:** người dùng luôn thấy đúng target;
 không có thay đổi ngoài ý muốn. **Commit:**
 `feat(dan-form): complete deformation target workflow`.
+
+Fixture bắt buộc: [T03–T04, T11–T13](../../docs/testing/deformation-target-matrix.md).

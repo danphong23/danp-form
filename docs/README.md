@@ -18,6 +18,9 @@ Each H task has a separate development, verification and commit gate; P1–P5 re
 the historical baseline and require their own evidence.
 The [2026-09-25 baseline audit](testing/2026-09-25-release-hardening-baseline.md)
 separates code findings from runtime checks still marked NOT RUN.
+H01 is recorded in [ADR-017](decisions/ADR-017-deformation-target-contract.md),
+the [target contract](architecture/deformation-target-contract.md) and the
+[verification matrix](testing/deformation-target-matrix.md).
 
 Current Phase 2 UI uses the [native list UX](roadmap/phase-02-native-list-ux.md),
 with [task checklists](../tasks/phase-02-native-list-ux.md) and Gate P2-UX before Phase 3.

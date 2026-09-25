@@ -27,6 +27,10 @@ NO_AFFECTED_PATCH
 NON_FINITE_RESULT
 OPERATION_STALE
 UNSUPPORTED_FEATURE
+SHAPE_KEY_TARGET_INVALID
+SHAPE_KEY_TARGET_CHANGED
+SHAPE_KEY_LOCKED
+TARGET_PROVENANCE_UNKNOWN
 ```
 
 Rules:
@@ -52,6 +56,15 @@ Rules:
 - Reset Model restores the coordinate snapshot captured by the first Init on the
   same topology. It is separate from Reset DANP and is itself undoable. If the
   topology no longer matches that snapshot, Undo or Reset DANP is required first;
+- under [ADR-017](../decisions/ADR-017-deformation-target-contract.md), an
+  explicit historical Shape Key write must prove the captured key's identity,
+  not match only its name/index. Invalid/deleted target returns
+  `SHAPE_KEY_TARGET_INVALID`; active target switch/rename returns
+  `SHAPE_KEY_TARGET_CHANGED`; lock returns `SHAPE_KEY_LOCKED`; Reset/Undo with
+  insufficient saved identity returns `TARGET_PROVENANCE_UNKNOWN`. Changed
+  key-stack mode or coordinate count returns `OPERATION_STALE`. None permits
+  a write to another key. Internal rollback after a newly locked key is allowed
+  only with proven target and unchanged topology;
 - user UI receives a short recovery-oriented message;
 - agent receives a stable code plus machine-readable context.
 

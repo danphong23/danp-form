@@ -2,6 +2,10 @@
 
 **Status: Accepted for implementation, 2026-09-24**
 
+[ADR-017](ADR-017-deformation-target-contract.md) refines target identity,
+base/Basis separation, adapter boundaries and failure behavior while retaining
+this ADR's relative and absolute Shape Key support.
+
 ## Decision
 
 DANP Form deformation reads and writes the active Shape Key on the Source mesh.
@@ -19,9 +23,9 @@ at full value using Blender's show-only-key setting; the previous display settin
 restored when the user returns to the Source or leaves Controller Edit Mode. Shape
 Key values and mute settings are not changed.
 
-Init snapshots record the target Shape Key name. Reset Model can restore that snapshot
-only when the same target is active, preventing a Basis snapshot from being written to
-an expression key. Shape Keys retain their Blender topology constraints; DANP Form
+Init snapshots currently record the target Shape Key name. Reset Model may restore
+that snapshot only when the same target is proven under ADR-017; a matching name
+alone is insufficient to distinguish a replaced key. Shape Keys retain their Blender topology constraints; DANP Form
 does not add, remove, or reorder shape-key points.
 
 ## Rationale
@@ -48,6 +52,6 @@ The current add-on has active-target selection and captures target positions at
 operation start. A code review identified an Edit Mode path where an explicit
 Shape Key target may be read/written through the active BMesh layer instead;
 Undo recovery must use the same target-safe adapter. This is tracked in
-[H02](../../tasks/release-hardening/h02-target-io-undo.md). Any change to the
-relative/absolute scope above requires the H01 ADR; this note does not amend
-the accepted decision.
+[H02](../../tasks/release-hardening/h02-target-io-undo.md). H01 retained the
+relative/absolute scope through ADR-017; this implementation note is not a
+claim that the H02 runtime gate has passed.

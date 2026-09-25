@@ -48,8 +48,10 @@ translate their geometry into canonical hidden masks and validate overlaps; do n
 a second runtime activation system. No released-code compatibility is implied yet.
 
 `captured_deformation_target` denotes the base mesh or a specific Source Shape Key.
-It is fixed for one transaction under ADR-015; H01 specifies stable identity and
-failure behavior, and H02 consolidates target-specific I/O. It does not add a
+It is fixed for one transaction under ADR-015 and
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md). The
+[target contract](deformation-target-contract.md) specifies identity and failure
+behavior; H02 consolidates target-specific I/O. It does not add a
 second persistent geometry store or change Source-backed control IDs.
 
 Network revision changes on definition/mask edits; proxy generation changes on rebuild

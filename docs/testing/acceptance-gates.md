@@ -86,7 +86,7 @@ gates without replacing P1–P5:
 
 | Gate | Required evidence |
 | --- | --- |
-| H01–H02 target safety | ADR resolves Shape Key scope; explicit target I/O, Edit Mode, cancel and Undo/Redo never write a different key |
+| H01–H02 target safety | H01 ADR/contract reviewed; H02 explicit target I/O, Edit Mode, cancel and Undo/Redo never write a different key |
 | H03 ownership safety | Stale marker, Source deletion, duplicate and load do not automatically delete scene mesh data |
 | H04–H05 native UI | Physical modal G/R/S, full/partial selection, key selection, display restoration and New Shape Key on a safe copy |
 | H06 agent parity | Actual MCP calls target the same Source/key, controls and transaction path as UI |

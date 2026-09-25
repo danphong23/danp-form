@@ -37,6 +37,9 @@ replaceable Phase 4 baseline. Shape Key target support is present, with known
 target I/O and lifecycle safety gaps tracked in the
 [release-hardening roadmap](docs/roadmap/release-hardening-plan.md). Live modal
 release gates and agent parity still require evidence.
+The target contract for base/Basis and relative/absolute Shape Keys is
+[ADR-017](docs/decisions/ADR-017-deformation-target-contract.md); its safe
+read/write implementation and runtime verification belong to H02.
 Existing `dan_form` extension/operator/data IDs remain compatible.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
 [performance report](docs/testing/phase-02-edit-performance-report.md).

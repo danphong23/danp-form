@@ -42,8 +42,9 @@ or Reset DANP can create a new mapping on the current mesh in one undoable step.
 
 ## Unsupported/uncertain Blender features
 
-Shape Keys are governed by [ADR-015](../decisions/ADR-015-shape-key-edit-target.md),
-with H01/H02 safety work pending. They are no longer a blanket unsupported
+Shape Keys are governed by [ADR-015](../decisions/ADR-015-shape-key-edit-target.md)
+and [ADR-017](../decisions/ADR-017-deformation-target-contract.md), with H02
+target I/O safety work pending. They are no longer a blanket unsupported
 prototype case. Multires, non-manifold corner cases, linked read-only data and
 shared editable meshes still need dedicated evidence or explicit rejection
 before writes. Do not apply/remove modifiers, copy data or make it local

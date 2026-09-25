@@ -25,7 +25,9 @@ runtime caches and transaction buffers are disposable.
 - `blender/workflows.py` owns deformation transactions, mask mutation and
   Source writeback. It receives mesh/proxy/UI-independent callbacks through
   `WorkflowDeps`.
-  The H01/H02 target adapter will centralize base/Basis/Shape Key coordinate
+  The H02 target adapter specified by
+  [ADR-017](../decisions/ADR-017-deformation-target-contract.md) will centralize
+  base/Basis/Shape Key coordinate
   access for this path, proxy synchronization and Undo. Until that refactor is
   verified, explicit-key reads/writes in Source Edit Mode are a known gap.
 - `registration.py` owns Blender class/property/handler/keymap registration;

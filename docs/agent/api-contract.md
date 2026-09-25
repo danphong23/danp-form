@@ -24,8 +24,9 @@ reveal_all_controls(source_id)
 rebuild_proxy(...) / simplify_control(...) / refine_control(...)
 ```
 
-Post-baseline H06 adds target-aware queries and selection, subject to H01's
-accepted contract: `list_deformation_targets(source_id)`,
+Post-baseline H06 adds target-aware queries and selection under
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md):
+`list_deformation_targets(source_id)`,
 `get_deformation_target(source_id)`, and a validated target-selection command.
 `begin_operation` captures that target; its handle must fail if the key changes,
 locks or disappears. These names are planned logical calls, not promises that

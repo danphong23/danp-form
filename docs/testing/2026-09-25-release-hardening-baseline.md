@@ -22,3 +22,7 @@ until H01 explicitly amends or supersedes it.
 This is a code/document review and earlier test-evidence synthesis. It is not a
 fresh Blender UI test, model edit, or release certification. Existing historical
 reports remain dated records; do not reinterpret their old NOT RUN as PASS.
+
+**Later on 2026-09-25:** H01 accepted
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md), retaining
+relative and absolute keys. Target I/O and all runtime rows remain for H02–H06.
