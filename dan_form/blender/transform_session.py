@@ -142,7 +142,17 @@ def commit(source, deps) -> None:
 def cancel(source, controller, deps) -> None:
     key = source.as_pointer()
     if key in deps.transactions:
-        _deform_cancel(source, controller)
+        # Cancellation restores both Source and Controller.  Updating the
+        # Controller can synchronously invoke the depsgraph observer while
+        # this session is still registered; without the guard, that observer
+        # interprets the restoration itself as another live transform sample
+        # and writes a fresh preview back onto Source.
+        previous_guard = runtime.SYNC_GUARD
+        runtime.SYNC_GUARD = True
+        try:
+            _deform_cancel(source, controller)
+        finally:
+            runtime.SYNC_GUARD = previous_guard
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
 
 

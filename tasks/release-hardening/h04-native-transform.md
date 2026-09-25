@@ -16,3 +16,10 @@ confirm/cancel/undo/redo, tất cả/ một phần control, object scale khác 1
 Quan sát có/không flicker, đo tọa độ chứ không chỉ ảnh. **Gate:** một kết quả
 xác định, không giật/trạng thái xen kẽ, không drift sau cancel/undo; có log và
 video/ảnh nếu cần. **Commit:** `fix(dan-form): stabilize native transform transactions`.
+
+**Nghiệm thu 2026-09-25:** background fixture Blender 5.2.1 pass 23 assertion;
+người dùng xác nhận đã thử các gate G/R/S bằng chuột trên bản sao an toàn với
+control đầy đủ/một phần, object scale khác 1, có/không Shape Key, confirm/cancel
+và Undo/Redo; báo cáo mọi thứ hoạt động ổn. Đây là nghiệm thu do người dùng cung
+cấp, không kèm video/ảnh/log UI. Chi tiết:
+[`2026-09-25-h04-native-transform.md`](../../docs/testing/2026-09-25-h04-native-transform.md).
