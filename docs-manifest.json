@@ -216,8 +216,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "b7e61169a5f506696537212a62c8c9db5630f6e55f44799664056b4ddb48783b",
-    "bytes": 297643
+    "sha256": "5ca1a613c21438e9cf449c27f0caca2c7b4e577a98a165ba814aa51f482ba6c2",
+    "bytes": 297833
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -276,8 +276,8 @@
   },
   {
     "path": "docs/roadmap/release-hardening-plan.md",
-    "sha256": "328cd58e92e436225485f82dd4df82febc045d9a6d43a552f889ca26fe1234dd",
-    "bytes": 6249
+    "sha256": "140978d12ca0490dc0e0840ba71cd1583adcbba3865e4d8832613b6f9f674057",
+    "bytes": 6335
   },
   {
     "path": "docs/testing/2026-09-25-all-control-scale-audit.md",
@@ -291,8 +291,8 @@
   },
   {
     "path": "docs/testing/2026-09-25-h02-evaluated-sync-undo.md",
-    "sha256": "31d63241d6940c6b8503cc2290cc097448bf98529cc513c621f757275596d2a3",
-    "bytes": 5089
+    "sha256": "acdb93fe31057a95009f79a3c0a0b9299556643eed4b20098181e36801f1b4aa",
+    "bytes": 5193
   },
   {
     "path": "docs/testing/2026-09-25-h02-target-io-undo.md",
@@ -461,8 +461,8 @@
   },
   {
     "path": "tasks/release-hardening/h02-target-io-undo.md",
-    "sha256": "a61b00a00d37406a9536d974a1c6d26d61afc4215a5cb9230cf22bb5ee6a17ab",
-    "bytes": 4280
+    "sha256": "be7feed977f7588ba00110169429b60fa64d660229f346c0e4c53fc70933e9fc",
+    "bytes": 4719
   },
   {
     "path": "tasks/release-hardening/h03-owned-object-safety.md",

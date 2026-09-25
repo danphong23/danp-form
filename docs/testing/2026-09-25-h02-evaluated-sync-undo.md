@@ -1,7 +1,7 @@
 # H02 follow-up — evaluated sync and Undo safety
 
 **Status: Blender 5.2.1 fixture and live MCP Shape Key transition PASS for
-version 0.5.34; native UI Undo acceptance pending.** This follow-up covers reports that a Shape Key value change left the
+version 0.5.34; user confirms stable Blender interaction.** This follow-up covers reports that a Shape Key value change left the
 Controller at Basis and that Blender crashed during Undo.
 
 ## Findings
@@ -73,13 +73,14 @@ Controller at Basis and that Blender crashed during Undo.
   each step. The final value was restored to 1, and the file was not saved.
   Afterward, object/mesh/Shape Key datablock counts remained 13/9/5, with no
   temporary object or mesh left behind.
-- [NOT RUN] Native Ctrl+Z/Ctrl+Shift+Z from a real Blender UI after a Controller
-  transform. The Blender MCP connection can inspect the live UI, but this
-  session does not expose native keyboard input. The open file was inspected
-  read-only and was not saved or modified.
+- [USER CONFIRMED] After the 0.5.34 fix and requested Blender check, the user
+  reported that it operates stably. The agent did not independently observe a
+  native Ctrl+Z/Ctrl+Shift+Z key sequence; its automated Undo/Redo bridge and
+  live Shape Key transition evidence are listed above.
 
 ## Acceptance
 
-The 0.5.34 fixture and live MCP Shape Key transition pass. Native Ctrl+Z/Redo
-after a Controller edit remains a separate user acceptance step. Do not start
-the next phase until that UI check passes.
+The 0.5.34 fixture and live MCP Shape Key transition pass. The user has
+confirmed the Blender interaction is stable, closing H02 user acceptance.
+H04 may begin; keep native keyboard evidence attributed to the user because the
+agent did not independently operate that input surface.

@@ -4318,7 +4318,8 @@ than being counted as passes.
 
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: H01–H03 pass theo phạm vi phase 2026-09-25; H04–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
+**Trạng thái: H01–H03 pass theo phạm vi phase 2026-09-25; người dùng đã nghiệm thu
+H02 trên Blender 0.5.34; H04–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
 một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](../../tasks/README.md)
@@ -4339,7 +4340,7 @@ runtime riêng, còn H04–H10 vẫn chờ gate của chúng.
 - [Audit Scale](../testing/2026-09-25-all-control-scale-audit.md) đã xác minh
   phép tính và fixture nền, nhưng chưa xác minh transform modal bằng chuột trên
   phiên Blender mở. Bộ selection lịch sử và overlay cần cập nhật gate.
-- Manifest hiện là 0.5.31. Không suy ra mức sẵn sàng phát hành từ số phiên bản,
+- Manifest ở thời điểm nghiệm thu H02 là 0.5.34. Không suy ra mức sẵn sàng phát hành từ số phiên bản,
   test thuần Python hoặc ảnh chụp.
 
 ## Thứ tự và phụ thuộc
@@ -4817,7 +4818,7 @@ release readiness of DANP Form.
 # H02 follow-up — evaluated sync and Undo safety
 
 **Status: Blender 5.2.1 fixture and live MCP Shape Key transition PASS for
-version 0.5.34; native UI Undo acceptance pending.** This follow-up covers reports that a Shape Key value change left the
+version 0.5.34; user confirms stable Blender interaction.** This follow-up covers reports that a Shape Key value change left the
 Controller at Basis and that Blender crashed during Undo.
 
 ## Findings
@@ -4889,13 +4890,14 @@ Controller at Basis and that Blender crashed during Undo.
   each step. The final value was restored to 1, and the file was not saved.
   Afterward, object/mesh/Shape Key datablock counts remained 13/9/5, with no
   temporary object or mesh left behind.
-- [NOT RUN] Native Ctrl+Z/Ctrl+Shift+Z from a real Blender UI after a Controller
-  transform. The Blender MCP connection can inspect the live UI, but this
-  session does not expose native keyboard input. The open file was inspected
-  read-only and was not saved or modified.
+- [USER CONFIRMED] After the 0.5.34 fix and requested Blender check, the user
+  reported that it operates stably. The agent did not independently observe a
+  native Ctrl+Z/Ctrl+Shift+Z key sequence; its automated Undo/Redo bridge and
+  live Shape Key transition evidence are listed above.
 
 ## Acceptance
 
-The 0.5.34 fixture and live MCP Shape Key transition pass. Native Ctrl+Z/Redo
-after a Controller edit remains a separate user acceptance step. Do not start
-the next phase until that UI check passes.
+The 0.5.34 fixture and live MCP Shape Key transition pass. The user has
+confirmed the Blender interaction is stable, closing H02 user acceptance.
+H04 may begin; keep native keyboard evidence attributed to the user because the
+agent did not independently operate that input surface.

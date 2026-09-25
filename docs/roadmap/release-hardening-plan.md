@@ -1,6 +1,7 @@
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: H01–H03 pass theo phạm vi phase 2026-09-25; H04–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
+**Trạng thái: H01–H03 pass theo phạm vi phase 2026-09-25; người dùng đã nghiệm thu
+H02 trên Blender 0.5.34; H04–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
 một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](../../tasks/README.md)
@@ -21,7 +22,7 @@ runtime riêng, còn H04–H10 vẫn chờ gate của chúng.
 - [Audit Scale](../testing/2026-09-25-all-control-scale-audit.md) đã xác minh
   phép tính và fixture nền, nhưng chưa xác minh transform modal bằng chuột trên
   phiên Blender mở. Bộ selection lịch sử và overlay cần cập nhật gate.
-- Manifest hiện là 0.5.31. Không suy ra mức sẵn sàng phát hành từ số phiên bản,
+- Manifest ở thời điểm nghiệm thu H02 là 0.5.34. Không suy ra mức sẵn sàng phát hành từ số phiên bản,
   test thuần Python hoặc ảnh chụp.
 
 ## Thứ tự và phụ thuộc
