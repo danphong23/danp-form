@@ -4058,3 +4058,114 @@ rollback, and native Undo/Redo through the captured active key.
   propagation to other keys is intentionally not implicit.
 - Blender integration must cover target changes, lock changes, cancel, undo/redo,
   display restoration, and a mesh with no Shape Keys.
+
+---
+
+<!-- source: docs/decisions/ADR-016-coherent-all-control-transform.md -->
+
+# ADR-016 — One affine transform when every control is selected
+
+**Status: Implemented, 2026-09-25**
+
+## Problem
+
+The Controller is split into face patches by control edges. A native Scale of
+every enabled Controller vertex is one coherent transform, but each patch was
+fitted independently. Near-planar rings do not determine motion along their
+normal, so free vertices in those patches could scale less than the rest of the
+mesh. The fixed `1e-6` sample residual threshold was smaller than Blender's
+float32 coordinate noise on the current head; successive mouse samples switched
+different patches between affine and harmonic interpolation.
+
+On `girl chibi test | Head` (1,072 Source vertices, 134 selected Controller
+vertices, 10 patches), a read-only simulated Scale at factor 0.5 had up to
+1.104673 Source-local units of error against a whole-mesh Scale. Across tested
+factors, between 3 and 10 patches switched to harmonic interpolation.
+
+## Decision
+
+When every enabled Controller vertex was selected at operation start, there are
+no stationary control vertices, the DANP proportional radius is zero, and the
+measured targets fit one affine transform, apply that transform once over the
+operation's captured affected-patch scope. Exact measured control targets still
+override the fitted positions. An unchanged target set returns P0 exactly.
+
+The fit check allows eight float32 units of precision at the largest sample
+coordinate, with a `1e-7` floor. If targets are not coherent, retain the
+existing patch-local constrained solve. Partial selections, stationary
+controls, finite proportional radius, topology boundaries, and Shape Key
+writeback keep their existing behavior. This adds no persistent state or new
+solver family.
+
+## Evidence and verification
+
+The same read-only head simulation gave a maximum error below `0.0000022`
+for uniform Scale, non-uniform Scale, rotation, and translation after the change.
+Across 20 uniform Scale samples, numerical-only median/P95 time changed from
+26.39/29.89 ms to 8.91/9.28 ms in Blender 5.2.1 on the current head.
+Regression tests cover separate near-planar patches, float32 target rounding,
+consecutive Scale factors, exact no-op, and existing fixed/partial controls.
+
+---
+
+<!-- source: docs/testing/2026-09-25-all-control-scale-audit.md -->
+
+# All-control Scale stability audit — 2026-09-25
+
+## Reproduction on the open head
+
+The active `girl chibi test | Head` has 1,072 Source vertices, 134 enabled
+Controller vertices, 10 face patches, and all 134 Controller vertices selected.
+Its DANP proportional radius is zero. Read-only calculations using the open
+model's actual patch graph and Source coordinates reproduced the reported
+behavior: a uniform Scale factor of 0.5 left some Source vertices as much as
+1.104673 Source-local units away from the whole-mesh Scale result. During a
+series of Scale factors, 3–10 patches changed from affine fitting to harmonic
+interpolation because the old fixed `1e-6` target tolerance was below float32
+coordinate noise for this mesh. A planar control loop also leaves its normal
+direction underdetermined when fitted in isolation.
+
+## Repair
+
+If every enabled Controller vertex belongs to the captured selection, no
+stationary control remains, proportional radius is zero, and the measured
+targets fit one affine transform, use that transform for the entire affected
+patch scope. Preserve each exact measured control position. Use a tolerance
+derived from Blender's float32 coordinate precision for affine target checks.
+Unselected controls still anchor their patches. Incoherent targets retain the
+constrained solve. A returned-to-rest operation remains an exact no-op.
+
+## Verification
+
+- Read-only calculations on the current head: maximum error below 0.0000022
+  Source-local units for uniform Scale, nonuniform Scale, rotation and
+  translation. Across 20 uniform Scale samples, numerical-only median/P95
+  computation time was 26.39/29.89 ms before and 8.91/9.28 ms after.
+- Pure Python suite: 59 checks passed, including consecutive float32 Scale
+  samples, exact no-op, stationary controls, partial selections and finite
+  proportional radius.
+- Blender 5.2.1 background two-patch fixture: six consecutive Scale samples
+  passed; maximum Source error 0.00000191. It also restored the fixture Source
+  after cancellation.
+- Blender 5.2.1 background Shape Key, duplicate ownership, Controller
+  lifecycle, sidebar regression and deformation fixture suites passed. The
+  sidebar suite was corrected to re-read control definitions after Hide/Show;
+  its previous assertion inspected stale in-memory copies of those definitions.
+- Installed extension 0.5.31 in the open Blender. Read-only recalculation on
+  the same head at Scale factors 0.98, 0.7, 0.5 and 1.0 showed maximum error
+  0.000001912 and an exact no-op at 1.0. The Source still had 1,072 vertices,
+  the Controller still had 134 selected vertices, and the scene stayed in
+  Controller Edit Mode.
+
+The background Blender transform operator did not move Controller geometry in
+the saved-file probe, so a physical modal mouse Scale in the open UI was not
+verified here. The open user scene was only read and was not saved by these
+checks. It was dirty at the first diagnostic read and clean at the final
+installation check.
+
+The historical Phase 2 selection suites are not valid release gates for this
+build: they call selection operators and a scene property that have not been
+registered since the later Controller UX refactor. The patch overlay suite
+also needs a GPU-backed UI context and cannot run in background Blender.
+These gaps are separate from the Scale calculation and remain visible rather
+than being counted as passes.

@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "752f535089e5ea63b096523177b98361d2e5ae7d62949b0cbe674211332d2133",
-    "bytes": 26923
+    "sha256": "d4f0e9eecef94de785a6569f6f2b792fc3513a2f60e1173c80484c070c837609",
+    "bytes": 27588
   },
   {
     "path": "CONTRIBUTING.md",
@@ -185,6 +185,11 @@
     "bytes": 2233
   },
   {
+    "path": "docs/decisions/ADR-016-coherent-all-control-transform.md",
+    "sha256": "f9fa0ee78721f70b275f8adbaea9ec80ded577df26bca40ea3a2df9ac6c480f6",
+    "bytes": 2225
+  },
+  {
     "path": "docs/decisions/open-decisions.md",
     "sha256": "82561b5d2b023e8b83a6e88b0d90fbaaafad1ee34fe67e6375d1420267d4a939",
     "bytes": 2302
@@ -201,8 +206,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "bd116d393625eb489eefefe93f877fc1f12f663ab12d7c70f265afdc51371553",
-    "bytes": 245556
+    "sha256": "14c6a1ddbf310efd20e4e201a9078bbd832b249d481d2b9d58e7d2b12ceb32f2",
+    "bytes": 251334
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -258,6 +263,11 @@
     "path": "docs/roadmap/phase-02-ux-upgrade.md",
     "sha256": "19d05b86272b475cc36fc4ee1b313c2c404a10f221ea837f117cc67a5337e061",
     "bytes": 13002
+  },
+  {
+    "path": "docs/testing/2026-09-25-all-control-scale-audit.md",
+    "sha256": "ccff71389de8f59f14f03ca43b5e46ba02df3f1701bf127a9b8ed17541aa4436",
+    "bytes": 3397
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -346,8 +356,8 @@
   },
   {
     "path": "README.md",
-    "sha256": "c21e6ac6856b347379accb753fd0aed0a72fb5235a9fc9982363dc930c2ea126",
-    "bytes": 3792
+    "sha256": "a40729315be8ee630c91bb56dea3437044e637dd60163f896646bf8474813d10",
+    "bytes": 3746
   },
   {
     "path": "SECURITY.md",

@@ -2,6 +2,7 @@
 
 import importlib.util
 import math
+import struct
 import sys
 import types
 from pathlib import Path
@@ -206,6 +207,52 @@ def test_single_control_owns_scale_of_the_whole_patch():
     assert output[2].values[0] == 1.0
     assert abs(output[2].values[1] - 1.0) < 1e-6
     assert abs(output[2].values[2] - 1.0) < 1e-6
+
+
+def test_all_selected_controls_scale_as_one_mesh_across_patch_cuts():
+    # Two nearly planar control rings divide the mesh into separate patches.
+    # Each ring alone cannot determine scale along its normal, but together
+    # they define the same full 3D Scale that Blender applied to the proxy.
+    def f32(value):
+        return struct.unpack("f", struct.pack("f", float(value)))[0]
+
+    p0 = {}
+    patches = []
+    selected = set()
+    edge_vids = {}
+    for group, z in enumerate((10.123456, 20.654321)):
+        offset = group * 5
+        ring = {
+            offset: V(f32(10.123456), f32(0.123456), f32(z)),
+            offset + 1: V(f32(12.654321), f32(0.123456), f32(z)),
+            offset + 2: V(f32(12.654321), f32(2.654321), f32(z)),
+            offset + 3: V(f32(10.123456), f32(2.654321), f32(z)),
+        }
+        p0.update(ring)
+        p0[offset + 4] = V(f32(11.4), f32(1.4), f32(z + 1.0))
+        selected.update(ring)
+        patches.append({"vertex_ids": list(range(offset, offset + 5))})
+        for side in range(4):
+            edge_vids[offset * 8 + side] = (offset + side, offset + (side + 1) % 4)
+            edge_vids[offset * 8 + side + 4] = (offset + side, offset + 4)
+
+    for factor in (1.0, 0.98, 0.9, 0.7, 0.5, 0.4):
+        targets = {
+            vertex_id: V(*(f32(factor * component) for component in p0[vertex_id]))
+            for vertex_id in selected
+        }
+        output, changed = DEFORMATION.compute_preview(
+            p0, selected, set(p0), patches, edge_vids, targets, set(),
+            "LINEAR", 0.0, selection_intent=selected,
+            all_controls_selected=True,
+        )
+        if factor == 1.0:
+            assert output == p0 and changed == 0
+        else:
+            assert changed == len(p0)
+            for vertex_id, rest in p0.items():
+                expected = [factor * component for component in rest]
+                assert math.dist(tuple(output[vertex_id]), expected) < 1e-4
 
 
 def test_single_planar_control_keeps_axis_scale_continuous_for_free_patch_vertices():

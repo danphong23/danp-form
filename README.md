@@ -37,12 +37,12 @@ Phase 4 baseline; live release gates and agent parity remain Phase 5 work.
 Existing `dan_form` extension/operator/data IDs remain compatible.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
 [performance report](docs/testing/phase-02-edit-performance-report.md).
-Controller Edit supports Ctrl+Alt+Click to select a span between junctions (Shift
-adds), H/Alt-H for partial Hide/Reveal, and bulk Hide/Show synchronizing all eyes.
-Hover picking preserves native selection until click, supports RMB/Esc cancel,
-passes navigation through, and yields to native commands such as Box Select.
-The optional thin cyan highlight follows native selection and Hide/Show; it has
-no selection or input ownership. See the [UX audit](docs/testing/phase-02-pick-ux-audit.md).
+Controller Edit uses Blender's native vertex/edge selection and G/R/S transforms.
+H/Alt-H hide or reveal selected controls, and bulk Hide/Show synchronizes all
+eyes. The optional thin cyan highlight follows native selection and Hide/Show;
+it has no selection or input ownership. The historical Ctrl+Alt+Click span and
+hover picker described in the [Phase 2 UX audit](docs/testing/phase-02-pick-ux-audit.md)
+are not registered in the current build.
 Phase 3 now derives Source face patches from the effective control network and can
 show them as a display-only translucent overlay. See the [patch report](docs/testing/phase-03-patch-report.md).
 Patch connectivity and GPU submissions are cached so Show Patches does not rebuild

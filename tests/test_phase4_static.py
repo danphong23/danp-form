@@ -11,10 +11,8 @@ def test_phase4_transaction_primitives_exist():
 
 
 def test_phase4_hard_constraints_and_profiles_are_present():
-    assert (
-        "stationary = set(deps.effective_proxy_elements(source)[0]) - active" in SOURCE
-        or "stationary = set(_effective_proxy_elements(source)[0]) - active" in SOURCE
-    )
+    assert "effective_vertices = set(deps.effective_proxy_elements(source)[0])" in SOURCE
+    assert "stationary = effective_vertices - active" in SOURCE
     assert "for vertex_id, target in operation_targets.items():" in SOURCE
     assert "output[vertex_id] = p0[vertex_id].copy()" in SOURCE
     assert "solve_displacements(" in SOURCE
@@ -114,4 +112,4 @@ def test_transform_selection_intent_is_carried_separately_from_measured_targets(
     assert 'selection_intent=intent' in workflows
     assert 'selection_intent=selection_intent' in session
     assert 'active = moved | intent' in deformation
-    assert 'stationary = set(deps.effective_proxy_elements(source)[0]) - active' in workflows
+    assert 'stationary = effective_vertices - active' in workflows

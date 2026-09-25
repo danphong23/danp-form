@@ -192,6 +192,18 @@ def _transform_from_samples(p0, targets):
     return apply
 
 
+def _affine_sample_tolerance(p0, targets):
+    """Allow for Blender's float32 vertex coordinates when testing a fit."""
+    magnitude = max(
+        (abs(float(component))
+         for vertex_id, target in targets.items()
+         for position in (p0[vertex_id], target)
+         for component in position),
+        default=0.0,
+    )
+    return max(1e-7, 8.0 * (2.0 ** -23) * magnitude)
+
+
 def compute_preview(
     p0: dict[int, object],
     moved_targets: set[int],
@@ -204,6 +216,7 @@ def compute_preview(
     radius: float,
     control_groups: dict[str, set[int]] | None = None,
     selection_intent: set[int] | None = None,
+    all_controls_selected: bool = False,
 ) -> tuple[dict[int, object], int]:
     """Compute an absolute preview from the selection and measured positions.
 
@@ -228,6 +241,27 @@ def compute_preview(
     operation_targets = {vertex_id: p0[vertex_id].copy() for vertex_id in intent}
     operation_targets.update(targets)
     output = dict(p0)
+    # One native G/R/S applied to every enabled Controller vertex is one
+    # transform of the affected mesh. Separate patch fits can be ambiguous
+    # for nearly planar loops and can flip to harmonic interpolation as
+    # float32 samples cross a fixed residual threshold during Scale.
+    if all_controls_selected and not stationary and radius <= 0.0:
+        if all(tuple(target) == tuple(p0[vertex_id])
+               for vertex_id, target in operation_targets.items()):
+            return output, 0
+        transform = _transform_from_samples(p0, operation_targets)
+        tolerance = _affine_sample_tolerance(p0, operation_targets)
+        if transform is not None and all(
+            math.dist(tuple(transform(p0[vertex_id])), tuple(target)) <= tolerance
+            for vertex_id, target in operation_targets.items()
+        ):
+            for vertex_id in scope:
+                output[vertex_id] = transform(p0[vertex_id])
+            for vertex_id, target in operation_targets.items():
+                output[vertex_id] = target.copy()
+            changed = sum(output.get(vertex_id) != p0.get(vertex_id) for vertex_id in scope)
+            return output, changed
+
     candidates: dict[int, list[object]] = {}
     for patch in patches:
         patch_vertices = {int(vertex_id) for vertex_id in patch["vertex_ids"]}
@@ -251,9 +285,10 @@ def compute_preview(
                 # constrained displacement solve below so hard samples stay
                 # exact.  This is a target-shape check, not a time or
                 # scene-specific heuristic.
+                tolerance = _affine_sample_tolerance(p0, patch_targets)
                 for vertex_id, target in patch_targets.items():
                     predicted = transform(p0[vertex_id])
-                    if math.dist(tuple(predicted), tuple(target)) > 1e-6:
+                    if math.dist(tuple(predicted), tuple(target)) > tolerance:
                         transform = None
                         break
 

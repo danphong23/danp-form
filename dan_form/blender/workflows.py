@@ -170,7 +170,8 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
     for patch in partition["patches"]:
         if active.intersection(set(patch["vertex_ids"])):
             tx["scope"].update(int(v) for v in patch["vertex_ids"])
-    stationary = set(deps.effective_proxy_elements(source)[0]) - active
+    effective_vertices = set(deps.effective_proxy_elements(source)[0])
+    stationary = effective_vertices - active
     output, changed_vertices = compute_preview(
         p0,
         moved,
@@ -183,6 +184,7 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         float(radius),
         control_groups=tx.get("control_groups"),
         selection_intent=intent,
+        all_controls_selected=bool(effective_vertices) and effective_vertices.issubset(intent),
     )
     write_source_positions(source, {vid: output[vid] for vid in tx["scope"] if vid in output},
                            deps, shape_key=tx.get("shape_key_target"))

@@ -1,5 +1,17 @@
 # Design Changelog
 
+## 2026-09-24 — DANP Form 0.5.31 stabilizes all-control transforms
+
+- Apply one coherent affine transform over affected patches when every enabled
+  Controller point participates in the same native transform.
+- Compare fitted targets using Blender float32 coordinate precision so a live
+  Scale does not switch patches between affine and harmonic methods as the
+  mouse moves.
+- Keep exact control targets and existing stationary, proportional, and
+  partial-control behavior; add a multi-patch Scale regression.
+- Verify the installed build against the open head and a Blender two-patch
+  fixture; refresh the sidebar regression to inspect current definitions.
+
 ## 2026-09-24 — DANP Form 0.5.30 restores the control sidebar without Shape Keys
 
 - Disable the Edit Control button through its layout row instead of assigning

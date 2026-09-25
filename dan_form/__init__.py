@@ -135,7 +135,7 @@ _MODIFIER_SIGNATURES = _runtime.MODIFIER_SIGNATURES
 bl_info = {
     "name": "DANP Form",
     "author": "DANP Form",
-    "version": (0, 5, 30),
+    "version": (0, 5, 31),
     "blender": (5, 1, 0),
     "location": "View3D > Sidebar > DANP Form",
     "category": "Mesh",
