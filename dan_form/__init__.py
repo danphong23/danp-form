@@ -55,6 +55,8 @@ from .blender.mesh import _source_vid as _source_vid
 from .blender.mesh import _topology_fingerprint as _topology_fingerprint
 from .blender.mesh import _validate_source_topology as _validate_source_topology
 from .blender.mesh import _topology_state as _topology_state
+from .blender.mesh import _topology_repair_analysis as _topology_repair_analysis
+from .blender.mesh import _repair_source_topology as _repair_source_topology
 from .blender.mesh import _modifier_signature as _modifier_signature
 from .blender.proxy import ProxyDeps as _ProxyDeps
 from .blender.proxy import guard_proxy_topology as _proxy_guard

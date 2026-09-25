@@ -30,7 +30,11 @@ def _friendly_error(exc: Exception) -> str:
     if code in {"STALE_MAPPING", "TOPOLOGY_CHANGED"}:
         # STALE_MAPPING remains an accepted legacy diagnostic from old files;
         # users should see the recovery action, never an implementation code.
-        return "DANP tạm dừng: topology mesh đã thay đổi. Undo để khôi phục mapping hoặc Reset DANP để tạo control mới."
+        return "DANP tạm dừng: hãy Validate topology; chỉ Repair khi an toàn, nếu không hãy Undo hoặc Reset DANP."
+    if code == "TOPOLOGY_SNAPSHOT_MISSING":
+        return "Không có bản đồ topology gốc đáng tin cậy. Hãy Undo hoặc Reset DANP để tạo mapping mới."
+    if code == "TOPOLOGY_SNAPSHOT_INVALID":
+        return "Bản ghi topology bị lỗi; DANP không thể chứng minh mapping an toàn. Hãy Undo hoặc Reset DANP."
     if code == "SOURCE_ID_LAYERS_MISSING":
         return "DANP không tìm thấy ID mesh. Hãy Sync hoặc Reset DANP trên mesh hiện tại."
     if code.startswith("CONTROL_DATA_INVALID"):
@@ -58,6 +62,7 @@ _SOURCE_DANP_KEYS = (
     SOURCE_UUID_KEY, SCHEMA_KEY, CONTROLS_KEY, HIDDEN_VIDS_KEY,
     HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
     NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY, ORIGINAL_TOPOLOGY_KEY,
+    TOPOLOGY_SNAPSHOT_KEY, TOPOLOGY_SNAPSHOT_FINGERPRINT_KEY,
     ORIGINAL_SHAPE_KEY_NAME_KEY,
     ORIGINAL_TARGET_KIND_KEY,
     "dan_form_controller_name", UNBOUND_COPY_KEY,
@@ -304,6 +309,64 @@ class DANFORM_OT_sync(bpy.types.Operator):
             return {"FINISHED"}
         except ValueError as exc:
             self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_validate_topology(bpy.types.Operator):
+    bl_idname = "dan_form.validate_topology"
+    bl_label = "Validate Topology Recovery"
+    bl_description = "Preview whether this Source topology can be repaired without changing controls or Shape Keys"
+
+    def execute(self, context):
+        source, _controller = _context_source(context)
+        try:
+            if source is None:
+                raise ValueError("SOURCE_OR_CONTROLLER_MISSING")
+            report = _topology_repair_analysis(source)
+            summary = (f"Topology repair is safe: +{report['added_vertices']} vertices, "
+                       f"+{report['added_edges']} edges, -{report['removed_vertices']} vertices, "
+                       f"-{report['removed_edges']} edges; {report['protected_faces']} protected faces unchanged")
+            context.scene.dan_form_status = summary
+            self.report({"INFO"}, summary)
+            return {"FINISHED"}
+        except (AttributeError, RuntimeError, ValueError) as exc:
+            message = _friendly_error(exc)
+            context.scene.dan_form_status = message
+            self.report({"WARNING"}, message)
+            return {"CANCELLED"}
+
+
+class DANFORM_OT_repair_topology(bpy.types.Operator):
+    bl_idname = "dan_form.repair_topology"
+    bl_label = "Repair DANP Mapping"
+    bl_description = "Assign IDs to unambiguous new mesh elements and rebuild DANP controls"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        source, controller = _context_source(context)
+        return source is not None and controller is not None and _topology_state(source).get("state") == "PAUSED"
+
+    def execute(self, context):
+        source, controller = _context_source(context)
+        try:
+            _require_structural_idle(source)
+            if source is None or controller is None:
+                raise ValueError("SOURCE_OR_CONTROLLER_MISSING")
+            report = _repair_source_topology(source)
+            _update_revision(source)
+            _rebuild_proxy(source, controller)
+            _remember_binding(source, controller)
+            _set_scene_context(context, source, controller)
+            summary = (f"DANP mapping repaired: +{report['added_vertices']} vertices, "
+                       f"+{report['added_edges']} edges; controls and Shape Keys preserved")
+            context.scene.dan_form_status = summary
+            self.report({"INFO"}, summary)
+            return {"FINISHED"}
+        except (AttributeError, RuntimeError, ValueError) as exc:
+            message = _friendly_error(exc)
+            context.scene.dan_form_status = message
+            self.report({"ERROR"}, message)
             return {"CANCELLED"}
 
 
@@ -2029,7 +2092,11 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             warning = layout.box()
             warning.alert = True
             warning.label(text="DANP tạm dừng: topology đã thay đổi", icon="ERROR")
-            warning.label(text="Undo để khôi phục hoặc Reset để tạo mapping mới")
+            warning.label(text="Kiểm tra trước; chỉ Repair nếu patch control còn nguyên")
+            recovery = warning.row(align=True)
+            recovery.operator(DANFORM_OT_validate_topology.bl_idname, text="Validate", icon="VIEWZOOM")
+            recovery.operator(DANFORM_OT_repair_topology.bl_idname, text="Repair", icon="FILE_REFRESH")
+            warning.operator(DANFORM_OT_reset.bl_idname, text="Reset DANP", icon="LOOP_BACK")
         if controller is None:
             layout.label(text="Nhấn Init để dựng lại controller", icon="INFO")
             return
@@ -2127,6 +2194,8 @@ CLASSES = (
     DANFORM_OT_initialize,
     DANFORM_OT_resolve_duplicate_pair,
     DANFORM_OT_sync,
+    DANFORM_OT_validate_topology,
+    DANFORM_OT_repair_topology,
     DANFORM_OT_create_control,
     DANFORM_OT_sync_control,
     DANFORM_OT_move_control,
@@ -2163,7 +2232,8 @@ __all__ = [
     "DANFORM_PG_ControlItem", "DANFORM_UL_controls", "DANFORM_MT_control_menu", "DANFORM_MT_shape_keys", "DANFORM_MT_manage",
     "DANFORM_OT_select_shape_key",
     "DANFORM_PT_sidebar", "DANFORM_OT_initialize", "DANFORM_OT_resolve_duplicate_pair", "DANFORM_OT_sync",
-    "DANFORM_OT_sync_control", "DANFORM_OT_move_control", "DANFORM_OT_create_control",
+    "DANFORM_OT_sync_control", "DANFORM_OT_validate_topology", "DANFORM_OT_repair_topology",
+    "DANFORM_OT_move_control", "DANFORM_OT_create_control",
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",
     "DANFORM_OT_delete_control", "DANFORM_OT_hide_selected", "DANFORM_OT_reveal",
     "DANFORM_OT_remove_controller", "DANFORM_OT_remove", "DANFORM_OT_reset", "DANFORM_OT_reset_source", "DANFORM_OT_unbind_orphaned_owned_object", "DANFORM_OT_topology_locked",

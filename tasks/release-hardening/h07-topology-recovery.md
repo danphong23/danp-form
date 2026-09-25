@@ -18,3 +18,8 @@ giữ nguyên count, xóa cạnh control, duplicate ID, Shape Key đang tồn t�
 Undo/Redo và save/reopen. **Gate:** không ghi sai Source hoặc xóa control im lặng;
 mọi auto-accept đều có fixture chứng minh patch/mapping hợp lệ. **Commit:**
 `feat(dan-form): make topology recovery explicit`.
+
+**Nghiệm thu 2026-09-25:** fixture nền Blender 5.2.1 pass 20 assertion. Người
+dùng xác nhận Validate/Repair và Undo/Redo đã hoạt động ổn trên giao diện.
+Nghiệm thu này do người dùng báo lại, không kèm video/ảnh/log UI. Chi tiết:
+[`2026-09-25-h07-topology-recovery.md`](../../docs/testing/2026-09-25-h07-topology-recovery.md).

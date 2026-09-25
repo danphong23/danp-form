@@ -37,8 +37,12 @@ afterward. An unapplied modifier never becomes the control mapping: the proxy
 continues to follow base Source IDs while the overlay may use evaluated cage
 geometry. Applying a modifier is treated as a normal Source topology/coordinate
 edit. If the base topology fingerprint changes, DANP pauses and reports a
-recovery action; it does not write stale IDs. Undo can restore the old mapping,
-or Reset DANP can create a new mapping on the current mesh in one undoable step.
+recovery action; it does not write stale IDs. Under
+[ADR-018](../decisions/ADR-018-topology-recovery.md), Validate/Repair can assign
+IDs to unambiguous additions and preserve controls only when the saved
+connectivity proves every affected control patch unchanged. Changed patch
+connectivity, ambiguous IDs, missing snapshots or lost control elements require
+Undo, manual repair or Reset DANP. Repair is an explicit undoable action.
 
 ## Unsupported/uncertain Blender features
 

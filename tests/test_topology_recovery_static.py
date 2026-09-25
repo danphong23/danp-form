@@ -47,3 +47,16 @@ def test_modifier_contract_mentions_base_mapping_and_evaluated_display():
     assert "unapplied modifier" in integration
     assert "Applying a modifier" in integration
     assert "base Source IDs" in integration
+
+
+def test_explicit_topology_preview_and_repair_fail_closed():
+    mesh = (ROOT / "dan_form" / "blender" / "mesh.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    adr = (ROOT / "docs" / "decisions" / "ADR-018-topology-recovery.md").read_text(encoding="utf-8")
+    assert "TOPOLOGY_SNAPSHOT_KEY" in mesh
+    assert "def _topology_repair_analysis" in mesh
+    assert "def _repair_source_topology" in mesh
+    assert 'bl_idname = "dan_form.validate_topology"' in operators
+    assert 'bl_idname = "dan_form.repair_topology"' in operators
+    assert "duplicate IDs" in adr
+    assert "Loop cuts" in adr

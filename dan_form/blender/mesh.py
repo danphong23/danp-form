@@ -2,14 +2,315 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import bmesh
 import bpy
+import zlib
 
 from .. import runtime
 from ..constants import *
 from ..storage import controls, hidden, json_set, migrate_control_schema, validate_control_storage
+from ..core.controls import control_effective
+from ..core.patches import partition_faces
+
+
+def _topology_records(source: bpy.types.Object, allow_unassigned: bool = False) -> dict:
+    """Read ID-addressed topology without trusting Blender element indices."""
+    mesh = source.data
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(mesh)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        vertex_layer = bm.verts.layers.int.get(VID_ATTR)
+        edge_layer = bm.edges.layers.int.get(EID_ATTR)
+        if vertex_layer is None or edge_layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        vertex_ids = [int(vertex[vertex_layer]) for vertex in bm.verts]
+        edge_ids = [int(edge[edge_layer]) for edge in bm.edges]
+        index_vid = {vertex.index: int(vertex[vertex_layer]) for vertex in bm.verts}
+        edges = [
+            {"id": int(edge[edge_layer]),
+             "vertices": sorted(index_vid[vertex.index] for vertex in edge.verts)}
+            for edge in bm.edges
+        ]
+        faces = []
+        for face_index, face in enumerate(bm.faces):
+            vertices = sorted(index_vid[vertex.index] for vertex in face.verts)
+            edge_ids = sorted(int(edge[edge_layer]) for edge in face.edges)
+            face_id = (f"new:{face_index}" if any(value <= 0 for value in vertices)
+                       else "f:" + ":".join(map(str, vertices)))
+            faces.append({"id": face_id,
+                          "vertices": vertices, "edges": edge_ids})
+    else:
+        vertex_layer = mesh.attributes.get(VID_ATTR)
+        edge_layer = mesh.attributes.get(EID_ATTR)
+        if vertex_layer is None or edge_layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        if (vertex_layer.domain != "POINT" or vertex_layer.data_type != "INT"
+                or edge_layer.domain != "EDGE" or edge_layer.data_type != "INT"
+                or len(vertex_layer.data) != len(mesh.vertices)
+                or len(edge_layer.data) != len(mesh.edges)):
+            raise ValueError("STALE_MAPPING")
+        vertex_ids = [int(item.value) for item in vertex_layer.data]
+        edge_ids = [int(item.value) for item in edge_layer.data]
+        index_vid = list(vertex_ids)
+        edges = [
+            {"id": int(edge_layer.data[edge.index].value),
+             "vertices": sorted(index_vid[index] for index in edge.vertices)}
+            for edge in mesh.edges
+        ]
+        edge_by_vertices = {
+            frozenset(edge.vertices): int(edge_layer.data[edge.index].value)
+            for edge in mesh.edges
+        }
+        faces = []
+        for face_index, polygon in enumerate(mesh.polygons):
+            vertices = sorted(index_vid[index] for index in polygon.vertices)
+            edge_ids_for_face = sorted(
+                edge_by_vertices[frozenset((polygon.vertices[index],
+                                             polygon.vertices[(index + 1) % len(polygon.vertices)]))]
+                for index in range(len(polygon.vertices))
+            )
+            face_id = (f"new:{face_index}" if any(value <= 0 for value in vertices)
+                       else "f:" + ":".join(map(str, vertices)))
+            faces.append({"id": face_id,
+                          "vertices": vertices, "edges": edge_ids_for_face})
+
+    for values in (vertex_ids, edge_ids):
+        nonzero = [value for value in values if value > 0]
+        if not allow_unassigned and any(value <= 0 for value in values):
+            raise ValueError("STALE_MAPPING")
+        if len(nonzero) != len(set(nonzero)):
+            raise ValueError("STALE_MAPPING")
+        if not allow_unassigned and len(nonzero) != len(values):
+            raise ValueError("STALE_MAPPING")
+    if len({face["id"] for face in faces}) != len(faces):
+        raise ValueError("STALE_MAPPING")
+    return {"vertices": vertex_ids, "edges": edges, "faces": faces}
+
+
+def _encode_topology_snapshot(records: dict) -> str:
+    payload = {
+        "v": sorted(records["vertices"]),
+        "e": sorted([[item["id"], *item["vertices"]] for item in records["edges"]]),
+        "f": sorted([[item["id"], item["vertices"], item["edges"]]
+                     for item in records["faces"]]),
+    }
+    packed = zlib.compress(json.dumps(payload, separators=(",", ":"),
+                                   sort_keys=True).encode("utf-8"), level=9)
+    return base64.b64encode(packed).decode("ascii")
+
+
+def _decode_topology_snapshot(source: bpy.types.Object) -> dict:
+    encoded = source.get(TOPOLOGY_SNAPSHOT_KEY)
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError("TOPOLOGY_SNAPSHOT_MISSING")
+    if str(source.get(TOPOLOGY_SNAPSHOT_FINGERPRINT_KEY, "")) != str(source.get(TOPOLOGY_KEY, "")):
+        raise ValueError("TOPOLOGY_SNAPSHOT_INVALID")
+    try:
+        payload = json.loads(zlib.decompress(base64.b64decode(encoded)).decode("utf-8"))
+        if set(payload) != {"v", "e", "f"}:
+            raise ValueError
+        vertices = {int(value) for value in payload["v"]}
+        edges = {int(item[0]): tuple(sorted((int(item[1]), int(item[2]))))
+                 for item in payload["e"]}
+        faces = {str(item[0]): {"id": str(item[0]),
+                                "vertices": sorted(int(value) for value in item[1]),
+                                "edges": sorted(int(value) for value in item[2])}
+                 for item in payload["f"]}
+        if (any(value <= 0 for value in vertices)
+                or len(edges) != len(payload["e"])
+                or len(faces) != len(payload["f"])
+                or any(edge_id <= 0 or len(set(endpoints)) != 2
+                       or not set(endpoints) <= vertices for edge_id, endpoints in edges.items())
+                or any(face["id"] != "f:" + ":".join(map(str, face["vertices"]))
+                       or len(face["vertices"]) < 3
+                       or len(face["vertices"]) != len(set(face["vertices"]))
+                       or not set(face["vertices"]) <= vertices
+                       or len(face["edges"]) < 3
+                       or len(face["edges"]) != len(set(face["edges"]))
+                       or not set(face["edges"]) <= set(edges)
+                       for face in faces.values())):
+            raise ValueError
+        return {"vertices": vertices, "edges": edges, "faces": faces}
+    except (IndexError, KeyError, TypeError, ValueError, zlib.error, base64.binascii.Error) as exc:
+        raise ValueError("TOPOLOGY_SNAPSHOT_INVALID") from exc
+
+
+def _topology_repair_analysis(source: bpy.types.Object) -> dict:
+    """Classify a topology edit against stored control-patch connectivity."""
+    baseline = _decode_topology_snapshot(source)
+    current = _topology_records(source, allow_unassigned=True)
+    vertex_ids = current["vertices"]
+    edge_ids = [item["id"] for item in current["edges"]]
+    if (any(value < 0 for value in vertex_ids + edge_ids)
+            or len([value for value in vertex_ids if value > 0]) != len(set(value for value in vertex_ids if value > 0))
+            or len([value for value in edge_ids if value > 0]) != len(set(value for value in edge_ids if value > 0))):
+        raise ValueError("STALE_MAPPING")
+
+    current_vertices = {value for value in vertex_ids if value > 0}
+    current_edges = {item["id"]: tuple(item["vertices"]) for item in current["edges"] if item["id"] > 0}
+    missing_vertices = baseline["vertices"] - current_vertices
+    missing_edges = set(baseline["edges"]) - set(current_edges)
+    definitions = controls(source)
+    referenced_vertices = set(hidden(source, HIDDEN_VIDS_KEY))
+    referenced_edges = set(hidden(source, HIDDEN_EIDS_KEY))
+    for control in definitions:
+        referenced_vertices.update(int(value) for field in ("vertex_ids", "hidden_vertex_ids")
+                                   for value in control.get(field, []))
+        referenced_edges.update(int(value) for field in ("edge_ids", "hidden_edge_ids")
+                                for value in control.get(field, []))
+    if (not referenced_vertices <= baseline["vertices"]
+            or not referenced_edges <= set(baseline["edges"])):
+        raise ValueError("STALE_MAPPING")
+    if missing_vertices & referenced_vertices or missing_edges & referenced_edges:
+        raise ValueError("STALE_MAPPING")
+
+    old_edge_vids = baseline["edges"]
+    hidden_vertices = set(hidden(source, HIDDEN_VIDS_KEY))
+    hidden_edges = set(hidden(source, HIDDEN_EIDS_KEY))
+    incidences = []
+    cut_edges = set()
+    effective_control_vertices = set()
+    effective_control_edges = set()
+    for control in definitions:
+        protection_control = dict(control)
+        protection_control["enabled"] = True
+        protection_control["hidden_vertex_ids"] = []
+        protection_control["hidden_edge_ids"] = []
+        effective_vertices, effective_edges = control_effective(
+            protection_control, old_edge_vids, set(), set(), set(old_edge_vids)
+        )
+        explicit_nodes = set(effective_vertices)
+        explicit_nodes.difference_update(
+            vertex for edge_id in effective_edges for vertex in old_edge_vids[edge_id]
+        )
+        incidences.append((str(control.get("control_uuid")), effective_vertices,
+                           effective_edges, explicit_nodes))
+        cut_edges.update(effective_edges)
+        effective_control_vertices.update(effective_vertices)
+        effective_control_edges.update(effective_edges)
+    old_face_records = list(baseline["faces"].values())
+    old_face_records = [
+        {"face_id": face["id"], "vertex_ids": face["vertices"],
+         "edge_ids": face["edges"]}
+        for face in old_face_records
+    ]
+    old_partition = partition_faces(old_face_records, cut_edges, definitions, incidences)
+    protected_face_ids = {
+        face_id
+        for control in definitions
+        for patch_id in old_partition["control_patch_ids"].get(str(control.get("control_uuid")), [])
+        for patch in old_partition["patches"] if patch["patch_id"] == patch_id
+        for face_id in patch["face_ids"]
+    }
+    protected_faces = {face_id: baseline["faces"][face_id] for face_id in protected_face_ids}
+    protected_vertices = {value for face in protected_faces.values() for value in face["vertices"]}
+    protected_edges = {value for face in protected_faces.values() for value in face["edges"]}
+    protected_vertices.update(effective_control_vertices)
+    protected_edges.update(effective_control_edges)
+    protected_edges.update(
+        edge_id for edge_id, endpoints in baseline["edges"].items()
+        if effective_control_vertices.intersection(endpoints)
+    )
+    current_faces = {item["id"]: item for item in current["faces"]}
+    if any(current_faces.get(face_id) != face for face_id, face in protected_faces.items()):
+        raise ValueError("STALE_MAPPING")
+    if any(face_id not in baseline["faces"] and
+           (set(face["vertices"]) & protected_vertices or set(face["edges"]) & protected_edges)
+           for face_id, face in current_faces.items()):
+        raise ValueError("STALE_MAPPING")
+    if any((edge["id"] == 0 or edge["id"] not in baseline["edges"])
+           and set(edge["vertices"]) & protected_vertices for edge in current["edges"]):
+        raise ValueError("STALE_MAPPING")
+    if any(current_edges.get(edge_id) != baseline["edges"].get(edge_id)
+           for edge_id in protected_edges):
+        raise ValueError("STALE_MAPPING")
+
+    return {
+        "safe": True,
+        "added_vertices": len([value for value in vertex_ids if value == 0]) +
+                          len(current_vertices - baseline["vertices"]),
+        "added_edges": len([value for value in edge_ids if value == 0]) +
+                       len(set(current_edges) - set(baseline["edges"])),
+        "removed_vertices": len(missing_vertices),
+        "removed_edges": len(missing_edges),
+        "protected_faces": len(protected_faces),
+        "changed_topology": _topology_fingerprint(source) != str(source.get(TOPOLOGY_KEY, "")),
+    }
+
+
+def _capture_topology_snapshot(source: bpy.types.Object) -> None:
+    source[TOPOLOGY_SNAPSHOT_KEY] = _encode_topology_snapshot(_topology_records(source))
+    source[TOPOLOGY_SNAPSHOT_FINGERPRINT_KEY] = str(source.get(TOPOLOGY_KEY, ""))
+
+
+def _repair_source_topology(source: bpy.types.Object) -> dict:
+    """Assign IDs only to unassigned additions after a passing preflight."""
+    report = _topology_repair_analysis(source)
+    next_vid = max(int(source.get(NEXT_VID_KEY, 1)), 1)
+    next_eid = max(int(source.get(NEXT_EID_KEY, 1)), 1)
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        vertex_layer = bm.verts.layers.int.get(VID_ATTR)
+        edge_layer = bm.edges.layers.int.get(EID_ATTR)
+        if vertex_layer is None or edge_layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        used_vertices = {int(vertex[vertex_layer]) for vertex in bm.verts if int(vertex[vertex_layer]) > 0}
+        used_edges = {int(edge[edge_layer]) for edge in bm.edges if int(edge[edge_layer]) > 0}
+        for vertex in bm.verts:
+            if int(vertex[vertex_layer]) <= 0:
+                while next_vid in used_vertices:
+                    next_vid += 1
+                vertex[vertex_layer] = next_vid
+                used_vertices.add(next_vid)
+                next_vid += 1
+        for edge in bm.edges:
+            if int(edge[edge_layer]) <= 0:
+                while next_eid in used_edges:
+                    next_eid += 1
+                edge[edge_layer] = next_eid
+                used_edges.add(next_eid)
+                next_eid += 1
+        bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
+    else:
+        vertex_attr = source.data.attributes.get(VID_ATTR)
+        edge_attr = source.data.attributes.get(EID_ATTR)
+        if vertex_attr is None or edge_attr is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        used_vertices = {int(item.value) for item in vertex_attr.data if int(item.value) > 0}
+        used_edges = {int(item.value) for item in edge_attr.data if int(item.value) > 0}
+        for item in vertex_attr.data:
+            if int(item.value) <= 0:
+                while next_vid in used_vertices:
+                    next_vid += 1
+                item.value = next_vid
+                used_vertices.add(next_vid)
+                next_vid += 1
+        for item in edge_attr.data:
+            if int(item.value) <= 0:
+                while next_eid in used_edges:
+                    next_eid += 1
+                item.value = next_eid
+                used_edges.add(next_eid)
+                next_eid += 1
+        source.data.update()
+    source[NEXT_VID_KEY] = max(next_vid, max(used_vertices or {0}) + 1)
+    source[NEXT_EID_KEY] = max(next_eid, max(used_edges or {0}) + 1)
+    source[TOPOLOGY_KEY] = _topology_fingerprint(source)
+    _capture_topology_snapshot(source)
+    runtime.TOPOLOGY_STATES.pop(source.as_pointer(), None)
+    runtime.MAPPING_CACHE.pop(source.as_pointer(), None)
+    runtime.PATCH_CACHE.pop(source.as_pointer(), None)
+    runtime.PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+    runtime.FACE_CACHE.pop(source.as_pointer(), None)
+    runtime.OVERLAY_CACHE.clear()
+    runtime.PICK_PREVIEW.clear()
+    return report
+
 
 def _is_valid_source(obj: bpy.types.Object | None) -> bool:
     return (
@@ -179,6 +480,9 @@ def _ensure_source_ids(source: bpy.types.Object) -> None:
     json_set(source, HIDDEN_VIDS_KEY, sorted(hidden(source, HIDDEN_VIDS_KEY)))
     json_set(source, HIDDEN_EIDS_KEY, sorted(hidden(source, HIDDEN_EIDS_KEY)))
     mesh.update()
+    if (str(source.get(TOPOLOGY_SNAPSHOT_FINGERPRINT_KEY, ""))
+            != str(source.get(TOPOLOGY_KEY, ""))):
+        _capture_topology_snapshot(source)
 
 
 def _source_id_maps(source: bpy.types.Object) -> tuple[dict[int, int], dict[int, int]]:
