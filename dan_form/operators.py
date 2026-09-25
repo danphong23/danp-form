@@ -1014,6 +1014,40 @@ class DANFORM_OT_reset(bpy.types.Operator):
             return {"CANCELLED"}
 
 
+class DANFORM_OT_unbind_orphaned_owned_object(bpy.types.Operator):
+    bl_idname = "dan_form.unbind_stale_object"
+    bl_label = "Unbind Stale DANP Object"
+    bl_description = "Keep this mesh and its geometry, but remove stale DANP ownership markers"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        active = context.view_layer.objects.active
+        return (
+            active is not None
+            and active.type == "MESH"
+            and bool(active.get(ORPHANED_OWNED_KEY))
+            and active.mode == "OBJECT"
+        )
+
+    def execute(self, context):
+        obj = context.view_layer.objects.active
+        if not self.poll(context):
+            return {"CANCELLED"}
+        world = obj.matrix_world.copy()
+        obj.parent = None
+        obj.matrix_world = world
+        obj.pop(CONTROLLER_KEY, None)
+        obj.pop(FACE_SOURCE_UUID_KEY, None)
+        obj.pop(ORPHANED_OWNED_KEY, None)
+        obj[UNBOUND_COPY_KEY] = True
+        context.scene.dan_form_status = (
+            f"Đã bỏ liên kết DANP cũ trên {obj.name}; mesh và dữ liệu được giữ nguyên"
+        )
+        self.report({"INFO"}, "Stale DANP ownership removed; mesh data preserved")
+        return {"FINISHED"}
+
+
 class DANFORM_OT_reset_source(bpy.types.Operator):
     bl_idname = "dan_form.reset_source"
     bl_label = "Reset Model"
@@ -1936,6 +1970,17 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         active = context.view_layer.objects.active
         if source is None:
             if active is not None and active.type == "MESH":
+                if active.get(ORPHANED_OWNED_KEY):
+                    box = layout.box()
+                    box.alert = True
+                    box.label(text="Object có liên kết DANP cũ chưa xác minh", icon="ERROR")
+                    box.label(text="Dữ liệu mesh được giữ; chọn cách bỏ liên kết để dùng riêng")
+                    box.operator(
+                        DANFORM_OT_unbind_orphaned_owned_object.bl_idname,
+                        text="Bỏ liên kết DANP cũ, giữ mesh",
+                        icon="UNLINKED",
+                    )
+                    return
                 state_source = active.parent if active.get(CONTROLLER_KEY) is not None else active
                 state = _binding_status(state_source)
                 if state == "DUPLICATE_UNBOUND":
@@ -2087,6 +2132,7 @@ CLASSES = (
     DANFORM_OT_remove,
     DANFORM_OT_reset,
     DANFORM_OT_reset_source,
+    DANFORM_OT_unbind_orphaned_owned_object,
     DANFORM_OT_topology_locked,
     DANFORM_OT_deform,
     DANFORM_OT_cancel_deform,
@@ -2112,7 +2158,7 @@ __all__ = [
     "DANFORM_OT_sync_control", "DANFORM_OT_move_control", "DANFORM_OT_create_control",
     "DANFORM_OT_rename_control", "DANFORM_OT_select_control", "DANFORM_OT_set_control_visibility",
     "DANFORM_OT_delete_control", "DANFORM_OT_hide_selected", "DANFORM_OT_reveal",
-    "DANFORM_OT_remove_controller", "DANFORM_OT_remove", "DANFORM_OT_reset", "DANFORM_OT_reset_source", "DANFORM_OT_topology_locked",
+    "DANFORM_OT_remove_controller", "DANFORM_OT_remove", "DANFORM_OT_reset", "DANFORM_OT_reset_source", "DANFORM_OT_unbind_orphaned_owned_object", "DANFORM_OT_topology_locked",
     "DANFORM_OT_deform", "DANFORM_OT_cancel_deform", "DANFORM_OT_reveal_controller", "DANFORM_OT_toggle_viewport_controls",
     "DANFORM_OT_focus_source", "DANFORM_OT_focus_controller",
     "_ui_item_name_update", "_ui_control_index_update", "_register_topology_keymaps",

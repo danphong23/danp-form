@@ -260,17 +260,27 @@ def _set_topology_paused_status(source) -> None:
 
 
 def _cleanup_orphaned_owned_objects() -> int:
-    removed = 0
-    for obj in orphaned_owned_objects():
-        mesh = getattr(obj, "data", None)
-        try:
-            bpy.data.objects.remove(obj, do_unlink=True)
-            if mesh is not None and getattr(mesh, "users", 0) == 0 and bpy.data.meshes.get(mesh.name) is mesh:
-                bpy.data.meshes.remove(mesh)
-            removed += 1
-        except (ReferenceError, RuntimeError):
+    """Mark stale ownership for explicit repair; never delete scene data here."""
+    stale = {obj.as_pointer() for obj in orphaned_owned_objects()}
+    changed = 0
+    for obj in bpy.data.objects:
+        pointer = obj.as_pointer()
+        marked = bool(obj.get(ORPHANED_OWNED_KEY))
+        if getattr(obj, "library", None) is not None or getattr(obj, "override_library", None) is not None:
             continue
-    return removed
+        if pointer in stale and not marked:
+            try:
+                obj[ORPHANED_OWNED_KEY] = True
+                changed += 1
+            except (ReferenceError, RuntimeError, TypeError):
+                continue
+        elif pointer not in stale and marked:
+            try:
+                obj.pop(ORPHANED_OWNED_KEY, None)
+                changed += 1
+            except (ReferenceError, RuntimeError, TypeError):
+                continue
+    return changed
 
 
 def _controller_pose_changed(source, controller, previous_snapshot) -> bool:

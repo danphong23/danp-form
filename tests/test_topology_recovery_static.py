@@ -26,12 +26,20 @@ def test_reset_is_registered_and_undoable():
     assert "ORIGINAL_POSITIONS_KEY" in operators
 
 
-def test_cleanup_requires_explicit_ownership_marker():
+def test_cleanup_marks_stale_ownership_without_deleting_objects():
     context = (ROOT / "dan_form" / "blender" / "context.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
     assert "orphaned_owned_objects" in context
     assert "FACE_SOURCE_UUID_KEY" in context
     assert "_cleanup_orphaned_owned_objects" in lifecycle
+    cleanup = lifecycle.split("def _cleanup_orphaned_owned_objects", 1)[1].split("\ndef ", 1)[0]
+    assert "bpy.data.objects.remove" not in cleanup
+    assert "ORPHANED_OWNED_KEY" in cleanup
+    assert 'bl_idname = "dan_form.unbind_stale_object"' in operators
+    recovery_operator = operators.split("class DANFORM_OT_unbind_orphaned_owned_object", 1)[1].split("\nclass ", 1)[0]
+    assert 'bl_options = {"REGISTER", "UNDO"}' in recovery_operator
+    assert "UNBOUND_COPY_KEY" in operators
 
 
 def test_modifier_contract_mentions_base_mapping_and_evaluated_display():

@@ -17,10 +17,12 @@ On undo/redo:
 - recovery synchronization must not create a second undo entry.
 
 An ownership marker alone is insufficient authority to delete a mesh object.
-When Source is missing or ownership is ambiguous, lifecycle handling must keep
-objects in the scene, mark the relationship stale and offer explicit recovery.
-H03 replaces the current cleanup path that can remove a marked object with no
-resolvable Source. On Proxy deletion, Source remains valid and can rebuild it.
+When Source is missing or ownership is ambiguous, lifecycle handling keeps
+objects in the scene, marks the relationship stale and offers explicit
+recovery. H03 implements this in load/depsgraph handlers; the recovery action
+can unbind stale markers while preserving the mesh. On Proxy deletion, Source
+remains valid and can rebuild it. Interactive Undo of the recovery button is
+still a separate UI check.
 
 If Source topology changes outside DANP, the stored ID mapping is kept intact
 but the pair enters a paused state. Commands do not write against stale array

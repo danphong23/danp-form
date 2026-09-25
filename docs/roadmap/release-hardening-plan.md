@@ -1,12 +1,12 @@
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: H01 hoàn tất phần hợp đồng 2026-09-25; H02–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
+**Trạng thái: H01–H03 pass theo phạm vi phase 2026-09-25; H04–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
 một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](../../tasks/README.md)
 để triển khai. H01 được chốt bằng [ADR-017](../decisions/ADR-017-deformation-target-contract.md)
-và [ma trận target](../testing/deformation-target-matrix.md); đây chỉ là gate
-tài liệu, không phải kiểm thử runtime H02–H06.
+và [ma trận target](../testing/deformation-target-matrix.md); H02/H03 có báo cáo
+runtime riêng, còn H04–H10 vẫn chờ gate của chúng.
 
 ## Căn cứ và ranh giới
 
@@ -15,10 +15,9 @@ tài liệu, không phải kiểm thử runtime H02–H06.
   relative và absolute; H01 giữ nguyên phạm vi này trong ADR-017. Đề xuất
   bên ngoài về `Deformation Target` là đầu vào thiết kế, không phải đặc tả
   tự động thay thế ADR.
-- Kiểm tra mã 2026-09-25 phát hiện đường đọc/ghi khi Source ở Edit Mode có thể
-  dùng BMesh của key đang active dù lệnh yêu cầu một key khác; đường khôi phục
-  Undo cần được bao phủ. Handler lifecycle có thể xóa object mang marker DANP
-  khi Source bị thiếu. Đây là rủi ro dữ liệu ưu tiên cao.
+- Baseline audit phát hiện target I/O Edit Mode chưa tôn trọng key tường minh
+  và handler có thể xóa object stale. H02/H03 đã sửa các đường đó; xem báo cáo
+  H02/H03 để biết phần đã kiểm và các case UI còn chờ.
 - [Audit Scale](../testing/2026-09-25-all-control-scale-audit.md) đã xác minh
   phép tính và fixture nền, nhưng chưa xác minh transform modal bằng chuột trên
   phiên Blender mở. Bộ selection lịch sử và overlay cần cập nhật gate.
@@ -30,8 +29,8 @@ tài liệu, không phải kiểm thử runtime H02–H06.
 | Phase | Kết quả độc lập có thể review | Phụ thuộc bắt buộc | Commit đề xuất |
 | --- | --- | --- | --- |
 | [H01](../../tasks/release-hardening/h01-target-contract.md) — PASS tài liệu | Hợp đồng target và ADR giải quyết relative/absolute, Basis, target ID, thao tác đổi target | Không | `docs(dan-form): settle deformation target contract` |
-| [H02](../../tasks/release-hardening/h02-target-io-undo.md) | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
-| [H03](../../tasks/release-hardening/h03-owned-object-safety.md) | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
+| [H02](../../tasks/release-hardening/h02-target-io-undo.md) — PASS runtime | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
+| [H03](../../tasks/release-hardening/h03-owned-object-safety.md) — PASS lifecycle | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
 | [H04](../../tasks/release-hardening/h04-native-transform.md) | G/R/S modal ổn định, gồm Scale toàn control | H02, H03 | `fix(dan-form): stabilize native transform transactions` |
 | [H05](../../tasks/release-hardening/h05-target-ux.md) | UI target rõ ràng, tạo Shape Key mới an toàn | H01, H02, H04 | `feat(dan-form): complete deformation target workflow` |
 | [H06](../../tasks/release-hardening/h06-agent-parity.md) | Agent API target đạt parity với UI | H01, H02, H05 | `feat(dan-form): expose target-aware agent operations` |

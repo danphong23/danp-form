@@ -1250,10 +1250,12 @@ On undo/redo:
 - recovery synchronization must not create a second undo entry.
 
 An ownership marker alone is insufficient authority to delete a mesh object.
-When Source is missing or ownership is ambiguous, lifecycle handling must keep
-objects in the scene, mark the relationship stale and offer explicit recovery.
-H03 replaces the current cleanup path that can remove a marked object with no
-resolvable Source. On Proxy deletion, Source remains valid and can rebuild it.
+When Source is missing or ownership is ambiguous, lifecycle handling keeps
+objects in the scene, marks the relationship stale and offers explicit
+recovery. H03 implements this in load/depsgraph handlers; the recovery action
+can unbind stale markers while preserving the mesh. On Proxy deletion, Source
+remains valid and can rebuild it. Interactive Undo of the recovery button is
+still a separate UI check.
 
 If Source topology changes outside DANP, the stored ID mapping is kept intact
 but the pair enters a paused state. Commands do not write against stale array
@@ -4298,13 +4300,13 @@ than being counted as passes.
 
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: H01 hoàn tất phần hợp đồng 2026-09-25; H02–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
+**Trạng thái: H01–H03 pass theo phạm vi phase 2026-09-25; H04–H10 chưa pass.** Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
 một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](../../tasks/README.md)
 để triển khai. H01 được chốt bằng [ADR-017](../decisions/ADR-017-deformation-target-contract.md)
-và [ma trận target](../testing/deformation-target-matrix.md); đây chỉ là gate
-tài liệu, không phải kiểm thử runtime H02–H06.
+và [ma trận target](../testing/deformation-target-matrix.md); H02/H03 có báo cáo
+runtime riêng, còn H04–H10 vẫn chờ gate của chúng.
 
 ## Căn cứ và ranh giới
 
@@ -4313,10 +4315,9 @@ tài liệu, không phải kiểm thử runtime H02–H06.
   relative và absolute; H01 giữ nguyên phạm vi này trong ADR-017. Đề xuất
   bên ngoài về `Deformation Target` là đầu vào thiết kế, không phải đặc tả
   tự động thay thế ADR.
-- Kiểm tra mã 2026-09-25 phát hiện đường đọc/ghi khi Source ở Edit Mode có thể
-  dùng BMesh của key đang active dù lệnh yêu cầu một key khác; đường khôi phục
-  Undo cần được bao phủ. Handler lifecycle có thể xóa object mang marker DANP
-  khi Source bị thiếu. Đây là rủi ro dữ liệu ưu tiên cao.
+- Baseline audit phát hiện target I/O Edit Mode chưa tôn trọng key tường minh
+  và handler có thể xóa object stale. H02/H03 đã sửa các đường đó; xem báo cáo
+  H02/H03 để biết phần đã kiểm và các case UI còn chờ.
 - [Audit Scale](../testing/2026-09-25-all-control-scale-audit.md) đã xác minh
   phép tính và fixture nền, nhưng chưa xác minh transform modal bằng chuột trên
   phiên Blender mở. Bộ selection lịch sử và overlay cần cập nhật gate.
@@ -4328,8 +4329,8 @@ tài liệu, không phải kiểm thử runtime H02–H06.
 | Phase | Kết quả độc lập có thể review | Phụ thuộc bắt buộc | Commit đề xuất |
 | --- | --- | --- | --- |
 | [H01](../../tasks/release-hardening/h01-target-contract.md) — PASS tài liệu | Hợp đồng target và ADR giải quyết relative/absolute, Basis, target ID, thao tác đổi target | Không | `docs(dan-form): settle deformation target contract` |
-| [H02](../../tasks/release-hardening/h02-target-io-undo.md) | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
-| [H03](../../tasks/release-hardening/h03-owned-object-safety.md) | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
+| [H02](../../tasks/release-hardening/h02-target-io-undo.md) — PASS runtime | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
+| [H03](../../tasks/release-hardening/h03-owned-object-safety.md) — PASS lifecycle | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
 | [H04](../../tasks/release-hardening/h04-native-transform.md) | G/R/S modal ổn định, gồm Scale toàn control | H02, H03 | `fix(dan-form): stabilize native transform transactions` |
 | [H05](../../tasks/release-hardening/h05-target-ux.md) | UI target rõ ràng, tạo Shape Key mới an toàn | H01, H02, H04 | `feat(dan-form): complete deformation target workflow` |
 | [H06](../../tasks/release-hardening/h06-agent-parity.md) | Agent API target đạt parity với UI | H01, H02, H05 | `feat(dan-form): expose target-aware agent operations` |
@@ -4480,17 +4481,19 @@ the UI path. The core accepts only IDs, coordinates and operation settings.
 
 | Current path | Observed behavior | Required follow-up |
 | --- | --- | --- |
-| `blender.mesh._shape_key_signature` | Captures mesh/key pointer, name, lock, count and mode | H02 centralizes descriptor validation and stale recovery |
-| `blender.selection._source_positions` | Edit Mode reads active BMesh even for explicit other key | H02 validates/reroutes explicit target |
-| `blender.workflows.write_source_positions` | Edit Mode writes active BMesh even for explicit other key | H02 prevents wrong-key write; Undo uses same adapter |
-| `blender.workflows.deform_begin/update/cancel` | Captures key/P0 and checks signature | H02 uses one target validation/write path |
-| `blender.lifecycle._restore_native_undo_records` | Stores historical KeyBlock and writes through workflow | H02 verifies key provenance and Edit Mode behavior |
-| `operators.DANFORM_OT_reset_source` | Checks snapshot's key name | H02 adds sufficient provenance or safe refusal |
+| `blender.mesh._shape_key_signature` | Captures mesh/key pointer, name, lock, count, mode and active index | H02 validates one captured target signature |
+| `blender.selection._source_positions` | Reads explicit BMesh shape layer in Edit Mode or `KeyBlock.data` in Object Mode | H02 runtime fixture passes Basis/expression routing |
+| `blender.workflows.write_source_positions` | Writes exact explicit target after all IDs/counts/coordinates validate | H02 runtime fixture passes Object/Edit Mode routing |
+| `blender.workflows.deform_begin/update/cancel` | Captures target/P0 and checks signature before preview writes | H02 fixture passes cancel and changed-target guards |
+| `blender.lifecycle._restore_native_undo_records` | Stores historical KeyBlock and uses shared workflow writer | H02 fixture passes bridge write while Source edits another key |
+| `operators.DANFORM_OT_reset_source` | Uses BASE/KEY kind and session proof; refuses unknown saved-key identity | H02 fixture passes same-key reset and replacement/load-evidence refusal |
 | `operators.DANFORM_OT_select_shape_key` | Selects active key, syncs proxy | H05 completes UI and New Shape Key workflow |
 | `dan_form.agent` | Transaction facade exists, target list/select absent | H06 adds target API and MCP parity |
 
-H01 changes only contracts and review evidence. These gaps remain FAIL/NOT RUN
-until the named implementation phase supplies tests.
+H01 changed only contracts and review evidence. H02 implementation and runtime
+evidence are recorded in
+[`2026-09-25-h02-target-io-undo.md`](../testing/2026-09-25-h02-target-io-undo.md).
+Native modal G/R/S and remaining matrix rows stay assigned to later phases.
 
 ---
 
@@ -4680,3 +4683,95 @@ assert untouched stores bytewise or within the documented float32 tolerance.
 Record Blender version, Source mode, active key, key-stack mode, controller mode,
 expected/actual, PASS/FAIL/NOT RUN, and whether the check ran in background or
 through native UI. Blender background tests do not satisfy modal UI rows T08/T11.
+
+---
+
+<!-- source: docs/testing/2026-09-25-h02-target-io-undo.md -->
+
+# H02 — Target I/O and Undo report
+
+**Status: PASS for the H02 runtime target-safety gate.** Blender 5.2.1 LTS;
+starting add-on commit `6664763`. The fixture uses a disposable mesh and never
+loads or saves the user's open project.
+
+## Changes verified
+
+- Source coordinate reads and writes resolve one explicit target. Object Mode
+  uses the target `KeyBlock.data`; Edit Mode reads/writes that key's BMesh shape
+  layer, even when a different key is active in the edit context.
+- Target signatures include mesh/key identity, name, lock, point count,
+  relative/absolute mode and active index. A changed target or signature stops
+  preview before another write. Cancel uses the captured key reference.
+- The Undo/Redo bridge writes its stored historical target through the same
+  adapter. The Source Edit Mode case leaves Basis active while the bridge
+  restores an expression key.
+- Reset records `BASE` or `KEY`. Since Blender 5.2.1 KeyBlocks do not support
+  ID properties, key proof is session-only. Load clears that proof; observed
+  key-stack replacement invalidates it. Reset refuses when the original key
+  cannot be proven, including a same-name replacement.
+
+## Evidence
+
+- [PASS] `tests/live_shape_key_support.py` — Basis and expression edits,
+  untouched-key checks, Source Edit Mode explicit read/write, cancel, locked
+  key, target switch/rename, Undo/Redo bridge in Source Edit Mode, absolute
+  stack read/write/deform/cancel and Undo/Redo bridge, Reset on captured key and safe refusal after
+  replacement or loss of session evidence, and no-key control creation.
+- [PASS] Seven ownership/topology static checks and all 59 static test
+  functions invoked directly; no failures. `pytest` is not installed in this
+  environment, so the static functions were called through a small direct
+  runner rather than the pytest runner.
+- [NOT RUN] Native modal G/R/S and real interactive Undo/Redo keypresses; these
+  require a separate Blender UI gate. In-operation key reorder and every
+  T15/T16 combination remain for their assigned H04/H06/H07 coverage.
+- [PASS] `scripts/validate-docs.ps1` after regenerating the consolidated spec
+  and SHA-256 manifests.
+
+## Limits
+
+This report closes H02's target-routing runtime gate. It does not certify the
+native modal transform UI or all release matrix rows assigned to later phases.
+
+---
+
+<!-- source: docs/testing/2026-09-25-h03-owned-object-safety.md -->
+
+# H03 — Owned-object safety report
+
+**Status: PASS for the H03 lifecycle safety gate.** Blender 5.2.1 LTS;
+starting add-on commit `6664763`. All fixtures are disposable and run in a
+factory-startup Blender process.
+
+## Changes verified
+
+- Load and depsgraph handlers no longer remove stale owned objects or their
+  mesh datablocks. They mark the object for repair and clear the warning when
+  its owner becomes resolvable again.
+- The sidebar offers an explicit undoable unbind action. It clears DANP owner
+  markers and parentage while preserving the object's mesh, local geometry and
+  world transform.
+- Duplicate binding behavior remains covered by the existing full-pair and
+  mesh-only duplicate fixture.
+
+## Evidence
+
+- [PASS] `tests/live_owned_object_safety.py` — stale Controller/face helper
+  survives load, undo and depsgraph handlers; both mesh datablocks and coordinates
+  persist; explicit unbind keeps geometry and world transform; restored owner
+  clears the stale warning without replacing the helper.
+- [PASS] `tests/live_duplicate_bindings.py` — mesh-only/full-pair/Controller
+  duplicates remain isolated and ambiguous/shared ownership fails closed.
+- [PASS] Static check confirms lifecycle cleanup contains no object deletion
+  and the explicit recovery operator is registered.
+- [NOT RUN] Interactive Undo after clicking the recovery button in a 3D View.
+  A background fixture has no native undo context; programmatic invocation
+  from a GUI timer did not reproduce a real panel click, so it is not counted
+  as evidence. The operator carries Blender's `UNDO` option.
+- [PASS] `scripts/validate-docs.ps1` after regenerating the consolidated spec
+  and SHA-256 manifests.
+
+## Limits
+
+The lifecycle deletion-safety gate passes. Interactive Undo remains a manual
+UI check; this report does not certify all release matrix rows or the complete
+release readiness of DANP Form.

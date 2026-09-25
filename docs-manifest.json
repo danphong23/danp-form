@@ -31,8 +31,8 @@
   },
   {
     "path": "docs/architecture/deformation-target-contract.md",
-    "sha256": "dcf21b51eb7fabd106f35f1ddf856885cb21097bcbe018a523e788014ed834ae",
-    "bytes": 5143
+    "sha256": "bb85c4846c9cf9c9995ed82ddf35af8c1df449a745cfb45d821a7eb72a3df159",
+    "bytes": 5445
   },
   {
     "path": "docs/architecture/errors-and-recovery.md",
@@ -71,8 +71,8 @@
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
-    "sha256": "89bf1e4e84c46a435a023c6ef6dcef8c4e0ad175cd02cf4bb4e88eb50f19ba52",
-    "bytes": 1736
+    "sha256": "0230897ae4b93578f77efea6e398a906b8e37e3732998df4f1c246d0cb0a8f87",
+    "bytes": 1862
   },
   {
     "path": "docs/core/control-model.md",
@@ -216,8 +216,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "98db758c10503a6803337e7dff915d5ef512a460a5ff6a5a9a13675a4648b650",
-    "bytes": 285288
+    "sha256": "8bfb36b9c719359d914f54cc33c22342c88002bf6c5e865c5a848aca2159d254",
+    "bytes": 290184
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -276,8 +276,8 @@
   },
   {
     "path": "docs/roadmap/release-hardening-plan.md",
-    "sha256": "c61ee87392d9c4773eae771967264bdc8217b98311c6bd70012f341ddb9ffe49",
-    "bytes": 6242
+    "sha256": "328cd58e92e436225485f82dd4df82febc045d9a6d43a552f889ca26fe1234dd",
+    "bytes": 6249
   },
   {
     "path": "docs/testing/2026-09-25-all-control-scale-audit.md",
@@ -288,6 +288,16 @@
     "path": "docs/testing/2026-09-25-h01-target-contract-review.md",
     "sha256": "f5d721142c30fc337b79f11a662911b49715509625e4b59cabbf7e98ec624f93",
     "bytes": 3632
+  },
+  {
+    "path": "docs/testing/2026-09-25-h02-target-io-undo.md",
+    "sha256": "b5bc62244301a7ce08ddaee4a378c6625a78286ce8af1a51981446972ceb0b27",
+    "bytes": 2383
+  },
+  {
+    "path": "docs/testing/2026-09-25-h03-owned-object-safety.md",
+    "sha256": "a4ca4506e38b3dd3cc6a3e1b19e410a13812d19c5f7feb31664b1ce90d38bf62",
+    "bytes": 1937
   },
   {
     "path": "docs/testing/2026-09-25-release-hardening-baseline.md",
@@ -446,13 +456,13 @@
   },
   {
     "path": "tasks/release-hardening/h02-target-io-undo.md",
-    "sha256": "5dd8a31ed3f6f0c621b9f695250e6485e3a8ed77b02b85630157b013ce9f14c3",
-    "bytes": 1727
+    "sha256": "96245dfb47c10bf4a1ac76bd9f05f7897444c633ae4449f5c7f09addb1b7ef0d",
+    "bytes": 3240
   },
   {
     "path": "tasks/release-hardening/h03-owned-object-safety.md",
-    "sha256": "004492d03b01cd8f9a0556a782ae795565fa071ef6f0d196de8944c91187416d",
-    "bytes": 1270
+    "sha256": "590998ed58071849f4ec8ac04c12ce19c2413cff47bc7ac0e06c39601d8d6d15",
+    "bytes": 2163
   },
   {
     "path": "tasks/release-hardening/h04-native-transform.md",
