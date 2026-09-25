@@ -42,6 +42,14 @@ def _set_controller_pose(controller, positions):
             controller.data.vertices[index].co = positions[vertex_id]
 
 
+def _controller_positions(controller):
+    layer = controller.data.attributes.get(addon.PROXY_VID_ATTR)
+    if layer is None:
+        raise AssertionError("controller proxy ID attribute missing")
+    return {int(item.value): controller.data.vertices[index].co.copy()
+            for index, item in enumerate(layer.data)}
+
+
 def run():
     addon.register()
     scene = bpy.context.scene
@@ -104,6 +112,42 @@ def run():
         bpy.ops.mesh.select_all(action="SELECT")
         check(bpy.ops.dan_form.create_control() == {"FINISHED"}, "control creation with Shape Keys")
         bpy.ops.object.mode_set(mode="OBJECT")
+
+        # Idle Controller coordinates follow Blender's visible evaluated Source,
+        # including Shape Key blending, instead of a selected key's stored data.
+        lifecycle = importlib.import_module(f"{addon.__name__}.blender.lifecycle")
+        runtime_state = importlib.import_module(f"{addon.__name__}.runtime")
+        runtime_state.SHAPE_EVAL_SIGNATURES[source.as_pointer()] = addon._shape_key_evaluation_signature(source)
+        source.active_shape_key_index = 1
+        expression.value = 1.0
+        bpy.context.view_layer.update()
+        auto_synced = runtime_state.SHAPE_EVAL_SIGNATURES.get(source.as_pointer()) == addon._shape_key_evaluation_signature(source)
+        lifecycle._depsgraph_update_post(scene, bpy.context.evaluated_depsgraph_get())
+        check(auto_synced, "Blender depsgraph detects Shape Key value changes without an explicit sync action")
+        visible_full = addon._evaluated_source_positions(source)
+        proxy_full = _controller_positions(controller)
+        check(all(_near(proxy_full[vid], co) for vid, co in visible_full.items()),
+              "controller follows the visible full Shape Key pose")
+        expression.value = 0.5
+        bpy.context.view_layer.update()
+        lifecycle._depsgraph_update_post(scene, bpy.context.evaluated_depsgraph_get())
+        visible_half = addon._evaluated_source_positions(source)
+        proxy_half = _controller_positions(controller)
+        check(all(_near(proxy_half[vid], co) for vid, co in visible_half.items()),
+              "controller follows the visible blended Shape Key pose")
+        check(not all(_near(visible_half[vid], visible_full[vid]) for vid in visible_half),
+              "partial key value produces an intermediate visible pose")
+        expression.value = 0.0
+        bpy.context.view_layer.update()
+        lifecycle._depsgraph_update_post(scene, bpy.context.evaluated_depsgraph_get())
+        visible_basis = addon._evaluated_source_positions(source)
+        proxy_basis = _controller_positions(controller)
+        check(all(_near(proxy_basis[vid], co) for vid, co in visible_basis.items()),
+              "controller returns to the visible Basis pose when key value reaches zero")
+        source.active_shape_key_index = 0
+        bpy.context.view_layer.update()
+        addon._sync_proxy(source, controller)
+
         addon._select_only(bpy.context, controller)
         bpy.ops.object.mode_set(mode="EDIT")
 
@@ -141,6 +185,17 @@ def run():
         check(not _near(committed_after, committed_before), "commit changes active key coordinates")
         record = addon._NATIVE_UNDO_RECORDS.get(source.as_pointer())
         check(bool(record), "Shape Key commit records the key-specific undo target")
+        target_record = record.get("shape_key_target")
+        check(isinstance(target_record, dict) and target_record.get("kind") == "KEY",
+              "Undo history stores stable Shape Key identity instead of a KeyBlock reference")
+        invalid_target_record = dict(target_record, pointer=target_record["pointer"] + 1)
+        try:
+            addon._source_positions(source, invalid_target_record)
+            stale_target_rejected = False
+        except ValueError as exc:
+            stale_target_rejected = str(exc) == "SHAPE_KEY_TARGET_INVALID"
+        check(stale_target_rejected,
+              "Undo target identity fails closed when the captured key no longer resolves")
         lifecycle = importlib.import_module(f"{addon.__name__}.blender.lifecycle")
         # Blender owns native G/R/S undo for the Controller. Reproduce the
         # resulting proxy pose here, then verify DANP repairs the corresponding

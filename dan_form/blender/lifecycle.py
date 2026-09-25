@@ -45,7 +45,12 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                     source.show_only_shape_key = bool(previous_preview)
             source_changed = source.as_pointer() in changed_geometry or source.data.as_pointer() in changed_geometry
             controller_changed = controller.as_pointer() in changed_geometry or controller.data.as_pointer() in changed_geometry
-            if not source_changed and not controller_changed:
+            source_ptr = source.as_pointer()
+            current_shape_eval = _shape_key_evaluation_signature(source)
+            previous_shape_eval = runtime.SHAPE_EVAL_SIGNATURES.get(source_ptr)
+            shape_eval_changed = previous_shape_eval != current_shape_eval
+            runtime.SHAPE_EVAL_SIGNATURES[source_ptr] = current_shape_eval
+            if not source_changed and not controller_changed and not shape_eval_changed:
                 continue
             previous_proxy_snapshot = _PROXY_SNAPSHOTS.get(controller.as_pointer())
             modifier_key = source.as_pointer()
@@ -89,7 +94,8 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                 # dependency-graph tick would visibly snap the transform and
                 # lose numeric/axis-lock input.  The transform bridge performs
                 # the final sync on commit or cancel.
-                if source_changed and source.as_pointer() not in runtime.NATIVE_TRANSFORM_SESSIONS:
+                if ((source_changed or shape_eval_changed)
+                        and source.as_pointer() not in runtime.NATIVE_TRANSFORM_SESSIONS):
                     _sync_proxy(source, controller)
             except (KeyError, ValueError) as exc:
                 if str(exc).startswith("TOPOLOGY_CHANGED"):
@@ -492,6 +498,7 @@ def _load_post(_unused=None) -> None:
     runtime.NATIVE_UNDO_RECORDS.clear()
     runtime.SHAPE_PREVIEW_STATES.clear()
     _refresh_binding_registry(clear=True)
+    runtime.SHAPE_EVAL_SIGNATURES.clear()
     _refresh_runtime(_unused)
     _PICK_PREVIEW.clear()
     _MAPPING_CACHE.clear()
@@ -527,6 +534,20 @@ def _positions_close(left, right, tolerance=1e-6) -> bool:
     return all((left[key] - right[key]).length <= tolerance for key in left)
 
 
+def _active_target_matches(source, target_record) -> bool:
+    if isinstance(target_record, str) and target_record == BASE_MESH_TARGET:
+        return source.data.shape_keys is None and _active_shape_key(source) is None
+    if not isinstance(target_record, dict):
+        return False
+    if target_record.get("kind") == "BASE":
+        return source.data.shape_keys is None and _active_shape_key(source) is None
+    try:
+        target = _resolve_shape_key(source, target_record)
+        return target is not None and _active_shape_key(source) == target
+    except (AttributeError, ReferenceError, RuntimeError, ValueError):
+        return False
+
+
 def _restore_native_undo_records(direction: str):
     """Pair Blender's native proxy undo with the Source deformation state."""
     try:
@@ -540,7 +561,9 @@ def _restore_native_undo_records(direction: str):
             if source.as_pointer() != source_ptr:
                 runtime.NATIVE_UNDO_RECORDS[source.as_pointer()] = runtime.NATIVE_UNDO_RECORDS.pop(source_ptr)
             try:
-                source_now = _source_positions(source, record.get("shape_key_target"))
+                target_record = record.get("shape_key_target")
+                _resolve_shape_key(source, target_record)
+                source_now = _source_positions(source, target_record)
                 history = record.get("history", [])
                 controllers = {obj.as_pointer(): obj for obj in bpy.data.objects}
 
@@ -591,11 +614,7 @@ def _restore_native_undo_records(direction: str):
                         if not _positions_close(source_now, source_pre):
                             _write_source_positions(source, source_pre, allow_locked=True, shape_key=target_key)
                         controller = controller_for(candidate)
-                        target_is_active = (
-                            _active_shape_key(source) is None
-                            if isinstance(target_key, str) and target_key == BASE_MESH_TARGET
-                            else _active_shape_key(source) == target_key
-                        )
+                        target_is_active = _active_target_matches(source, target_key)
                         if controller is not None and target_is_active:
                             _sync_proxy(source, controller)
                     finally:
@@ -609,11 +628,7 @@ def _restore_native_undo_records(direction: str):
                         if not _positions_close(source_now, source_post):
                             _write_source_positions(source, source_post, allow_locked=True, shape_key=target_key)
                         controller = controller_for(candidate)
-                        target_is_active = (
-                            _active_shape_key(source) is None
-                            if isinstance(target_key, str) and target_key == BASE_MESH_TARGET
-                            else _active_shape_key(source) == target_key
-                        )
+                        target_is_active = _active_target_matches(source, target_key)
                         if controller is not None and target_is_active:
                             _sync_proxy(source, controller)
                     finally:

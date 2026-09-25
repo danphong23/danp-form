@@ -44,6 +44,9 @@ from .blender.mesh import _ensure_source_ids as _ensure_source_ids
 from .blender.mesh import _is_valid_source as _is_valid_source
 from .blender.mesh import _active_shape_key as _active_shape_key
 from .blender.mesh import _shape_key_signature as _shape_key_signature
+from .blender.mesh import _resolve_shape_key as _resolve_shape_key
+from .blender.mesh import _shape_key_evaluation_signature as _shape_key_evaluation_signature
+from .blender.mesh import _evaluated_source_positions as _evaluated_source_positions
 from .blender.mesh import _source_co as _source_co
 from .blender.mesh import _source_edge_vids as _source_edge_vids
 from .blender.mesh import _source_id_maps as _source_id_maps
@@ -151,6 +154,7 @@ def _proxy_dependencies() -> _ProxyDeps:
         source_id_maps=_source_id_maps,
         source_edge_vids=_source_edge_vids,
         source_vertices=_source_vertices,
+        evaluated_source_positions=_evaluated_source_positions,
         proxy_selection_snapshot=_proxy_selection_snapshot,
         select_proxy_ids=_select_proxy_ids,
     )

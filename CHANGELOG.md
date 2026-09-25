@@ -1,5 +1,12 @@
 # Design Changelog
 
+## 2026-09-25 — DANP Form 0.5.32 tracks evaluated Shape Key poses safely
+
+- Sync Controller coordinates from the visible evaluated Source mesh, including
+  Shape Key value blends and show-only-key preview changes.
+- Store native Undo target identity as scalar metadata instead of a live
+  KeyBlock reference, then resolve it against the current stack before restore.
+
 ## 2026-09-24 — DANP Form 0.5.31 stabilizes all-control transforms
 
 - Apply one coherent affine transform over affected patches when every enabled

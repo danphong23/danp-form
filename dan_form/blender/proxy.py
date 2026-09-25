@@ -20,6 +20,7 @@ class ProxyDeps:
     source_id_maps: Callable
     source_edge_vids: Callable
     source_vertices: Callable
+    evaluated_source_positions: Callable
     proxy_selection_snapshot: Callable
     select_proxy_ids: Callable
 
@@ -41,7 +42,7 @@ def rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object, deps) 
 def rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object, deps) -> None:
     deps.validate_source_topology(source)
     vertex_ids, edge_ids = deps.effective_proxy_elements(source)
-    vid_to_index, eid_to_index = deps.source_id_maps(source)
+    deps.source_id_maps(source)
     proxy_mesh = controller.data
     selected_ids = deps.proxy_selection_snapshot(controller) if controller.mode == "EDIT" else (set(), set())
     old_active = bpy.context.view_layer.objects.active
@@ -52,11 +53,11 @@ def rebuild_proxy_impl(source: bpy.types.Object, controller: bpy.types.Object, d
         # Temporarily leave only the controller edit context, then restore it.
         bpy.ops.object.mode_set(mode="OBJECT")
     proxy_mesh.clear_geometry()
-    source_vertices = deps.source_vertices(source)
+    source_positions = deps.evaluated_source_positions(source)
     edge_vids = deps.source_edge_vids(source)
-    # Source owns every coordinate, including surviving and newly revealed IDs.
-    # A rebuilt proxy must never revive an older, possibly stale edit pose.
-    proxy_vertices = [tuple(source_vertices[vid_to_index[vid]].co) for vid in vertex_ids]
+    # Source's visible evaluated result owns displayed coordinates. A rebuilt
+    # proxy must never revive an older, possibly stale edit pose.
+    proxy_vertices = [tuple(source_positions[vid]) for vid in vertex_ids]
     proxy_vertex_index = {vid: index for index, vid in enumerate(vertex_ids)}
     proxy_edges = []
     kept_edge_ids = []
@@ -108,7 +109,7 @@ def sync_proxy(source: bpy.types.Object, controller: bpy.types.Object, deps) -> 
     if proxy_attr is None:
         return
     source_vids, _ = deps.source_id_maps(source)
-    source_vertices = deps.source_vertices(source)
+    source_positions = deps.evaluated_source_positions(source)
     changed = False
     if controller.mode == "EDIT":
         bm = bmesh.from_edit_mesh(controller.data)
@@ -116,9 +117,9 @@ def sync_proxy(source: bpy.types.Object, controller: bpy.types.Object, deps) -> 
         if layer is None:
             return
         for vert in bm.verts:
-            source_index = source_vids.get(int(vert[layer]))
-            if source_index is not None:
-                position = source_vertices[source_index].co
+            vertex_id = int(vert[layer])
+            position = source_positions.get(vertex_id)
+            if vertex_id in source_vids and position is not None:
                 if (vert.co - position).length_squared > 1e-16:
                     vert.co = position
                     changed = True
@@ -127,9 +128,9 @@ def sync_proxy(source: bpy.types.Object, controller: bpy.types.Object, deps) -> 
             guard_proxy_topology(source, controller, deps)
         return
     for index, item in enumerate(proxy_attr.data):
-        source_index = source_vids.get(int(item.value))
-        if source_index is not None and index < len(controller.data.vertices):
-            position = source_vertices[source_index].co
+        vertex_id = int(item.value)
+        position = source_positions.get(vertex_id)
+        if vertex_id in source_vids and position is not None and index < len(controller.data.vertices):
             vert = controller.data.vertices[index]
             if (vert.co - position).length_squared > 1e-16:
                 vert.co = position

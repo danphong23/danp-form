@@ -1845,6 +1845,8 @@ class DANFORM_OT_focus_source(bpy.types.Operator):
             previous_preview = runtime.SHAPE_PREVIEW_STATES.pop(source.as_pointer(), None)
             if previous_preview is not None:
                 source.show_only_shape_key = bool(previous_preview)
+                context.view_layer.update()
+                _sync_proxy(source, controller)
             _select_only(context, source)
             if _RETURN_MODES.pop(source.get(SOURCE_UUID_KEY), "OBJECT") == "EDIT":
                 bpy.ops.object.mode_set(mode="EDIT")
@@ -1885,6 +1887,8 @@ class DANFORM_OT_focus_controller(bpy.types.Operator):
             runtime.SHAPE_PREVIEW_STATES.setdefault(source.as_pointer(), bool(source.show_only_shape_key))
             if key is not None:
                 source.show_only_shape_key = True
+                context.view_layer.update()
+                _sync_proxy(source, controller)
             controller.hide_set(False, view_layer=context.view_layer)
             _select_only(context, controller)
             bpy.ops.object.mode_set(mode="EDIT")
@@ -1922,9 +1926,13 @@ class DANFORM_OT_select_shape_key(bpy.types.Operator):
             if not 0 <= self.key_index < len(blocks):
                 raise ValueError("SHAPE_KEY_TARGET_INVALID")
             source.active_shape_key_index = self.key_index
-            _sync_proxy(source, controller)
             if controller is not None and controller.mode == "EDIT":
+                runtime.SHAPE_PREVIEW_STATES.setdefault(
+                    source.as_pointer(), bool(source.show_only_shape_key)
+                )
                 source.show_only_shape_key = True
+            context.view_layer.update()
+            _sync_proxy(source, controller)
             key = _active_shape_key(source)
             context.scene.dan_form_status = f"Đang chỉnh Shape Key: {key.name}"
             _tag_viewport_redraw(context)

@@ -93,7 +93,7 @@ def unregister(api) -> None:
     for cache in (
         api._MAPPING_CACHE, api._UI_SIGNATURES, api._ACTIVE_CONTROL_UUIDS, api._RETURN_MODES,
         api._PROXY_SNAPSHOTS, api._NETWORK_CACHE, api._PATCH_CACHE, api._PATCH_OVERLAY_CACHE,
-        api._FACE_CACHE, api._OVERLAY_CACHE,
+        api._FACE_CACHE, api._OVERLAY_CACHE, api._runtime.SHAPE_EVAL_SIGNATURES,
     ):
         cache.clear()
     api._NATIVE_TRANSFORM_SESSIONS.clear()

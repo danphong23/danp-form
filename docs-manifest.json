@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "d4f0e9eecef94de785a6569f6f2b792fc3513a2f60e1173c80484c070c837609",
-    "bytes": 27588
+    "sha256": "67763f6d9a73e0f3fd37fa67f9410564d4cdb13f24cf7f1fcf8689e7387ec249",
+    "bytes": 27958
   },
   {
     "path": "CONTRIBUTING.md",
@@ -31,8 +31,8 @@
   },
   {
     "path": "docs/architecture/deformation-target-contract.md",
-    "sha256": "bb85c4846c9cf9c9995ed82ddf35af8c1df449a745cfb45d821a7eb72a3df159",
-    "bytes": 5445
+    "sha256": "14bb59cd74f798851c4869c4a7bdadc27293b06ffc7cad76f5aeb4a927f59375",
+    "bytes": 5759
   },
   {
     "path": "docs/architecture/errors-and-recovery.md",
@@ -196,8 +196,8 @@
   },
   {
     "path": "docs/decisions/ADR-017-deformation-target-contract.md",
-    "sha256": "a484a50d6a91a892b0307a7a3408c300e3a31c40262fd65c3953af5385fd10bd",
-    "bytes": 5601
+    "sha256": "19f8212b5e392f6fb44f8d43d833999f2f2ede3f93a0e1154b528b4d0b5298cc",
+    "bytes": 6071
   },
   {
     "path": "docs/decisions/open-decisions.md",
@@ -216,8 +216,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "8bfb36b9c719359d914f54cc33c22342c88002bf6c5e865c5a848aca2159d254",
-    "bytes": 290184
+    "sha256": "f99208bdbb8d0bdb246bce2a05426222c0a4e7aa82a1ba3e4686a05b2ae783ed",
+    "bytes": 293848
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -288,6 +288,11 @@
     "path": "docs/testing/2026-09-25-h01-target-contract-review.md",
     "sha256": "f5d721142c30fc337b79f11a662911b49715509625e4b59cabbf7e98ec624f93",
     "bytes": 3632
+  },
+  {
+    "path": "docs/testing/2026-09-25-h02-evaluated-sync-undo.md",
+    "sha256": "6c607e24cb237ef693c8b04e5608dac2f33b2aff98015206103b28aa4b76555b",
+    "bytes": 2805
   },
   {
     "path": "docs/testing/2026-09-25-h02-target-io-undo.md",
@@ -456,8 +461,8 @@
   },
   {
     "path": "tasks/release-hardening/h02-target-io-undo.md",
-    "sha256": "96245dfb47c10bf4a1ac76bd9f05f7897444c633ae4449f5c7f09addb1b7ef0d",
-    "bytes": 3240
+    "sha256": "a61b00a00d37406a9536d974a1c6d26d61afc4215a5cb9230cf22bb5ee6a17ab",
+    "bytes": 4280
   },
   {
     "path": "tasks/release-hardening/h03-owned-object-safety.md",

@@ -255,6 +255,21 @@ def _resolve_shape_key(source: bpy.types.Object, target=None):
         if target == BASE_MESH_TARGET and source.data.shape_keys is None:
             return None
         raise ValueError("SHAPE_KEY_TARGET_INVALID")
+    if isinstance(target, dict):
+        kind = target.get("kind")
+        if kind == "BASE":
+            if source.data.shape_keys is None:
+                return None
+            raise ValueError("SHAPE_KEY_TARGET_INVALID")
+        if kind != "KEY":
+            raise ValueError("SHAPE_KEY_TARGET_INVALID")
+        blocks = source.data.shape_keys.key_blocks if source.data.shape_keys else ()
+        for index, key in enumerate(blocks):
+            if (int(key.as_pointer()) == target.get("pointer")
+                    and str(key.name) == target.get("name")
+                    and index == target.get("index")):
+                return key
+        raise ValueError("SHAPE_KEY_TARGET_INVALID")
     try:
         target_pointer = target.as_pointer()
         target_name = str(target.name)
@@ -278,6 +293,61 @@ def _shape_key_signature(source: bpy.types.Object) -> tuple:
         bool(key.lock_shape), len(key.data), bool(source.data.shape_keys.use_relative),
         int(source.active_shape_key_index),
     )
+
+
+def _shape_key_evaluation_signature(source: bpy.types.Object) -> tuple:
+    """Capture properties that can change the evaluated Source surface."""
+    shape_keys = source.data.shape_keys if source.type == "MESH" and source.data else None
+    if shape_keys is None:
+        return (source.data.as_pointer(), None, bool(source.show_only_shape_key))
+    return (
+        source.data.as_pointer(), shape_keys.as_pointer(), bool(shape_keys.use_relative),
+        float(shape_keys.eval_time), bool(source.show_only_shape_key),
+        int(source.active_shape_key_index),
+        tuple((key.as_pointer(), str(key.name), float(key.value), bool(key.mute))
+              for key in shape_keys.key_blocks),
+    )
+
+
+def _evaluated_source_positions(source: bpy.types.Object) -> dict[int, object]:
+    """Read visible Source coordinates from Blender's evaluated mesh by persistent ID."""
+    expected_ids, _ = _source_id_maps(source)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    evaluated = source.evaluated_get(depsgraph)
+    mesh = evaluated.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+    if mesh is None:
+        raise ValueError("EVALUATED_SOURCE_UNAVAILABLE")
+    try:
+        ids = mesh.attributes.get(VID_ATTR)
+        if ids is None or ids.domain != "POINT" or ids.data_type != "INT":
+            raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
+        if len(ids.data) != len(mesh.vertices):
+            raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
+        positions = {}
+        for index, item in enumerate(ids.data):
+            vertex_id = int(item.value)
+            if vertex_id not in expected_ids or vertex_id in positions:
+                raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
+            positions[vertex_id] = mesh.vertices[index].co.copy()
+        if positions.keys() != expected_ids.keys():
+            raise ValueError("EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE")
+        return positions
+    finally:
+        evaluated.to_mesh_clear()
+
+
+def _shape_key_target_record(source: bpy.types.Object, target) -> dict:
+    """Store stable scalar identity in Undo history, never a KeyBlock RNA wrapper."""
+    if isinstance(target, str) and target == BASE_MESH_TARGET:
+        return {"kind": "BASE"}
+    key = _resolve_shape_key(source, target)
+    if key is None:
+        return {"kind": "BASE"}
+    blocks = source.data.shape_keys.key_blocks
+    return {
+        "kind": "KEY", "pointer": int(key.as_pointer()), "name": str(key.name),
+        "index": next(index for index, item in enumerate(blocks) if item == key),
+    }
 
 
 def _source_vid(source: bpy.types.Object, vertex_index: int) -> int:

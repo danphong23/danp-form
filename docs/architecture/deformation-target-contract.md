@@ -23,7 +23,7 @@ changes with target. No per-key control or patch copy is stored.
 ```text
 resolve Source/Controller + selected target
   → validate owner, topology, target, lock and mode
-  → resync controller from target when idle
+  → resync controller from the visible evaluated Source mesh when idle
   → capture target descriptor + immutable P0
   → core computes each preview from P0
   → adapter writes only captured target
@@ -49,11 +49,15 @@ array index or by a different active key.
 
 ## UI, agent and structural actions
 
-The Source active key is the single user-visible selection state; DANP's panel
-must show that same target. Choosing another key is a structural command:
-require no active transform, change active key, validate it and resync controller
-to its coordinates. Entering Controller Edit may temporarily enable
-`show_only_shape_key`; leaving it or an error restores the prior setting.
+The Source active key is the single user-visible edit-target selection state;
+DANP's panel must show that same target. Choosing another key is a structural
+command: require no active transform, change active key, validate it and resync
+the controller from Blender's visible evaluated Source result. Idle display
+tracks the current evaluated mix as key values, mute state, absolute evaluation
+time or show-only-key state changes. Entering Controller Edit may temporarily
+enable `show_only_shape_key`; leaving it or an error restores the prior setting
+and resyncs the controller after evaluation. Deformation still writes only the
+captured key's stored coordinates.
 Key values, mute, drivers, animation and absolute-key evaluation time remain
 untouched. A locked key can be selected for inspection but cannot begin a new
 deformation. New Shape Key belongs to H05, not to a transform. It copies the

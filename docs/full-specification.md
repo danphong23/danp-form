@@ -4432,7 +4432,7 @@ changes with target. No per-key control or patch copy is stored.
 ```text
 resolve Source/Controller + selected target
   → validate owner, topology, target, lock and mode
-  → resync controller from target when idle
+  → resync controller from the visible evaluated Source mesh when idle
   → capture target descriptor + immutable P0
   → core computes each preview from P0
   → adapter writes only captured target
@@ -4458,11 +4458,15 @@ array index or by a different active key.
 
 ## UI, agent and structural actions
 
-The Source active key is the single user-visible selection state; DANP's panel
-must show that same target. Choosing another key is a structural command:
-require no active transform, change active key, validate it and resync controller
-to its coordinates. Entering Controller Edit may temporarily enable
-`show_only_shape_key`; leaving it or an error restores the prior setting.
+The Source active key is the single user-visible edit-target selection state;
+DANP's panel must show that same target. Choosing another key is a structural
+command: require no active transform, change active key, validate it and resync
+the controller from Blender's visible evaluated Source result. Idle display
+tracks the current evaluated mix as key values, mute state, absolute evaluation
+time or show-only-key state changes. Entering Controller Edit may temporarily
+enable `show_only_shape_key`; leaving it or an error restores the prior setting
+and resyncs the controller after evaluation. Deformation still writes only the
+captured key's stored coordinates.
 Key values, mute, drivers, animation and absolute-key evaluation time remain
 untouched. A locked key can be selected for inspection but cannot begin a new
 deformation. New Shape Key belongs to H05, not to a transform. It copies the
@@ -4524,10 +4528,14 @@ implicitly edits other blocks or changes `use_relative`, key values, mute,
 drivers, keyframes or absolute evaluation time.
 
 The controller is a rebuildable input proxy. Its persistent membership and the
-patch graph are shared by all targets; its displayed coordinates are sampled
-from the currently selected target when idle. A transaction captures exactly
-one target and its immutable P0. Preview, confirm, cancel and Undo/Redo must
-address that captured target, never whichever key is active later.
+patch graph are shared by all targets. While idle, its displayed coordinates
+mirror the Source's visible evaluated mesh, including Shape Key values, blends,
+mute state and show-only-key display. This makes the Source's visible result the
+only geometric truth for controller display. On entering Controller Edit, DANP
+isolates the selected key through Blender's show-only-key display and resyncs
+from that evaluated result. A transaction captures exactly one stored-coordinate
+target and its immutable P0. Preview, confirm, cancel and Undo/Redo address that
+captured target, never whichever key is active later.
 
 ## Identity and failure rule
 
@@ -4589,8 +4597,10 @@ topology, never an implicit transform side effect.
 - **Force key values to 1 and others to 0:** rejected; display isolation uses
   `show_only_shape_key` without altering animation state.
 
-This decision creates no new data write in H01. H02 implements safe I/O and
-Reset/Undo provenance; H05 completes target selection and New Shape Key UX;
+This decision creates no new data write in H01. H02 implements safe I/O,
+visible evaluated Source-to-proxy synchronization and Reset/Undo provenance;
+native Undo history stores scalar key identity and re-resolves the live target
+before reading or writing. H05 completes target selection and New Shape Key UX;
 H06 exposes equivalent agent operations. `Save As Shape Key`, automatic Basis
 propagation, corrective drivers, multi-object transactions and topology
 remapping remain outside this decision.
@@ -4775,3 +4785,63 @@ factory-startup Blender process.
 The lifecycle deletion-safety gate passes. Interactive Undo remains a manual
 UI check; this report does not certify all release matrix rows or the complete
 release readiness of DANP Form.
+
+---
+
+<!-- source: docs/testing/2026-09-25-h02-evaluated-sync-undo.md -->
+
+# H02 follow-up — evaluated sync and Undo safety
+
+**Status: PASS in Blender 5.2.1 background fixtures; interactive native Undo is
+still pending user acceptance.** This follow-up was prompted by a report that a
+Shape Key value change left the Controller at its previous pose and Blender
+crashed during Undo.
+
+## Findings
+
+- The crash log's Python backtrace entered the deferred native Undo bridge and
+  then `_source_positions` while reading Shape Key coordinates. Undo history
+  retained a live `KeyBlock` wrapper, which could refer to data Blender had
+  replaced during its native Undo operation.
+- Idle proxy sync sampled the selected key's stored coordinates. It did not
+  observe Shape Key value/blend changes, so a key returning to zero could leave
+  the proxy showing the previous key pose.
+
+## Changes
+
+- Source-to-Controller sync now samples the evaluated Source mesh and maps the
+  resulting coordinates by persistent Source vertex IDs. A missing, duplicate
+  or incomplete ID mapping fails safely instead of guessing by array index.
+- A runtime evaluation signature observes Shape Key values, mute state, active
+  key, evaluation time and show-only-key changes. The depsgraph callback resyncs
+  the Controller when the visible Source pose changes.
+- Undo history now stores scalar key identity (`kind`, pointer, name and index)
+  instead of a live `KeyBlock` wrapper. Before restoration, the adapter resolves
+  that identity against the current stack; a mismatch is rejected before access
+  or mutation.
+- Entering/leaving Controller Edit refreshes the proxy after Blender evaluates
+  the temporary show-only-key state.
+
+## Evidence
+
+- [PASS] `tests/live_shape_key_support.py`: evaluated Controller pose at key
+  values 1.0, 0.5 and 0.0; automatic depsgraph detection; Basis/expression and
+  absolute-key coordinate routing; cancel; safe key identity resolution;
+  Undo/Redo bridge including Source Edit Mode; lock, target-change, Reset and
+  no-key cases.
+- [PASS] `tests/live_owned_object_safety.py` and
+  `tests/live_duplicate_bindings.py` remain green.
+- [PASS] 59 static test functions; documentation regeneration and validation;
+  `git diff --check`.
+- [NOT RUN] Native Ctrl+Z/Ctrl+Shift+Z from a real Blender UI after a Controller
+  transform. The Blender MCP connection can inspect the live UI, but this
+  session does not expose native keyboard input. The open file was inspected
+  read-only and was not saved or modified.
+
+## Acceptance
+
+The code and disposable fixtures pass. H02 is not user-accepted yet. Install
+the generated 0.5.32 extension, then check that changing the Shape Key value
+from 1 to 0 moves the Controller back with the visible Source and that a real
+Undo/Redo neither crashes Blender nor separates the two. Do not start the next
+phase until that UI check passes.

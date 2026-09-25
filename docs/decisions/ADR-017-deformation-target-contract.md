@@ -23,10 +23,14 @@ implicitly edits other blocks or changes `use_relative`, key values, mute,
 drivers, keyframes or absolute evaluation time.
 
 The controller is a rebuildable input proxy. Its persistent membership and the
-patch graph are shared by all targets; its displayed coordinates are sampled
-from the currently selected target when idle. A transaction captures exactly
-one target and its immutable P0. Preview, confirm, cancel and Undo/Redo must
-address that captured target, never whichever key is active later.
+patch graph are shared by all targets. While idle, its displayed coordinates
+mirror the Source's visible evaluated mesh, including Shape Key values, blends,
+mute state and show-only-key display. This makes the Source's visible result the
+only geometric truth for controller display. On entering Controller Edit, DANP
+isolates the selected key through Blender's show-only-key display and resyncs
+from that evaluated result. A transaction captures exactly one stored-coordinate
+target and its immutable P0. Preview, confirm, cancel and Undo/Redo address that
+captured target, never whichever key is active later.
 
 ## Identity and failure rule
 
@@ -88,8 +92,10 @@ topology, never an implicit transform side effect.
 - **Force key values to 1 and others to 0:** rejected; display isolation uses
   `show_only_shape_key` without altering animation state.
 
-This decision creates no new data write in H01. H02 implements safe I/O and
-Reset/Undo provenance; H05 completes target selection and New Shape Key UX;
+This decision creates no new data write in H01. H02 implements safe I/O,
+visible evaluated Source-to-proxy synchronization and Reset/Undo provenance;
+native Undo history stores scalar key identity and re-resolves the live target
+before reading or writing. H05 completes target selection and New Shape Key UX;
 H06 exposes equivalent agent operations. `Save As Shape Key`, automatic Basis
 propagation, corrective drivers, multi-object transactions and topology
 remapping remain outside this decision.

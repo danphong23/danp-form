@@ -13,7 +13,7 @@ import math
 from ..constants import *
 from ..core.deformation import compute_preview
 from ..core.operation import OperationTransform, targets_from_transform
-from .mesh import _resolve_shape_key
+from .mesh import _resolve_shape_key, _shape_key_target_record
 
 _USE_ACTIVE_SHAPE_KEY = object()
 
@@ -244,7 +244,7 @@ def deform_commit(source: bpy.types.Object, deps) -> None:
             "source": source.as_pointer(),
             "source_uuid": source.get(SOURCE_UUID_KEY),
             "controller": controller.as_pointer(),
-            "shape_key_target": tx.get("shape_key_target"),
+            "shape_key_target": _shape_key_target_record(source, tx.get("shape_key_target")),
             "source_pre": {int(vid): position.copy() for vid, position in source_pre.items()},
             "source_post": {int(vid): position.copy() for vid, position in source_post.items()},
             "controller_pre": {
