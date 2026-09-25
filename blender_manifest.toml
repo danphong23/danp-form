@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "dan_form"
-version = "0.5.34"
+version = "0.5.35"
 name = "DANP Form"
 tagline = "Source-backed patch deformation with proportional control"
 maintainer = "DANP Form"

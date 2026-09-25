@@ -31,16 +31,19 @@ controls/sync; patch visualization; Edit Mode deformation/proportional; human an
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).
 
-Manifest version 0.5.31 displays DANP Form, offers model Init/Remove and keeps
-controller topology fixed. Controller-to-Source deformation is implemented as a
-replaceable Phase 4 baseline. Shape Key target support is present, with known
-target I/O and lifecycle safety gaps tracked in the
-[release-hardening roadmap](docs/roadmap/release-hardening-plan.md). Live modal
-release gates and agent parity still require evidence.
+Version 0.5.35 targets Blender 5.1 or newer. DANP Form keeps a child Controller
+bound to one Source and edits the active deformation target: Base when there are
+no Shape Keys, otherwise the explicitly selected Basis or Shape Key. Target
+selection, native G/R/S deformation, cancel and Undo share the transaction path.
+The complete current evidence and remaining release limits are in the
+[release-hardening roadmap](docs/roadmap/release-hardening-plan.md).
 The target contract for base/Basis and relative/absolute Shape Keys is
 [ADR-017](docs/decisions/ADR-017-deformation-target-contract.md); its safe
 read/write implementation and runtime verification belong to H02.
-Existing `dan_form` extension/operator/data IDs remain compatible.
+Existing `dan_form` extension/operator/data IDs remain compatible. After topology
+changes, validate or explicitly repair the mapping before editing. Duplicate
+Source meshes do not inherit a live Controller binding; initialize a separate
+Controller for the new Source. The Controller is its Source's direct child.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
 [performance report](docs/testing/phase-02-edit-performance-report.md).
 Controller Edit uses Blender's native vertex/edge selection and G/R/S transforms.

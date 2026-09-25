@@ -25,18 +25,17 @@ lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao n
 theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
 hay deactivate riêng.
 
-Bộ này gồm specification và addon prototype Phase 1–4. Bản 0.5.17 dùng tên DANP
-Form; model có Init/Remove, controller giữ topology cố định. Patch chỉ có một
-control biên nhận toàn bộ G/R/S; patch có nhiều control blend transform với các
-control không chọn làm neo đứng yên. Lộ trình kiểm chứng agent và release vẫn
-thuộc Phase 5.
+Bản 0.5.35 hỗ trợ Blender 5.1 trở lên. Mỗi Source có một Controller con trực
+tiếp; mesh sao chép không tự dùng chung Controller. Add-on chỉnh target đang chọn:
+Base nếu chưa có Shape Key, hoặc Basis/key được chọn rõ ràng. Target selection,
+G/R/S, cancel và Undo dùng cùng đường transaction.
 
 Controller Edit: Ctrl+Alt+Click chọn đoạn giữa giao điểm; Shift để chọn thêm.
 H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ toàn bộ con mắt.
 
 Source vẫn có thể chỉnh topology bằng Edit Mode hoặc Apply Modifier. Khi topology
-thay đổi, DANP tạm dừng để không ghi theo ID cũ; dùng Undo để quay lại mapping
-trước đó hoặc chọn **Manage → Reset DANP Controls** để tạo mapping mới trên mesh hiện tại.
+thay đổi, DANP tạm dừng để không ghi theo ID cũ. Dùng Undo để quay lại mapping
+trước đó hoặc Validate/Repair và tạo lại mapping tường minh trên topology hiện tại.
 Modifier chưa Apply chỉ thay đổi hình hiển thị; mapping vẫn theo Source base.
 
 Khi Init lần đầu, DANP lưu một snapshot tọa độ theo ID của Source. **Reset Model**

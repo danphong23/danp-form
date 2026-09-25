@@ -15,3 +15,13 @@ dùng chưa yêu cầu hành động đó.
 Blender và hồi quy bắt buộc H09. **Gate:** gói có thể tái tạo, mọi giới hạn được
 ghi đúng; không ghi “production ready” nếu một gate bắt buộc FAIL/NOT RUN.
 **Commit:** `chore(dan-form): prepare verified release package`.
+
+**Operational scope:** ship an installable, version-consistent functional
+candidate. Keep the H09 GPU-overlay and combined large-mesh P95/peak-memory
+items explicitly listed; do not describe this archive as performance-certified.
+
+**Progress 2026-09-25:** manifest and `bl_info` are aligned at 0.5.35; English
+and Vietnamese guides were refreshed. Documentation links and hashes validate.
+The 131-file archive passes package validation and a Blender 5.2.1 extract,
+import, register, and unregister smoke test. See the
+[H10 package report](../../docs/testing/2026-09-25-h10-package-candidate.md).

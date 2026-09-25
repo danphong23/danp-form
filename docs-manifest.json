@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "aa41e637be83af6f4b0eea7f005cc0a108bb07af9e9deb51d88c9b2d403efb83",
-    "bytes": 28823
+    "sha256": "0dc516748a81ca0bd384a2b2b70f152a71274a54d90e45ca3508d049c2d989c1",
+    "bytes": 29457
   },
   {
     "path": "CONTRIBUTING.md",
@@ -16,8 +16,8 @@
   },
   {
     "path": "docs/agent/api-contract.md",
-    "sha256": "86d9bea941da58e65e3881830a7c9bac9f9acffb60a94f18702286eb216c0643",
-    "bytes": 6132
+    "sha256": "1f1fbbf0c6ac8722519f85c2263ddb6483b1b9269367e2785c29e49e6ca88caa",
+    "bytes": 7955
   },
   {
     "path": "docs/agent/shared-primitives.md",
@@ -61,8 +61,8 @@
   },
   {
     "path": "docs/blender/integration.md",
-    "sha256": "33c468dd1453cd45eec2fcdeeb607a7043483e7fae459d89592181c6c6434a8e",
-    "bytes": 3185
+    "sha256": "5804666b0d46dc9b2e9d36862bcf623bf8bcb9596019ea3d83ece84855009434",
+    "bytes": 3456
   },
   {
     "path": "docs/blender/interaction.md",
@@ -200,6 +200,11 @@
     "bytes": 6447
   },
   {
+    "path": "docs/decisions/ADR-018-topology-recovery.md",
+    "sha256": "6aa9d15a420cd004c786e5866c85e9085d8ecdea95cfbc2e291a22f20017af77",
+    "bytes": 2620
+  },
+  {
     "path": "docs/decisions/open-decisions.md",
     "sha256": "b077a9e7c05e10d6e4994709e1db65e10e4b43574c49705219bcaf8978638fe2",
     "bytes": 2950
@@ -216,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "5ca1a613c21438e9cf449c27f0caca2c7b4e577a98a165ba814aa51f482ba6c2",
-    "bytes": 297833
+    "sha256": "217ff614c3c1a4ad88ada032cb4456c5ebe06f46d997b0d2b8a0517246e8533c",
+    "bytes": 316268
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -276,8 +281,8 @@
   },
   {
     "path": "docs/roadmap/release-hardening-plan.md",
-    "sha256": "140978d12ca0490dc0e0840ba71cd1583adcbba3865e4d8832613b6f9f674057",
-    "bytes": 6335
+    "sha256": "308d959cb528ecbb030e48d14e091b388282d256eab3e03bd8b758a5df43daa5",
+    "bytes": 6773
   },
   {
     "path": "docs/testing/2026-09-25-all-control-scale-audit.md",
@@ -303,6 +308,41 @@
     "path": "docs/testing/2026-09-25-h03-owned-object-safety.md",
     "sha256": "a4ca4506e38b3dd3cc6a3e1b19e410a13812d19c5f7feb31664b1ce90d38bf62",
     "bytes": 1937
+  },
+  {
+    "path": "docs/testing/2026-09-25-h04-native-transform.md",
+    "sha256": "e789baa684c0bba8832d028929502e4634e3aab99b18a017180d619508db83ba",
+    "bytes": 1225
+  },
+  {
+    "path": "docs/testing/2026-09-25-h05-target-ux.md",
+    "sha256": "c15d19e1d0cb2ee8dda755082b8698a53d5e7653a421ccd476bb982d1c737d76",
+    "bytes": 3897
+  },
+  {
+    "path": "docs/testing/2026-09-25-h06-agent-parity.md",
+    "sha256": "107d46668f7327a76a252de8366af95e89e9cbae3a88c36985062974fc5a62fe",
+    "bytes": 1866
+  },
+  {
+    "path": "docs/testing/2026-09-25-h07-topology-recovery.md",
+    "sha256": "daa7b7edb27c3caec2ec49979062cd8367db5c9b8721a9a91613a9f54312bec5",
+    "bytes": 1143
+  },
+  {
+    "path": "docs/testing/2026-09-25-h08-runtime-architecture.md",
+    "sha256": "2083138bfca006316304adac14aa83479b402bf34b80fbb990b76779fb2ab269",
+    "bytes": 2077
+  },
+  {
+    "path": "docs/testing/2026-09-25-h09-release-gates.md",
+    "sha256": "8d861da95d63d6e3329e6cdcf0c49c1e426cbe309556869e4131e063d29863ac",
+    "bytes": 1398
+  },
+  {
+    "path": "docs/testing/2026-09-25-h10-package-candidate.md",
+    "sha256": "478289890f269d4f2b629c7b725a2ddb56b276787e579b9269a32dd10b29d11c",
+    "bytes": 1113
   },
   {
     "path": "docs/testing/2026-09-25-release-hardening-baseline.md",
@@ -396,13 +436,13 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "31973dee0cd4014af0c6fdf30f4ee8f62b31d3162d89e4894ce548ee0fb24f15",
-    "bytes": 4606
+    "sha256": "a354c1320a15665657de524b6beba038628d9ef5b1f7c5db37a19ea022bf99a0",
+    "bytes": 4548
   },
   {
     "path": "README.md",
-    "sha256": "618fb85d426e946a8306c77061a110304a2821000fa07f843bd3fd13702cafe5",
-    "bytes": 4145
+    "sha256": "a7d10893b353d50ff6f7239d9c901084cfb47edb42901cc5e7faac037061abcd",
+    "bytes": 4424
   },
   {
     "path": "SECURITY.md",
@@ -471,37 +511,37 @@
   },
   {
     "path": "tasks/release-hardening/h04-native-transform.md",
-    "sha256": "4d82f095415876a8b0d7e03fa847ccef79aef816548a1668af635c9475bebb3e",
-    "bytes": 1290
+    "sha256": "ad4997ea72a6195786b42585e2d57a720f634d19ecc532957716851f63e1fdb5",
+    "bytes": 1816
   },
   {
     "path": "tasks/release-hardening/h05-target-ux.md",
-    "sha256": "ebbac928d9a597a67cb851cf72e895fb08121d83a0884a5bd86b08675a4026d9",
-    "bytes": 1706
+    "sha256": "547d3abd77d9555d826081ef27a0454b66193defcf49401ccd12167de318bc2d",
+    "bytes": 2890
   },
   {
     "path": "tasks/release-hardening/h06-agent-parity.md",
-    "sha256": "d13de0c983bcba05560b819d449dcf4f9edb98dac83e91ab3361bb36951c3c5f",
-    "bytes": 1344
+    "sha256": "9b4f6fc506ec8339af635da72ca19a39a877e6cb9dfe1650a76e27a37c85bf83",
+    "bytes": 2031
   },
   {
     "path": "tasks/release-hardening/h07-topology-recovery.md",
-    "sha256": "171d52b0a0ca64cf0cc2d99918bcbac8d81ebc69dc2e6212458bc1a3a402800f",
-    "bytes": 1400
+    "sha256": "e7d02d3d2aa178a1c1b8786d65b5782af5d910fffa4e0a92a734674bbd037791",
+    "bytes": 1767
   },
   {
     "path": "tasks/release-hardening/h08-runtime-architecture.md",
-    "sha256": "ff02e4e080900c798108f24758abbfe70957a8c06022bd986ee0d2eda1358c8c",
-    "bytes": 1292
+    "sha256": "c6728aa8fcee5cd90f8038dc0b6786e1f58551670ab5d323484d432351519988",
+    "bytes": 1759
   },
   {
     "path": "tasks/release-hardening/h09-release-gates.md",
-    "sha256": "b82c41c95ed08e115cbadd113aff257dec3c6e829962fafa088dacf81105409d",
-    "bytes": 1304
+    "sha256": "400c3473bce6b480ffcf0e53d3a0935a53a4e3dfbecc2e33f88e9750ab94951a",
+    "bytes": 1833
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
-    "sha256": "b5445dc490fbace2f9f930d0f6bdcca447c73270c0eed9438c00245bcbb8d7da",
-    "bytes": 1112
+    "sha256": "16948c3a5a310999ce843079ce46236063fea1b28b6127462153615d85028e5b",
+    "bytes": 1709
   }
 ]

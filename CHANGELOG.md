@@ -1,5 +1,16 @@
 # Design Changelog
 
+## 2026-09-25 — DANP Form 0.5.35 completes target-aware functional hardening
+
+- Add target-aware Blender-side agent operations with revision checks, opaque
+  operation handles, exact persistent-ID target maps, and shared UI transaction
+  and solver paths.
+- Verify target workflow, native transforms, topology recovery, runtime handler
+  lifecycle, and multi-Source isolation in Blender 5.2.1 fixtures.
+- Add a repeatable release-gate runner and package validation. Full GPU overlay
+  fault review and a fresh combined P95/peak-memory benchmark remain unverified;
+  this build is a functional candidate, not performance-certified.
+
 ## 2026-09-25 — DANP Form 0.5.34 evaluates Shape Key mixes on the Source cage
 
 - Use Blender's native Shape Key mix on an independent temporary mesh when a
