@@ -19,3 +19,13 @@ lifecycle; không đường agent nào ghi bypass adapter. **Commit:**
 Áp dụng [ADR-017](../../docs/decisions/ADR-017-deformation-target-contract.md)
 và [T14–T15](../../docs/testing/deformation-target-matrix.md); API báo đúng
 target `BASE` hoặc `KEY`, không nhận tên/index như bằng chứng đủ để ghi.
+
+**Progress 2026-09-25:** the facade now lists/selects revision-checked targets,
+captures an opaque operation handle, accepts complete absolute target maps by
+persistent vertex ID, and returns target/revision/change metadata. A Blender
+5.2.1 fixture passes six scenarios covering Base/relative targets, locked-key
+rejection, stale revisions/handles, mid-operation target changes, cancel,
+commit, and Source isolation. A read-only query through the connected Blender
+MCP listed the active Source's two targets. Full coordinate edits were kept in
+the disposable fixture; the user's dirty file was not modified. See the
+[H06 test report](../../docs/testing/2026-09-25-h06-agent-parity.md).

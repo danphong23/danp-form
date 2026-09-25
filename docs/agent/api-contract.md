@@ -1,6 +1,6 @@
 # Agent API Contract
 
-**Status: Logical contract; transport and exact signatures are implementation details**
+**Status: Implemented Python facade for Blender-side agent calls; a separate transport is not implied.**
 
 ```text
 list_sources() / get_source(source_id)
@@ -24,13 +24,48 @@ reveal_all_controls(source_id)
 rebuild_proxy(...) / simplify_control(...) / refine_control(...)
 ```
 
-Post-baseline H06 adds target-aware queries and selection under
-[ADR-017](../decisions/ADR-017-deformation-target-contract.md):
-`list_deformation_targets(source_id)`,
-`get_deformation_target(source_id)`, and a validated target-selection command.
-`begin_operation` captures that target; its handle must fail if the key changes,
-locks or disappears. These names are planned logical calls, not promises that
-the current `dan_form.agent` facade implements them.
+H06 implements target-aware queries and selection under
+[ADR-017](../decisions/ADR-017-deformation-target-contract.md). The actual facade
+uses Blender object arguments and persistent Source IDs:
+
+```python
+from dan_form.agent import (
+    list_deformation_targets, select_deformation_target,
+    begin_operation, set_knot_targets, update_operation,
+    commit_operation, cancel_operation,
+)
+
+targets = list_deformation_targets(source)
+target = next(item for item in targets["targets"] if item["name"] == "Smile")
+selected = select_deformation_target(
+    source, target["target_id"], expected_revision=targets["target_revision"]
+)
+
+# Controller Edit must be active for begin_operation. Its opaque handle pins
+# the Source, controller, target identity, topology, and network revision.
+operation = begin_operation()
+set_knot_targets(operation["operation_id"], {
+    str(vertex_id): (x, y, z),  # absolute Source-local coordinate from P0
+    # include every selected persistent vertex ID exactly once
+})
+commit_operation(operation["operation_id"])  # or cancel_operation(handle)
+```
+
+`list_deformation_targets` returns `BASE` only when the Source has no key
+blocks; otherwise it returns actual KeyBlocks, including Basis, with name,
+index, lock, active, and supported state. `target_id` for a KeyBlock contains a
+current-session pointer and must be used with the matching `target_revision`;
+re-query after target/stack/topology changes or file reload. A locked key can be
+listed and selected, but `begin_operation` rejects it. A stale revision or
+handle fails before Source writes.
+
+`set_knot_targets` accepts absolute coordinates for the complete selected ID
+set. Missing/extra/duplicate IDs and non-finite coordinates return stable
+errors. `update_operation` is a convenience translation from immutable P0.
+Every operation response includes captured target, target/network revision and
+changed count. UI target selection and agent target selection call the same
+registered Shape Key selection operator; both deformation paths call the same
+transaction, patch expansion, solver, and Source writeback primitives.
 
 Visibility queries enumerate hidden Source IDs even when those elements are not in the
 visible proxy. Hide uses canonical masks and whole/partial selection semantics. There
@@ -81,13 +116,15 @@ ordinary targets, with no additional mesh-write API or reference solver.
 ## Blender facade (current build)
 
 When running inside Blender, external agents should import `dan_form.agent` and
-use the facade instead of editing `dan_form_controls` or indexing `mesh.vertices`
-directly:
+use the facade instead of editing `dan_form_controls` or persisting
+`mesh.vertices` indices directly:
 
 ```python
 from dan_form.agent import (
     inspect_source_selection, create_control_from_current_selection,
-    begin_operation, update_operation, commit_operation, cancel_operation,
+    list_deformation_targets, select_deformation_target,
+    begin_operation, set_knot_targets, update_operation,
+    commit_operation, cancel_operation,
 )
 
 selection = inspect_source_selection()
@@ -98,9 +135,9 @@ result = create_control_from_current_selection(
 )
 
 # Controller Edit must be active for the transaction facade.
-begin_operation()
-update_operation((0.02, 0.0, 0.0), radius=0.0)
-commit_operation()       # or cancel_operation()
+operation = begin_operation()
+update_operation(operation["operation_id"], (0.02, 0.0, 0.0), radius=0.0)
+commit_operation(operation["operation_id"])  # or cancel_operation(handle)
 ```
 
 `create_control_from_current_selection` calls the same registered operator as the

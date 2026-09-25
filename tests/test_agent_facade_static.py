@@ -25,6 +25,11 @@ def test_agent_facade_exposes_validation_and_no_direct_json_write():
 def test_agent_facade_exposes_transaction_lifecycle():
     for name in ("begin_operation", "update_operation", "commit_operation", "cancel_operation"):
         assert f"def {name}" in AGENT
+    for name in ("list_deformation_targets", "select_deformation_target", "set_knot_targets"):
+        assert f"def {name}" in AGENT
+    assert "agent_operation_id" in AGENT
+    assert "TARGET_SET_MISMATCH" in AGENT
+    assert "TARGET_REVISION_MISMATCH" in AGENT
     assert "_deform_begin" in AGENT
     assert "_deform_update" in AGENT
     assert "_deform_cancel" in AGENT
