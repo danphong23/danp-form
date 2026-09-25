@@ -17,3 +17,10 @@ register/unregister nhiều lần, cache invalidation, lỗi cố ý; Blender UI
 background. **Gate:** không dữ liệu bị ghi/xóa ngoài transaction; không lỗi bị
 nuốt; số đo và giới hạn được ghi. **Commit:**
 `refactor(dan-form): harden runtime boundaries`.
+
+**Progress 2026-09-25:** handler/cache lifecycle fixture passes 12 checks over
+repeated register/unregister, handler uniqueness, undo/load invalidation and
+overlay teardown. Source writes were reviewed against the shared transaction
+workflow and deferred Undo restoration. Scoped performance baselines are linked
+in the [H08 report](../../docs/testing/2026-09-25-h08-runtime-architecture.md);
+large-mesh peak-memory and GPU error injection remain H09 release gates.

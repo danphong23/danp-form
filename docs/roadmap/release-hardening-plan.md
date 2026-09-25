@@ -1,8 +1,8 @@
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
-**Trạng thái: H01–H07 đã pass; người dùng nghiệm thu H02 trên Blender
+**Trạng thái: H01–H08 đã pass trong phạm vi ghi ở từng báo cáo; người dùng nghiệm thu H02 trên Blender
 0.5.34 và xác nhận các gate giao diện H04/H07 hoạt động ổn; H05–H06 và H08–H10
-chưa hoàn tất (H08–H10).** Báo cáo H04/H07 ngày 2026-09-25 ghi riêng kết quả chạy nền và
+chưa hoàn tất (H09–H10).** Báo cáo H04/H07 ngày 2026-09-25 ghi riêng kết quả chạy nền và
 nghiệm thu giao diện của người dùng. Đây là đợt hardening sau baseline 5 phase của
 [ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
 P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
@@ -38,7 +38,7 @@ runtime riêng; H05, H06, H08, H09 và H10 còn lại.
 | [H05](../../tasks/release-hardening/h05-target-ux.md) — PASS | UI target rõ ràng, tạo Shape Key mới an toàn | H01, H02, H04 | `feat(dan-form): complete deformation target workflow` |
 | [H06](../../tasks/release-hardening/h06-agent-parity.md) — PASS | Agent API target đạt parity với UI | H01, H02, H05 | `feat(dan-form): expose target-aware agent operations` |
 | [H07](../../tasks/release-hardening/h07-topology-recovery.md) — PASS | Chính sách thay topology và phục hồi tường minh | H01, H03; có thể triển khai song song H05/H06 | `feat(dan-form): make topology recovery explicit` |
-| [H08](../../tasks/release-hardening/h08-runtime-architecture.md) | Handler, cache, lỗi và module boundaries được làm cứng | H03, H04, H07 | `refactor(dan-form): harden runtime boundaries` |
+| [H08](../../tasks/release-hardening/h08-runtime-architecture.md) — PASS* | Handler, cache, lỗi và module boundaries được làm cứng | H03, H04, H07 | `refactor(dan-form): harden runtime boundaries` |
 | [H09](../../tasks/release-hardening/h09-release-gates.md) | Test/release gate tự lặp và có bằng chứng trên Blender | Có thể dựng harness sớm; chỉ đóng gate sau H02–H08 | `test(dan-form): establish reproducible release gates` |
 | [H10](../../tasks/release-hardening/h10-package-release.md) | Gói cài, tài liệu, manifest và báo cáo phát hành khớp mã | H09 | `chore(dan-form): prepare verified release package` |
 
