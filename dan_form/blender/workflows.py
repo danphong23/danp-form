@@ -8,10 +8,12 @@ from typing import Callable
 import bmesh
 import bpy
 from mathutils import Vector
+import math
 
 from ..constants import *
 from ..core.deformation import compute_preview
 from ..core.operation import OperationTransform, targets_from_transform
+from .mesh import _resolve_shape_key
 
 _USE_ACTIVE_SHAPE_KEY = object()
 
@@ -94,29 +96,55 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
 def write_source_positions(source: bpy.types.Object, positions: dict[int, Vector], deps,
                            allow_locked: bool = False, shape_key=_USE_ACTIVE_SHAPE_KEY) -> bool:
     vids, _ = deps.source_id_maps(source)
-    key = deps.active_shape_key(source) if shape_key is _USE_ACTIVE_SHAPE_KEY else shape_key
-    is_base_mesh = isinstance(key, str) and key == BASE_MESH_TARGET
-    if key is not None and not is_base_mesh and bool(key.lock_shape) and not allow_locked:
+    requested_target = None if shape_key is _USE_ACTIVE_SHAPE_KEY else shape_key
+    key = _resolve_shape_key(source, requested_target)
+    if key is not None and bool(key.lock_shape) and not allow_locked:
         raise ValueError("SHAPE_KEY_LOCKED")
-    vertices = deps.source_vertices(source, key)
+    if not positions.keys() <= vids.keys():
+        raise ValueError("SOURCE_VERTEX_ID_INVALID")
+    if any(not all(math.isfinite(float(component)) for component in position) for position in positions.values()):
+        raise ValueError("NON_FINITE_RESULT")
     changed = False
     if source.mode == "EDIT":
         bm = bmesh.from_edit_mesh(source.data)
-        bm.verts.ensure_lookup_table(); layer = bm.verts.layers.int.get(VID_ATTR)
-        if layer is None: raise ValueError("SOURCE_ID_LAYERS_MISSING")
-        for vert in bm.verts:
-            position = positions.get(int(vert[layer]))
-            if position is not None and (vert.co - position).length_squared > 1e-16:
+        bm.verts.ensure_lookup_table()
+        id_layer = bm.verts.layers.int.get(VID_ATTR)
+        if id_layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        coordinate_layer = bm.verts.layers.shape.get(key.name) if key is not None else None
+        if key is not None and coordinate_layer is None:
+            raise ValueError("SHAPE_KEY_TARGET_INVALID")
+        bm_ids = {int(vert[id_layer]): vert for vert in bm.verts}
+        if not positions.keys() <= bm_ids.keys():
+            raise ValueError("SOURCE_VERTEX_ID_INVALID")
+        # Resolve every target and validate its current value before mutation so
+        # a stale/partial mapping cannot write only part of a preview.
+        updates = []
+        for vertex_id, position in positions.items():
+            vert = bm_ids[int(vertex_id)]
+            current = vert[coordinate_layer] if coordinate_layer else vert.co
+            if (current - position).length_squared > 1e-16:
+                updates.append((vert, position.copy()))
+        for vert, position in updates:
+            if coordinate_layer:
+                vert[coordinate_layer] = position
+            else:
                 vert.co = position
-                changed = True
+        changed = bool(updates)
         if changed:
             bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
     else:
+        vertices = key.data if key is not None else source.data.vertices
+        updates = []
         for vid, position in positions.items():
             index = vids.get(int(vid))
-            if index is not None and (vertices[index].co - position).length_squared > 1e-16:
-                vertices[index].co = position
-                changed = True
+            if index is None or index >= len(vertices):
+                raise ValueError("SOURCE_VERTEX_ID_INVALID")
+            if (vertices[index].co - position).length_squared > 1e-16:
+                updates.append((vertices[index], position.copy()))
+        for vertex, position in updates:
+            vertex.co = position
+        changed = bool(updates)
         if changed:
             source.data.update()
             shape_keys = source.data.shape_keys

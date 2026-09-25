@@ -38,3 +38,6 @@ MODIFIER_SIGNATURES = {}
 # runtime-only: a file loaded with an already ambiguous UUID/parent graph must
 # fail closed because its creation history is unavailable.
 BINDING_OWNERS = {}
+# Current-session proof for Reset Model's captured Shape Key. KeyBlocks do not
+# support ID properties in Blender; never persist identity by name or index.
+INIT_TARGET_PROVENANCE = {}

@@ -59,6 +59,7 @@ _SOURCE_DANP_KEYS = (
     HIDDEN_EIDS_KEY, NEXT_VID_KEY, NEXT_EID_KEY, TOPOLOGY_KEY,
     NETWORK_REVISION_KEY, ORIGINAL_POSITIONS_KEY, ORIGINAL_TOPOLOGY_KEY,
     ORIGINAL_SHAPE_KEY_NAME_KEY,
+    ORIGINAL_TARGET_KIND_KEY,
     "dan_form_controller_name", UNBOUND_COPY_KEY,
 )
 
@@ -88,18 +89,26 @@ def _clear_duplicate_source_state(source) -> None:
 def _capture_original_snapshot(source) -> None:
     """Capture the first Init pose by persistent Source vertex ID."""
     if source.get(ORIGINAL_POSITIONS_KEY):
-        if ORIGINAL_SHAPE_KEY_NAME_KEY not in source:
-            key = _active_shape_key(source)
-            source[ORIGINAL_SHAPE_KEY_NAME_KEY] = str(key.name) if key is not None else ""
+        # Existing snapshots have no trustworthy KeyBlock identity. Do not
+        # synthesize provenance from a key name or index.
         return
+    key = _active_shape_key(source)
     positions = _source_positions(source)
     _json_set(source, ORIGINAL_POSITIONS_KEY, {
         str(vertex_id): [float(component) for component in coordinates]
         for vertex_id, coordinates in positions.items()
     })
     source[ORIGINAL_TOPOLOGY_KEY] = str(source.get(TOPOLOGY_KEY, ""))
-    key = _active_shape_key(source)
     source[ORIGINAL_SHAPE_KEY_NAME_KEY] = str(key.name) if key is not None else ""
+    source[ORIGINAL_TARGET_KIND_KEY] = "KEY" if key is not None else "BASE"
+    shape_keys = source.data.shape_keys.key_blocks if source.data.shape_keys else ()
+    runtime.INIT_TARGET_PROVENANCE[source.as_pointer()] = {
+        "mesh": source.data.as_pointer(),
+        "key": key.as_pointer() if key is not None else None,
+        "reference": key,
+        "stack": tuple((item.as_pointer(), str(item.name)) for item in shape_keys),
+        "valid": True,
+    }
 
 
 def _original_snapshot(source) -> dict[int, Vector]:
@@ -120,6 +129,7 @@ def _discard_source_runtime(source: bpy.types.Object | None) -> None:
     if source is None:
         return
     key = source.as_pointer()
+    runtime.INIT_TARGET_PROVENANCE.pop(key, None)
     _forget_binding(source)
     runtime.DANP_TRANSACTIONS.pop(key, None)
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
@@ -1034,11 +1044,46 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
             if str(source.get(ORIGINAL_TOPOLOGY_KEY, "")) != str(source.get(TOPOLOGY_KEY, "")):
                 raise ValueError("ORIGINAL_SNAPSHOT_TOPOLOGY_CHANGED")
             active_key = _active_shape_key(source)
-            target_name = str(active_key.name) if active_key is not None else ""
-            if target_name != str(source.get(ORIGINAL_SHAPE_KEY_NAME_KEY, "")):
-                raise ValueError("ORIGINAL_SNAPSHOT_TARGET_MISMATCH")
+            target_kind = str(source.get(ORIGINAL_TARGET_KIND_KEY, ""))
+            provenance = runtime.INIT_TARGET_PROVENANCE.get(source.as_pointer())
+            if provenance is None and not target_kind:
+                # Legacy snapshots are identifiable as BASE only when the
+                # mesh has no Shape Key datablock at all.
+                if active_key is None and source.data.shape_keys is None:
+                    target_kind = "BASE"
+                else:
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
+            if target_kind == "BASE":
+                if active_key is not None or source.data.shape_keys is not None:
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_MISMATCH")
+                target = BASE_MESH_TARGET
+            elif target_kind == "KEY":
+                if (provenance is None or not provenance.get("valid")
+                        or provenance.get("mesh") != source.data.as_pointer()):
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
+                key_reference = provenance.get("reference")
+                try:
+                    key_pointer = key_reference.as_pointer()
+                except (AttributeError, ReferenceError, RuntimeError):
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
+                if key_pointer != provenance.get("key"):
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
+                live_keys = source.data.shape_keys.key_blocks if source.data.shape_keys else ()
+                live_stack = tuple((item.as_pointer(), str(item.name)) for item in live_keys)
+                if live_stack != provenance.get("stack"):
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
+                proven_key = next((key for key in live_keys
+                                   if key.as_pointer() == key_pointer), None)
+                if proven_key is None:
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
+                if active_key is None or active_key.as_pointer() != key_pointer:
+                    raise ValueError("ORIGINAL_SNAPSHOT_TARGET_MISMATCH")
+                target = proven_key
+            else:
+                raise ValueError("ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN")
             positions = _original_snapshot(source)
-            _workflow_write_source_positions(source, positions, _workflow_dependencies())
+            _workflow_write_source_positions(source, positions, _workflow_dependencies(),
+                                             shape_key=target)
             if controller is not None:
                 _sync_proxy(source, controller)
             _OVERLAY_CACHE.clear()
@@ -1052,6 +1097,8 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
                 message = "Không thể reset dáng gốc vì topology đã đổi; hãy Undo hoặc Reset DANP trước."
             elif str(exc) == "ORIGINAL_SNAPSHOT_TARGET_MISMATCH":
                 message = "Snapshot Init thuộc Shape Key khác. Hãy chọn key ban đầu trước khi Reset Model."
+            elif str(exc) == "ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN":
+                message = "Không xác minh được Shape Key của snapshot Init cũ. Hãy Reset DANP để tạo snapshot mới an toàn."
             elif str(exc) in {"ORIGINAL_SNAPSHOT_MISSING", "ORIGINAL_SNAPSHOT_INVALID"}:
                 message = "Mesh này chưa có snapshot Init; hãy Remove rồi Init DANP lại."
             else:

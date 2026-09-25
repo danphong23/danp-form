@@ -72,14 +72,16 @@ the UI path. The core accepts only IDs, coordinates and operation settings.
 
 | Current path | Observed behavior | Required follow-up |
 | --- | --- | --- |
-| `blender.mesh._shape_key_signature` | Captures mesh/key pointer, name, lock, count and mode | H02 centralizes descriptor validation and stale recovery |
-| `blender.selection._source_positions` | Edit Mode reads active BMesh even for explicit other key | H02 validates/reroutes explicit target |
-| `blender.workflows.write_source_positions` | Edit Mode writes active BMesh even for explicit other key | H02 prevents wrong-key write; Undo uses same adapter |
-| `blender.workflows.deform_begin/update/cancel` | Captures key/P0 and checks signature | H02 uses one target validation/write path |
-| `blender.lifecycle._restore_native_undo_records` | Stores historical KeyBlock and writes through workflow | H02 verifies key provenance and Edit Mode behavior |
-| `operators.DANFORM_OT_reset_source` | Checks snapshot's key name | H02 adds sufficient provenance or safe refusal |
+| `blender.mesh._shape_key_signature` | Captures mesh/key pointer, name, lock, count, mode and active index | H02 validates one captured target signature |
+| `blender.selection._source_positions` | Reads explicit BMesh shape layer in Edit Mode or `KeyBlock.data` in Object Mode | H02 runtime fixture passes Basis/expression routing |
+| `blender.workflows.write_source_positions` | Writes exact explicit target after all IDs/counts/coordinates validate | H02 runtime fixture passes Object/Edit Mode routing |
+| `blender.workflows.deform_begin/update/cancel` | Captures target/P0 and checks signature before preview writes | H02 fixture passes cancel and changed-target guards |
+| `blender.lifecycle._restore_native_undo_records` | Stores historical KeyBlock and uses shared workflow writer | H02 fixture passes bridge write while Source edits another key |
+| `operators.DANFORM_OT_reset_source` | Uses BASE/KEY kind and session proof; refuses unknown saved-key identity | H02 fixture passes same-key reset and replacement/load-evidence refusal |
 | `operators.DANFORM_OT_select_shape_key` | Selects active key, syncs proxy | H05 completes UI and New Shape Key workflow |
 | `dan_form.agent` | Transaction facade exists, target list/select absent | H06 adds target API and MCP parity |
 
-H01 changes only contracts and review evidence. These gaps remain FAIL/NOT RUN
-until the named implementation phase supplies tests.
+H01 changed only contracts and review evidence. H02 implementation and runtime
+evidence are recorded in
+[`2026-09-25-h02-target-io-undo.md`](../testing/2026-09-25-h02-target-io-undo.md).
+Native modal G/R/S and remaining matrix rows stay assigned to later phases.

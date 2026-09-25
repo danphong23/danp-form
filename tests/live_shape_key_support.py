@@ -8,6 +8,7 @@ from pathlib import Path
 
 import bpy
 import bmesh
+from mathutils import Vector
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +52,15 @@ def run():
             raise AssertionError(label)
         checks.append(label)
 
+    def reset_expected_failure():
+        try:
+            result = bpy.ops.dan_form.reset_source()
+        except RuntimeError as exc:
+            if "Không xác minh được Shape Key" not in str(exc):
+                raise
+            return {"CANCELLED"}
+        return result
+
     mesh = bpy.data.meshes.new("DANP Shape Key Gate Mesh")
     mesh.from_pydata(
         [(-1, 0, 0), (1, 0, 0), (1, 0, 2), (-1, 0, 2)],
@@ -68,6 +78,27 @@ def run():
         addon._select_only(bpy.context, source)
         check(bpy.ops.dan_form.initialize() == {"FINISHED"}, "Init accepts Basis Shape Key")
         controller = addon._find_controller(source)
+
+        # Target-aware I/O in Source Edit Mode must address an explicit key,
+        # even while Blender's active edit key remains Basis.
+        addon._select_only(bpy.context, source)
+        bpy.ops.object.mode_set(mode="EDIT")
+        source.active_shape_key_index = 0
+        basis_edit_before = addon._source_positions(source, basis)
+        expression_edit_before = addon._source_positions(source, expression)
+        expression_edit_after = {
+            vid: co + Vector((0.0, 0.0, 0.11))
+            for vid, co in expression_edit_before.items()
+        }
+        addon._write_source_positions(source, expression_edit_after, shape_key=expression)
+        check(all(_near(addon._source_positions(source, expression)[vid], co)
+                  for vid, co in expression_edit_after.items()),
+              "Source Edit Mode explicitly writes the requested expression key")
+        check(all(_near(addon._source_positions(source, basis)[vid], co)
+                  for vid, co in basis_edit_before.items()),
+              "explicit Edit Mode key write leaves active Basis unchanged")
+        addon._write_source_positions(source, expression_edit_before, shape_key=expression)
+        bpy.ops.object.mode_set(mode="OBJECT")
 
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
@@ -123,11 +154,138 @@ def run():
         lifecycle._restore_native_undo_records("REDO")
         check(_near(expression.data[source_index].co, committed_after),
               "Redo bridge reapplies the edited key after controller redo")
+        # Restore historical key state while Source is in Edit Mode on Basis.
+        addon._select_only(bpy.context, source)
+        bpy.ops.object.mode_set(mode="EDIT")
+        source.active_shape_key_index = 0
+        _set_controller_pose(controller, record["history"][-1]["controller_pre"])
+        lifecycle._restore_native_undo_records("UNDO")
+        check(_near(addon._source_positions(source, expression)[vertex_id], committed_before),
+              "Undo bridge writes its historical target while Source edits Basis")
+        _set_controller_pose(controller, record["history"][-1]["controller_post"])
+        lifecycle._restore_native_undo_records("REDO")
+        check(_near(addon._source_positions(source, expression)[vertex_id], committed_after),
+              "Redo bridge writes its historical target while Source edits Basis")
+        bpy.ops.object.mode_set(mode="OBJECT")
         # Return to pre-edit state before continuing lock and target-switch gates.
         _set_controller_pose(controller, record["history"][-1]["controller_pre"])
         lifecycle._restore_native_undo_records("UNDO")
 
+        # Absolute key stacks use the same explicit coordinate adapter and
+        # must preserve key mode/evaluation frame.
+        keys = source.data.shape_keys
+        keys.use_relative = False
+        keys.eval_time = 17.0
+        source.active_shape_key_index = 1
+        absolute_before = addon._source_positions(source, expression)
+        absolute_after = {vid: co + Vector((0.0, 0.0, 0.07))
+                          for vid, co in absolute_before.items()}
+        addon._write_source_positions(source, absolute_after, shape_key=expression)
+        check(all(_near(addon._source_positions(source, expression)[vid], co)
+                  for vid, co in absolute_after.items()),
+              "absolute Shape Key stack writes the explicit key coordinates")
+        check(not keys.use_relative and keys.eval_time == 17.0,
+              "absolute key mode and evaluation time remain unchanged")
+        addon._write_source_positions(source, absolute_before, shape_key=expression)
+        addon._sync_proxy(source, controller)
+        addon._select_only(bpy.context, controller)
+        bpy.ops.object.mode_set(mode="EDIT")
+        addon._select_proxy_ids(controller, {vertex_id}, set())
+        absolute_basis_before = basis.data[source_index].co.copy()
+        absolute_expression_before = expression.data[source_index].co.copy()
+        addon._deform_begin(source, controller)
+        addon._deform_update(source, controller, delta=(0.0, 0.0, 0.06), radius=1.0)
+        check(not _near(expression.data[source_index].co, absolute_expression_before),
+              "controller deformation writes active absolute Shape Key")
+        check(_near(basis.data[source_index].co, absolute_basis_before),
+              "absolute Shape Key deformation leaves Basis unchanged")
+        absolute_expression_after = expression.data[source_index].co.copy()
+        addon._deform_commit(source)
+        absolute_record = addon._NATIVE_UNDO_RECORDS[source.as_pointer()]
+        _set_controller_pose(controller, absolute_record["history"][-1]["controller_pre"])
+        lifecycle._restore_native_undo_records("UNDO")
+        check(_near(expression.data[source_index].co, absolute_expression_before),
+              "Undo bridge restores the stored absolute Shape Key")
+        _set_controller_pose(controller, absolute_record["history"][-1]["controller_post"])
+        lifecycle._restore_native_undo_records("REDO")
+        check(_near(expression.data[source_index].co, absolute_expression_after),
+              "Redo bridge reapplies the stored absolute Shape Key")
+        _set_controller_pose(controller, absolute_record["history"][-1]["controller_pre"])
+        lifecycle._restore_native_undo_records("UNDO")
+        bpy.ops.object.mode_set(mode="OBJECT")
+        runtime_state = importlib.import_module(f"{addon.__name__}.runtime")
+        runtime_state.NATIVE_TRANSFORM_SESSIONS.clear()
+        runtime_state.DANP_TRANSACTIONS.clear()
+        keys.use_relative = True
+
+        # Reset restores only a key proven in this session; after losing that
+        # evidence (as on file reopen), it refuses before touching a replacement.
+        source.active_shape_key_index = 0
+        basis_reset_before = basis.data[source_index].co.copy()
+        basis.data[source_index].co.z += 0.23
+        addon._select_only(bpy.context, source)
+        check(bpy.ops.dan_form.reset_source() == {"FINISHED"},
+              "Reset Model restores the original captured Basis target")
+        check(_near(basis.data[source_index].co, basis_reset_before),
+              "Reset Model restores original Basis coordinates")
+        for property_name in (addon.ORIGINAL_POSITIONS_KEY, addon.ORIGINAL_TOPOLOGY_KEY,
+                              addon.ORIGINAL_TARGET_KIND_KEY,
+                              addon.ORIGINAL_SHAPE_KEY_NAME_KEY):
+            source.pop(property_name, None)
+        source.active_shape_key_index = 1
+        operators = importlib.import_module(f"{addon.__name__}.operators")
+        operators._capture_original_snapshot(source)
+        captured_expression = source.data.shape_keys.key_blocks[1]
+        captured_expression.data[source_index].co.z += 0.19
+        mutated = captured_expression.data[source_index].co.copy()
+        # Replacing a captured key with a same-name key cannot inherit its
+        # session proof. Simulate deletion/recreation after Init.
+        source.shape_key_remove(captured_expression)
+        lifecycle._validate_init_target_provenance()
+        replacement = source.shape_key_add(name="Expression", from_mix=False)
+        replacement.data[source_index].co = mutated.copy()
+        expression = replacement
+        expression_before = expression.data[source_index].co.copy()
+        source.active_shape_key_index = 1
+        check(reset_expected_failure() == {"CANCELLED"},
+              "Reset Model rejects a same-name replacement Shape Key")
+        check(_near(replacement.data[source_index].co, mutated),
+              "failed Reset Model leaves replacement key unchanged")
+        runtime = importlib.import_module(f"{addon.__name__}.runtime")
+        runtime.INIT_TARGET_PROVENANCE.clear()
+        replacement.data[source_index].co.z += 0.09
+        reopened_state = replacement.data[source_index].co.copy()
+        check(reset_expected_failure() == {"CANCELLED"},
+              "Reset Model fails closed when saved key provenance is unavailable")
+        check(_near(replacement.data[source_index].co, reopened_state),
+              "unknown Reset provenance causes no key writes")
+        expression_before = replacement.data[source_index].co.copy()
+
+        # A key rename during a preview aborts the transaction; the explicit
+        # captured key reference still allows a safe cancel of that preview.
+        source.active_shape_key_index = 1
+        addon._sync_proxy(source, controller)
+        addon._select_only(bpy.context, controller)
+        bpy.ops.object.mode_set(mode="EDIT")
+        addon._select_proxy_ids(controller, {vertex_id}, set())
+        addon._deform_begin(source, controller)
+        replacement.name = "Expression Renamed"
+        try:
+            addon._deform_update(source, controller, delta=(0.0, 0.0, 0.05))
+        except ValueError as exc:
+            check(str(exc) == "SHAPE_KEY_TARGET_CHANGED",
+                  "renaming the target during preview aborts before another write")
+        else:
+            raise AssertionError("renamed Shape Key target remained writable")
+        addon._deform_cancel(source, controller)
+        check(_near(replacement.data[source_index].co, expression_before),
+              "cancel restores the captured key after rename")
+        replacement.name = "Expression"
+        bpy.ops.object.mode_set(mode="OBJECT")
+
         expression.lock_shape = True
+        addon._select_only(bpy.context, controller)
+        bpy.ops.object.mode_set(mode="EDIT")
         try:
             addon._deform_begin(source, controller)
         except ValueError as exc:

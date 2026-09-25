@@ -247,14 +247,36 @@ def _active_shape_key(source: bpy.types.Object | None):
     return shape_keys.key_blocks[index]
 
 
+def _resolve_shape_key(source: bpy.types.Object, target=None):
+    """Resolve an explicit key reference and reject stale/foreign KeyBlocks."""
+    if target is None:
+        return _active_shape_key(source)
+    if isinstance(target, str):
+        if target == BASE_MESH_TARGET and source.data.shape_keys is None:
+            return None
+        raise ValueError("SHAPE_KEY_TARGET_INVALID")
+    try:
+        target_pointer = target.as_pointer()
+        target_name = str(target.name)
+        blocks = source.data.shape_keys.key_blocks if source.data.shape_keys else ()
+        for key in blocks:
+            if key.as_pointer() == target_pointer and key.name == target_name:
+                return key
+    except (AttributeError, ReferenceError, RuntimeError):
+        pass
+    raise ValueError("SHAPE_KEY_TARGET_INVALID")
+
+
 def _shape_key_signature(source: bpy.types.Object) -> tuple:
     """Capture the active target identity and write permission for one operation."""
     key = _active_shape_key(source)
     if key is None:
-        return (source.data.as_pointer(), None, "", False, len(source.data.vertices))
+        return (source.data.as_pointer(), None, "", False, len(source.data.vertices),
+                False, int(source.active_shape_key_index))
     return (
         source.data.as_pointer(), key.as_pointer(), str(key.name),
         bool(key.lock_shape), len(key.data), bool(source.data.shape_keys.use_relative),
+        int(source.active_shape_key_index),
     )
 
 

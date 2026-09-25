@@ -33,6 +33,8 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
         return
     runtime.SYNC_GUARD = True
     try:
+        updated_ids = {update.id.original.as_pointer() for update in depsgraph.updates}
+        _validate_init_target_provenance(updated_ids)
         _reconcile_duplicate_bindings()
         _cleanup_orphaned_owned_objects()
         changed_geometry = {update.id.original.as_pointer() for update in depsgraph.updates if update.is_updated_geometry}
@@ -105,6 +107,26 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
             bpy.context.scene.dan_form_status = f"Error: {exc}"
     finally:
         runtime.SYNC_GUARD = False
+
+
+def _validate_init_target_provenance(updated_ids=None) -> None:
+    """Invalidate Reset evidence when a captured key stack is structurally replaced."""
+    objects = {obj.as_pointer(): obj for obj in bpy.data.objects}
+    for source_ptr, evidence in list(runtime.INIT_TARGET_PROVENANCE.items()):
+        source = objects.get(source_ptr)
+        if (updated_ids and source is not None
+                and source_ptr not in updated_ids
+                and evidence.get("mesh") not in updated_ids
+                and (source.data.shape_keys is None
+                     or source.data.shape_keys.as_pointer() not in updated_ids)):
+            continue
+        if source is None or source.type != "MESH" or source.data.as_pointer() != evidence.get("mesh"):
+            evidence["valid"] = False
+            continue
+        shape_keys = source.data.shape_keys.key_blocks if source.data.shape_keys else ()
+        current = tuple((key.as_pointer(), str(key.name)) for key in shape_keys)
+        if current != evidence.get("stack"):
+            evidence["valid"] = False
 
 
 def _remember_binding(source, controller) -> None:
@@ -456,6 +478,7 @@ def _redo_post(_unused=None) -> None:
 
 @persistent
 def _load_post(_unused=None) -> None:
+    runtime.INIT_TARGET_PROVENANCE.clear()
     runtime.NATIVE_UNDO_RECORDS.clear()
     runtime.SHAPE_PREVIEW_STATES.clear()
     _refresh_binding_registry(clear=True)

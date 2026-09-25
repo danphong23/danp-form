@@ -7,7 +7,7 @@ import bpy
 from mathutils import Vector
 
 from ..constants import *
-from .mesh import _source_edge_vids, _source_id_maps, _source_vertices, _validate_source_topology
+from .mesh import _resolve_shape_key, _source_edge_vids, _source_id_maps, _source_vertices, _validate_source_topology
 
 
 def _source_selection(source: bpy.types.Object) -> tuple[set[int], set[int]]:
@@ -84,17 +84,21 @@ def _proxy_selection(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
 def _source_positions(source: bpy.types.Object, shape_key=None) -> dict[int, Vector]:
     """Return the current Source coordinates keyed by persistent vertex ID."""
     vids, _ = _source_id_maps(source)
+    key = _resolve_shape_key(source, shape_key)
     if source.mode == "EDIT":
         bm = bmesh.from_edit_mesh(source.data)
         bm.verts.ensure_lookup_table()
-        layer = bm.verts.layers.int.get(VID_ATTR)
-        return {int(v[layer]): v.co.copy() for v in bm.verts} if layer else {}
-    vertices = _source_vertices(source)
-    if source.mode == "OBJECT":
-        if isinstance(shape_key, str) and shape_key == BASE_MESH_TARGET:
-            vertices = source.data.vertices
-        elif shape_key is not None:
-            vertices = shape_key.data
+        id_layer = bm.verts.layers.int.get(VID_ATTR)
+        if id_layer is None:
+            raise ValueError("SOURCE_ID_LAYERS_MISSING")
+        coordinate_layer = bm.verts.layers.shape.get(key.name) if key is not None else None
+        if key is not None and coordinate_layer is None:
+            raise ValueError("SHAPE_KEY_TARGET_INVALID")
+        return {
+            int(vert[id_layer]): (vert[coordinate_layer] if coordinate_layer else vert.co).copy()
+            for vert in bm.verts
+        }
+    vertices = key.data if key is not None else source.data.vertices
     return {int(vid): vertices[index].co.copy() for vid, index in vids.items()}
 
 
