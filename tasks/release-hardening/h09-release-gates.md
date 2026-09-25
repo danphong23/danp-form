@@ -1,0 +1,19 @@
+# H09 — Bộ kiểm thử phát hành có thể lặp
+
+**Bắt đầu dựng harness song song; chỉ đóng phase sau H02–H08. Bàn giao:** một
+lệnh/hướng dẫn chạy lại được với báo cáo kết quả và bằng chứng UI riêng.
+
+1. Sửa/thay bộ selection lịch sử gọi operator không còn đăng ký; dựng fixture
+độc lập cho no-key/Basis/relative/absolute theo H01, duplicate, ownership,
+topology, G/R/S, overlay, undo/save/load và agent parity.
+2. Harness kiểm exit code **và** traceback/assertions/result marker trong log;
+không chuyển lỗi thành pass. Ghi phiên bản Blender, add-on, OS, commit và fixture.
+3. Lập gate UI trực tiếp cho modal G/R/S, panel, overlay, nhiều model và MCP;
+background không thay thế GPU/UI. Đo median/P95 full preview, confirm, peak memory
+trên fixture đại diện; ghi ngưỡng được chọn sau đo.
+
+**Kiểm thử:** cố ý tạo một test fail để chứng minh harness trả FAIL; chạy sạch
+mọi suite bắt buộc, chạy test UI trên bản sao file an toàn, ghi NOT RUN nếu không
+thực hiện. **Gate:** Gate A–F liên quan và H01–H08 có bằng chứng; không stale test,
+không traceback bị bỏ qua. **Commit:**
+`test(dan-form): establish reproducible release gates`.

@@ -70,6 +70,14 @@ tắc recovery đầy đủ nằm ở [errors-and-recovery.md](../architecture/e
 
 ## Bàn giao từng phase
 
+Đợt hoàn thiện sau baseline dùng cùng mẫu báo cáo cho từng
+[H01–H10](release-hardening-plan.md). Mỗi H là một phạm vi review và commit riêng;
+phase phụ thuộc không được ghi PASS khi gate đầu vào còn FAIL/NOT RUN. Với
+Shape Key phải ghi rõ target thực tế, mode và các key không được phép đổi; với
+handler phải kiểm dữ liệu scene còn nguyên. Với UI modal phải thao tác thật,
+không thay bằng kết quả background. Harness phải xét traceback trong log dù
+Blender trả exit code 0.
+
 Báo cáo gồm: commit/diff hoặc danh sách file, bản extension cài được, Blender/OS,
 fixture và bước tái hiện, expected/actual, PASS/FAIL/BLOCKED, ảnh test phù hợp, lỗi
 chưa sửa và tính năng chưa triển khai. Chưa chạy test phải ghi NOT RUN. Không lấy

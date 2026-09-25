@@ -50,7 +50,10 @@
 - Equivalent local/world targets on transformed objects → same Source-local result; singular transform rejected.
 - Same counts but changed face connectivity / duplicated element IDs → fingerprint/mapping validation blocks stale edits.
 - Rebuild generation / closed operation token / second commit → no stale handles or repeated writes.
-- Shape Keys, Multires, shared editable and read-only data → explicit prototype rejection before writes.
+- Shape Keys → target-safe base/Basis/key read/write, lock/change detection,
+  cancel/Undo/Redo and no writes to other keys per ADR-015 and H01/H02.
+  Multires, shared editable and read-only data → explicit rejection unless
+  separately supported with tests.
 - Full Source/Controller pair duplicate → new Source UUID/proxy and local IDs/masks
   preserved without cross-control. A mesh-only duplicate starts unbound and clean.
 

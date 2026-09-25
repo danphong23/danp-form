@@ -81,6 +81,23 @@ coordinates and restore behavior through the same human/agent path.
 Requires passed behavior, representative quality, lifecycle/robustness and measured
 performance. Detailed prose and recorded failures alone are not passing gates.
 
+The post-baseline [H01–H10 plan](../roadmap/release-hardening-plan.md) adds release
+gates without replacing P1–P5:
+
+| Gate | Required evidence |
+| --- | --- |
+| H01–H02 target safety | ADR resolves Shape Key scope; explicit target I/O, Edit Mode, cancel and Undo/Redo never write a different key |
+| H03 ownership safety | Stale marker, Source deletion, duplicate and load do not automatically delete scene mesh data |
+| H04–H05 native UI | Physical modal G/R/S, full/partial selection, key selection, display restoration and New Shape Key on a safe copy |
+| H06 agent parity | Actual MCP calls target the same Source/key, controls and transaction path as UI |
+| H07–H08 recovery/runtime | Topology/ID ambiguity blocks writes; repair is explicit; handlers do not perform destructive cleanup or hide failures |
+| H09–H10 release | Repeatable fixture suite and UI checklist, fail on traceback, measured P95/memory, reproducible ZIP/install, documentation/version/license consistent |
+
+Each H phase records PASS/FAIL/BLOCKED/NOT RUN. A background fixture cannot pass
+a modal UI gate; exit code 0 cannot pass a run containing a Python traceback.
+Outstanding H gates preclude a production-ready claim, even when P1–P5 baseline
+features exist.
+
 Record hardware, Blender version, Source/affected vertex counts, control sample counts,
 median/P95 full preview latency, confirm time and peak memory. Include mesh extraction,
 target generation, interpolation and Source updates; report numerical-only time separately.

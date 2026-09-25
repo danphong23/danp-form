@@ -23,11 +23,16 @@ are not assumed to provide immutable-rest preview/cancel/undo semantics.
 
 ## Mesh access
 
-When Source is in Edit Mode, implementation must use the edit-mesh/BMesh pathway rather than assuming `obj.data` coordinates are current. Object-mode operations may use standard mesh updates.
+When Source is in Edit Mode, implementation must account for the live edit-mesh/BMesh
+state rather than assuming `obj.data` coordinates are current. For Shape Keys,
+it must also verify that the BMesh layer belongs to the **captured target**;
+an explicitly requested different key must never silently resolve through the
+active edit layer. H02 owns this adapter and its Undo regression tests.
 
 ## Downstream modifiers
 
-Core edits base Source coordinates. Subdivision/Armature/etc. may evaluate
+Core edits the captured Source base/Basis/Shape Key coordinates under ADR-015.
+Subdivision/Armature/etc. may evaluate
 afterward. An unapplied modifier never becomes the control mapping: the proxy
 continues to follow base Source IDs while the overlay may use evaluated cage
 geometry. Applying a modifier is treated as a normal Source topology/coordinate
@@ -37,14 +42,14 @@ or Reset DANP can create a new mapping on the current mesh in one undoable step.
 
 ## Unsupported/uncertain Blender features
 
-Shape Keys, Multires, non-manifold corner cases, and linked read-only data should be explicitly tested before claiming support. They are not reasons to complicate the first interpolation prototype.
+Shape Keys are governed by [ADR-015](../decisions/ADR-015-shape-key-edit-target.md),
+with H01/H02 safety work pending. They are no longer a blanket unsupported
+prototype case. Multires, non-manifold corner cases, linked read-only data and
+shared editable meshes still need dedicated evidence or explicit rejection
+before writes. Do not apply/remove modifiers, copy data or make it local
+automatically to start an operation.
 
-Prototype default: reject Shape Keys, Multires, non-manifold topology,
-read-only linked data and shared editable meshes before writes, with an explicit
-UNSUPPORTED_FEATURE/SOURCE_NOT_EDITABLE. This is not a permanent product ban. Do not
-apply/remove modifiers, copy data or make it local automatically to start an operation.
-
-Mapping is against Source-local base geometry, not evaluated subdivisions/poses.
+Mapping is against Source-local persistent topology, not evaluated subdivisions/poses.
 Capture object transforms for target conversion; reject singular matrices. Solve into
 plain buffers, validate, then update mesh/BMesh through the correct mode path. Do not
 deform numerically in depsgraph handlers. Version/platform packaging remains a release

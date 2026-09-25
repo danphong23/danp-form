@@ -10,6 +10,13 @@
 6. **Future Multires support.** Shape Key editing is settled by ADR-015. Multires support needs separate semantics/tests and is not required to start the core prototype.
 7. **Interpolation candidate and quality.** Prototype numeric methods remain replaceable;
    compare proportional response/current patch form without changing settled constraints.
+8. **Shape Key scope after ADR-015.** ADR-015 currently accepts relative and absolute
+   keys through the active-coordinate write path. H01 must decide whether to retain
+   that scope or explicitly supersede it with a relative-only first release,
+   including file compatibility and a stable unsupported-state response.
+9. **Topology repair scope.** Current fingerprint mismatch pauses edits. H07 must
+   define which topology edits can be validated safely without resetting controls;
+   patch connectivity and ambiguous persistent IDs may change away from controls.
 
 Settled by ADR-008: enabled unselected control vertices stay fixed, including sparse
 omitted vertices; selected junctions move; whole/partial Hide releases cuts/constraints;
@@ -26,3 +33,6 @@ Phase 4 resolves interpolation/default profiles and quality evidence; phase 5 re
 workflow/release evidence. Optional sparse/auto-fit decisions do not block these phases.
 
 Everything else that changes source-of-truth, patch derivation, operation rest, target expansion, proportional placement, or same-path human/AI behavior requires a new ADR.
+
+The post-baseline [H01–H10 roadmap](../roadmap/release-hardening-plan.md) records
+verification work and does not silently settle decisions 8–9.

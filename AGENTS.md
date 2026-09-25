@@ -30,6 +30,10 @@ Do not introduce harmonic fields, ARAP, SVD, PCG, cages, a permanent modifier, o
 The accepted main roadmap has five phases in `docs/roadmap/implementation-plan.md`
 and `tasks/README.md`. Read `docs/roadmap/development-contract.md` and ADR-009 before
 starting. Controller object is Source's child; patch overlay toggles are display-only.
+The post-baseline release-hardening roadmap is `docs/roadmap/release-hardening-plan.md`;
+H01–H10 are separate scoped phases with explicit dependencies, verification and
+commits. They do not waive any unmet P1–P5 gate. Preserve accepted ADR-015 until
+H01 explicitly decides whether its relative/absolute Shape Key scope changes.
 Implement exact controls first; sparse and automatic fitting are optional extensions.
 Choose/test interpolation in phase 4, then validate human/agent MCP workflows in
 phase 5 through the same primitives. Do not resurrect the replaced phase 0–8 tasks.

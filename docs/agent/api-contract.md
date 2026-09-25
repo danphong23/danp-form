@@ -24,6 +24,13 @@ reveal_all_controls(source_id)
 rebuild_proxy(...) / simplify_control(...) / refine_control(...)
 ```
 
+Post-baseline H06 adds target-aware queries and selection, subject to H01's
+accepted contract: `list_deformation_targets(source_id)`,
+`get_deformation_target(source_id)`, and a validated target-selection command.
+`begin_operation` captures that target; its handle must fail if the key changes,
+locks or disappears. These names are planned logical calls, not promises that
+the current `dan_form.agent` facade implements them.
+
 Visibility queries enumerate hidden Source IDs even when those elements are not in the
 visible proxy. Hide uses canonical masks and whole/partial selection semantics. There
 is no separate set_control_active command: hide/reveal is the user-facing mechanism.

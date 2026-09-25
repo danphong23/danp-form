@@ -36,6 +36,9 @@ Before transform, hide/reveal, simplify/refine, agent target query, or explicit 
 6. for deformation only, resolve selection and capture P0/potential incident-patch scope.
 
 After commit, resync proxy from the newly committed Source.
+For Shape Keys, "current Source positions" means the captured deformation target
+under ADR-015, not whichever BMesh layer happens to be active. H02 makes the
+explicit target read/write path safe in both Object and Source Edit Mode.
 
 ## Coordinate changes outside DANP Form
 

@@ -25,6 +25,7 @@ ControlComponent
 
 Operation
   source_uuid / topology_generation_at_start / network_revision_at_start
+  captured_deformation_target / target_revision_or_signature
   proxy_generation_at_start / captured_transform_frame
   P0 / proxy_start_state / resolved_selected_source_ids / enabled_network_snapshot
   captured_patch_scope / current_affected_patch_ids / dense_target_set / proportional_settings
@@ -45,6 +46,11 @@ Runtime operation snapshots are not persistent project truth. Preserve masks on 
 save/load and independent duplication. If migrating earlier active=false definitions,
 translate their geometry into canonical hidden masks and validate overlaps; do not leave
 a second runtime activation system. No released-code compatibility is implied yet.
+
+`captured_deformation_target` denotes the base mesh or a specific Source Shape Key.
+It is fixed for one transaction under ADR-015; H01 specifies stable identity and
+failure behavior, and H02 consolidates target-specific I/O. It does not add a
+second persistent geometry store or change Source-backed control IDs.
 
 Network revision changes on definition/mask edits; proxy generation changes on rebuild
 or representation edits, not previews. Source revision tracks DANP Form commits, not

@@ -4,6 +4,10 @@
 đợt nâng cấp transform ownership đang được kiểm chứng trước Phase 5. Gate chỉ pass
 khi có bằng chứng test tương ứng.**
 
+Đây là lộ trình baseline theo ADR-009. Các lỗi và hạng mục hoàn thiện sau baseline
+được chia thành [H01–H10](release-hardening-plan.md), với từng commit và gate riêng.
+Kế hoạch H không hồi tố đánh dấu các gate P1–P5 đã pass.
+
 Mục tiêu là chỉnh model template qua các đường control nằm trên mesh thật. Các đường
 đang bật chia patch và giữ phần không chọn đứng yên. Khi điều chỉnh control được chọn,
 phần bên trong patch liên quan biến dạng theo hình dạng hiện tại và proportional.

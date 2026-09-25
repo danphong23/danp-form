@@ -13,6 +13,11 @@ For development, begin with the [five-phase roadmap](roadmap/implementation-plan
 [development contract](roadmap/development-contract.md) and
 [phase tasks](../tasks/README.md). ADR-009 records the accepted sequence, Source-child
 controller, patch display semantics and reference-based phase-5 validation.
+For post-baseline release work, use the [H01–H10 hardening roadmap](roadmap/release-hardening-plan.md).
+Each H task has a separate development, verification and commit gate; P1–P5 remain
+the historical baseline and require their own evidence.
+The [2026-09-25 baseline audit](testing/2026-09-25-release-hardening-baseline.md)
+separates code findings from runtime checks still marked NOT RUN.
 
 Current Phase 2 UI uses the [native list UX](roadmap/phase-02-native-list-ux.md),
 with [task checklists](../tasks/phase-02-native-list-ux.md) and Gate P2-UX before Phase 3.

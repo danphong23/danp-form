@@ -16,10 +16,11 @@ On undo/redo:
 - at the next sync boundary validate Source metadata and resample/rebuild Proxy;
 - recovery synchronization must not create a second undo entry.
 
-On Source deletion, the lifecycle handler removes only Controller objects and
-auxiliary face/prototype objects carrying an explicit DANP Source ownership
-marker. It never guesses from object names or collections, so unrelated assets
-remain safe. On Proxy deletion, Source remains valid and can rebuild it.
+An ownership marker alone is insufficient authority to delete a mesh object.
+When Source is missing or ownership is ambiguous, lifecycle handling must keep
+objects in the scene, mark the relationship stale and offer explicit recovery.
+H03 replaces the current cleanup path that can remove a marked object with no
+resolvable Source. On Proxy deletion, Source remains valid and can rebuild it.
 
 If Source topology changes outside DANP, the stored ID mapping is kept intact
 but the pair enters a paused state. Commands do not write against stale array

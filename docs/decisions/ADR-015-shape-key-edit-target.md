@@ -41,3 +41,13 @@ rollback, and native Undo/Redo through the captured active key.
   propagation to other keys is intentionally not implicit.
 - Blender integration must cover target changes, lock changes, cancel, undo/redo,
   display restoration, and a mesh with no Shape Keys.
+
+## Implementation status (2026-09-25; decision unchanged)
+
+The current add-on has active-target selection and captures target positions at
+operation start. A code review identified an Edit Mode path where an explicit
+Shape Key target may be read/written through the active BMesh layer instead;
+Undo recovery must use the same target-safe adapter. This is tracked in
+[H02](../../tasks/release-hardening/h02-target-io-undo.md). Any change to the
+relative/absolute scope above requires the H01 ADR; this note does not amend
+the accepted decision.

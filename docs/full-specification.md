@@ -753,6 +753,7 @@ ControlComponent
 
 Operation
   source_uuid / topology_generation_at_start / network_revision_at_start
+  captured_deformation_target / target_revision_or_signature
   proxy_generation_at_start / captured_transform_frame
   P0 / proxy_start_state / resolved_selected_source_ids / enabled_network_snapshot
   captured_patch_scope / current_affected_patch_ids / dense_target_set / proportional_settings
@@ -773,6 +774,11 @@ Runtime operation snapshots are not persistent project truth. Preserve masks on 
 save/load and independent duplication. If migrating earlier active=false definitions,
 translate their geometry into canonical hidden masks and validate overlaps; do not leave
 a second runtime activation system. No released-code compatibility is implied yet.
+
+`captured_deformation_target` denotes the base mesh or a specific Source Shape Key.
+It is fixed for one transaction under ADR-015; H01 specifies stable identity and
+failure behavior, and H02 consolidates target-specific I/O. It does not add a
+second persistent geometry store or change Source-backed control IDs.
 
 Network revision changes on definition/mask edits; proxy generation changes on rebuild
 or representation edits, not previews. Source revision tracks DANP Form commits, not
@@ -821,6 +827,9 @@ Before transform, hide/reveal, simplify/refine, agent target query, or explicit 
 6. for deformation only, resolve selection and capture P0/potential incident-patch scope.
 
 After commit, resync proxy from the newly committed Source.
+For Shape Keys, "current Source positions" means the captured deformation target
+under ADR-015, not whichever BMesh layer happens to be active. H02 makes the
+explicit target read/write path safe in both Object and Source Edit Mode.
 
 ## Coordinate changes outside DANP Form
 
@@ -1002,11 +1011,16 @@ are not assumed to provide immutable-rest preview/cancel/undo semantics.
 
 ## Mesh access
 
-When Source is in Edit Mode, implementation must use the edit-mesh/BMesh pathway rather than assuming `obj.data` coordinates are current. Object-mode operations may use standard mesh updates.
+When Source is in Edit Mode, implementation must account for the live edit-mesh/BMesh
+state rather than assuming `obj.data` coordinates are current. For Shape Keys,
+it must also verify that the BMesh layer belongs to the **captured target**;
+an explicitly requested different key must never silently resolve through the
+active edit layer. H02 owns this adapter and its Undo regression tests.
 
 ## Downstream modifiers
 
-Core edits base Source coordinates. Subdivision/Armature/etc. may evaluate
+Core edits the captured Source base/Basis/Shape Key coordinates under ADR-015.
+Subdivision/Armature/etc. may evaluate
 afterward. An unapplied modifier never becomes the control mapping: the proxy
 continues to follow base Source IDs while the overlay may use evaluated cage
 geometry. Applying a modifier is treated as a normal Source topology/coordinate
@@ -1016,14 +1030,14 @@ or Reset DANP can create a new mapping on the current mesh in one undoable step.
 
 ## Unsupported/uncertain Blender features
 
-Shape Keys, Multires, non-manifold corner cases, and linked read-only data should be explicitly tested before claiming support. They are not reasons to complicate the first interpolation prototype.
+Shape Keys are governed by [ADR-015](../decisions/ADR-015-shape-key-edit-target.md),
+with H01/H02 safety work pending. They are no longer a blanket unsupported
+prototype case. Multires, non-manifold corner cases, linked read-only data and
+shared editable meshes still need dedicated evidence or explicit rejection
+before writes. Do not apply/remove modifiers, copy data or make it local
+automatically to start an operation.
 
-Prototype default: reject Shape Keys, Multires, non-manifold topology,
-read-only linked data and shared editable meshes before writes, with an explicit
-UNSUPPORTED_FEATURE/SOURCE_NOT_EDITABLE. This is not a permanent product ban. Do not
-apply/remove modifiers, copy data or make it local automatically to start an operation.
-
-Mapping is against Source-local base geometry, not evaluated subdivisions/poses.
+Mapping is against Source-local persistent topology, not evaluated subdivisions/poses.
 Capture object transforms for target conversion; reject singular matrices. Solve into
 plain buffers, validate, then update mesh/BMesh through the correct mode path. Do not
 deform numerically in depsgraph handlers. Version/platform packaging remains a release
@@ -1120,6 +1134,14 @@ object/mode matrix, eye behavior and tests. Phase 2 does not enable deformation 
 
 ## Selection and deformation
 
+For Shape Keys, the currently active Source key is the deformation target under
+[ADR-015](../decisions/ADR-015-shape-key-edit-target.md). The controller display
+may isolate that key with Blender's show-only setting while editing; value and
+mute must remain untouched and the prior display setting restored afterward.
+H05 completes the visible target workflow and safe New Shape Key action after
+H01/H02 settle and implement target identity. A locked, missing or switched key
+must stop the operation before a Source write.
+
 Selection is ordinary Blender Controller Edit selection. The list selects a stored
 control quickly, after which the user can refine it with Blender's native tools.
 There is no addon-specific hover preview or alternate segment grammar to maintain.
@@ -1205,10 +1227,11 @@ On undo/redo:
 - at the next sync boundary validate Source metadata and resample/rebuild Proxy;
 - recovery synchronization must not create a second undo entry.
 
-On Source deletion, the lifecycle handler removes only Controller objects and
-auxiliary face/prototype objects carrying an explicit DANP Source ownership
-marker. It never guesses from object names or collections, so unrelated assets
-remain safe. On Proxy deletion, Source remains valid and can rebuild it.
+An ownership marker alone is insufficient authority to delete a mesh object.
+When Source is missing or ownership is ambiguous, lifecycle handling must keep
+objects in the scene, mark the relationship stale and offer explicit recovery.
+H03 replaces the current cleanup path that can remove a marked object with no
+resolvable Source. On Proxy deletion, Source remains valid and can rebuild it.
 
 If Source topology changes outside DANP, the stored ID mapping is kept intact
 but the pair enters a paused state. Commands do not write against stale array
@@ -1296,6 +1319,13 @@ reveal_control_elements(source_id, source_vertex_ids=[], source_edge_ids=[], con
 reveal_all_controls(source_id)
 rebuild_proxy(...) / simplify_control(...) / refine_control(...)
 ```
+
+Post-baseline H06 adds target-aware queries and selection, subject to H01's
+accepted contract: `list_deformation_targets(source_id)`,
+`get_deformation_target(source_id)`, and a validated target-selection command.
+`begin_operation` captures that target; its handle must fail if the key changes,
+locks or disappears. These names are planned logical calls, not promises that
+the current `dan_form.agent` facade implements them.
 
 Visibility queries enumerate hidden Source IDs even when those elements are not in the
 visible proxy. Hide uses canonical masks and whole/partial selection semantics. There
@@ -1541,6 +1571,13 @@ midpoint response or required harmonic/ARAP backend follows from product intent.
 6. **Future Multires support.** Shape Key editing is settled by ADR-015. Multires support needs separate semantics/tests and is not required to start the core prototype.
 7. **Interpolation candidate and quality.** Prototype numeric methods remain replaceable;
    compare proportional response/current patch form without changing settled constraints.
+8. **Shape Key scope after ADR-015.** ADR-015 currently accepts relative and absolute
+   keys through the active-coordinate write path. H01 must decide whether to retain
+   that scope or explicitly supersede it with a relative-only first release,
+   including file compatibility and a stable unsupported-state response.
+9. **Topology repair scope.** Current fingerprint mismatch pauses edits. H07 must
+   define which topology edits can be validated safely without resetting controls;
+   patch connectivity and ambiguous persistent IDs may change away from controls.
 
 Settled by ADR-008: enabled unselected control vertices stay fixed, including sparse
 omitted vertices; selected junctions move; whole/partial Hide releases cuts/constraints;
@@ -1557,6 +1594,9 @@ Phase 4 resolves interpolation/default profiles and quality evidence; phase 5 re
 workflow/release evidence. Optional sparse/auto-fit decisions do not block these phases.
 
 Everything else that changes source-of-truth, patch derivation, operation rest, target expansion, proportional placement, or same-path human/AI behavior requires a new ADR.
+
+The post-baseline [H01–H10 roadmap](../roadmap/release-hardening-plan.md) records
+verification work and does not silently settle decisions 8–9.
 
 ---
 
@@ -1804,7 +1844,10 @@ recording images without deciding acceptance does not pass Gate C.
 - Equivalent local/world targets on transformed objects → same Source-local result; singular transform rejected.
 - Same counts but changed face connectivity / duplicated element IDs → fingerprint/mapping validation blocks stale edits.
 - Rebuild generation / closed operation token / second commit → no stale handles or repeated writes.
-- Shape Keys, Multires, shared editable and read-only data → explicit prototype rejection before writes.
+- Shape Keys → target-safe base/Basis/key read/write, lock/change detection,
+  cancel/Undo/Redo and no writes to other keys per ADR-015 and H01/H02.
+  Multires, shared editable and read-only data → explicit rejection unless
+  separately supported with tests.
 - Full Source/Controller pair duplicate → new Source UUID/proxy and local IDs/masks
   preserved without cross-control. A mesh-only duplicate starts unbound and clean.
 
@@ -1906,6 +1949,23 @@ coordinates and restore behavior through the same human/agent path.
 ## Production readiness
 Requires passed behavior, representative quality, lifecycle/robustness and measured
 performance. Detailed prose and recorded failures alone are not passing gates.
+
+The post-baseline [H01–H10 plan](../roadmap/release-hardening-plan.md) adds release
+gates without replacing P1–P5:
+
+| Gate | Required evidence |
+| --- | --- |
+| H01–H02 target safety | ADR resolves Shape Key scope; explicit target I/O, Edit Mode, cancel and Undo/Redo never write a different key |
+| H03 ownership safety | Stale marker, Source deletion, duplicate and load do not automatically delete scene mesh data |
+| H04–H05 native UI | Physical modal G/R/S, full/partial selection, key selection, display restoration and New Shape Key on a safe copy |
+| H06 agent parity | Actual MCP calls target the same Source/key, controls and transaction path as UI |
+| H07–H08 recovery/runtime | Topology/ID ambiguity blocks writes; repair is explicit; handlers do not perform destructive cleanup or hide failures |
+| H09–H10 release | Repeatable fixture suite and UI checklist, fail on traceback, measured P95/memory, reproducible ZIP/install, documentation/version/license consistent |
+
+Each H phase records PASS/FAIL/BLOCKED/NOT RUN. A background fixture cannot pass
+a modal UI gate; exit code 0 cannot pass a run containing a Python traceback.
+Outstanding H gates preclude a production-ready claim, even when P1–P5 baseline
+features exist.
 
 Record hardware, Blender version, Source/affected vertex counts, control sample counts,
 median/P95 full preview latency, confirm time and peak memory. Include mesh extraction,
@@ -2014,6 +2074,11 @@ For development, begin with the [five-phase roadmap](roadmap/implementation-plan
 [development contract](roadmap/development-contract.md) and
 [phase tasks](../tasks/README.md). ADR-009 records the accepted sequence, Source-child
 controller, patch display semantics and reference-based phase-5 validation.
+For post-baseline release work, use the [H01–H10 hardening roadmap](roadmap/release-hardening-plan.md).
+Each H task has a separate development, verification and commit gate; P1–P5 remain
+the historical baseline and require their own evidence.
+The [2026-09-25 baseline audit](testing/2026-09-25-release-hardening-baseline.md)
+separates code findings from runtime checks still marked NOT RUN.
 
 Current Phase 2 UI uses the [native list UX](roadmap/phase-02-native-list-ux.md),
 with [task checklists](../tasks/phase-02-native-list-ux.md) and Gate P2-UX before Phase 3.
@@ -2079,6 +2144,10 @@ None is selected by product definition alone. The prototype matrix in `../testin
 **Trạng thái: 5 phase đã thống nhất; Phase 1–4 đã có mã/bản cài và baseline live;
 đợt nâng cấp transform ownership đang được kiểm chứng trước Phase 5. Gate chỉ pass
 khi có bằng chứng test tương ứng.**
+
+Đây là lộ trình baseline theo ADR-009. Các lỗi và hạng mục hoàn thiện sau baseline
+được chia thành [H01–H10](release-hardening-plan.md), với từng commit và gate riêng.
+Kế hoạch H không hồi tố đánh dấu các gate P1–P5 đã pass.
 
 Mục tiêu là chỉnh model template qua các đường control nằm trên mesh thật. Các đường
 đang bật chia patch và giữ phần không chọn đứng yên. Khi điều chỉnh control được chọn,
@@ -2382,6 +2451,14 @@ Topology bị đổi ngoài dự kiến phải chặn tiếp tục, không rollb
 tắc recovery đầy đủ nằm ở [errors-and-recovery.md](../architecture/errors-and-recovery.md).
 
 ## Bàn giao từng phase
+
+Đợt hoàn thiện sau baseline dùng cùng mẫu báo cáo cho từng
+[H01–H10](release-hardening-plan.md). Mỗi H là một phạm vi review và commit riêng;
+phase phụ thuộc không được ghi PASS khi gate đầu vào còn FAIL/NOT RUN. Với
+Shape Key phải ghi rõ target thực tế, mode và các key không được phép đổi; với
+handler phải kiểm dữ liệu scene còn nguyên. Với UI modal phải thao tác thật,
+không thay bằng kết quả background. Harness phải xét traceback trong log dù
+Blender trả exit code 0.
 
 Báo cáo gồm: commit/diff hoặc danh sách file, bản extension cài được, Blender/OS,
 fixture và bước tái hiện, expected/actual, PASS/FAIL/BLOCKED, ảnh test phù hợp, lỗi
@@ -3465,6 +3542,9 @@ runtime caches and transaction buffers are disposable.
 - `blender/workflows.py` owns deformation transactions, mask mutation and
   Source writeback. It receives mesh/proxy/UI-independent callbacks through
   `WorkflowDeps`.
+  The H01/H02 target adapter will centralize base/Basis/Shape Key coordinate
+  access for this path, proxy synchronization and Undo. Until that refactor is
+  verified, explicit-key reads/writes in Source Edit Mode are a known gap.
 - `registration.py` owns Blender class/property/handler/keymap registration;
   `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
   invalidation. The root facade only passes itself as the compatibility API
@@ -4059,6 +4139,16 @@ rollback, and native Undo/Redo through the captured active key.
 - Blender integration must cover target changes, lock changes, cancel, undo/redo,
   display restoration, and a mesh with no Shape Keys.
 
+## Implementation status (2026-09-25; decision unchanged)
+
+The current add-on has active-target selection and captures target positions at
+operation start. A code review identified an Edit Mode path where an explicit
+Shape Key target may be read/written through the active BMesh layer instead;
+Undo recovery must use the same target-safe adapter. This is tracked in
+[H02](../../tasks/release-hardening/h02-target-io-undo.md). Any change to the
+relative/absolute scope above requires the H01 ADR; this note does not amend
+the accepted decision.
+
 ---
 
 <!-- source: docs/decisions/ADR-016-coherent-all-control-transform.md -->
@@ -4169,3 +4259,106 @@ registered since the later Controller UX refactor. The patch overlay suite
 also needs a GPU-backed UI context and cannot run in background Blender.
 These gaps are separate from the Scale calculation and remain visible rather
 than being counted as passes.
+
+---
+
+<!-- source: docs/roadmap/release-hardening-plan.md -->
+
+# DANP Form — Lộ trình hoàn thiện trước phát hành
+
+**Trạng thái: kế hoạch, 2026-09-25.** Đây là đợt hardening sau baseline 5 phase của
+[ADR-009](../decisions/ADR-009-five-phase-development.md), không viết lại lịch sử
+P1–P5 và không có nghĩa các gate cũ đã pass. Mỗi hàng dưới đây là **một phase,
+một phạm vi bàn giao và một commit riêng**. Xem [task tương ứng](../../tasks/README.md)
+để triển khai. Chưa phase H nào được đánh dấu hoàn thành.
+
+## Căn cứ và ranh giới
+
+- Mã hiện tại đã có target Shape Key đang active, P0 theo target và UI chọn key.
+  [ADR-015](../decisions/ADR-015-shape-key-edit-target.md) đang chấp nhận cả
+  relative và absolute. Đề xuất bên ngoài về `Deformation Target` là đầu vào
+  thiết kế, không phải đặc tả tự động thay thế ADR.
+- Kiểm tra mã 2026-09-25 phát hiện đường đọc/ghi khi Source ở Edit Mode có thể
+  dùng BMesh của key đang active dù lệnh yêu cầu một key khác; đường khôi phục
+  Undo cần được bao phủ. Handler lifecycle có thể xóa object mang marker DANP
+  khi Source bị thiếu. Đây là rủi ro dữ liệu ưu tiên cao.
+- [Audit Scale](../testing/2026-09-25-all-control-scale-audit.md) đã xác minh
+  phép tính và fixture nền, nhưng chưa xác minh transform modal bằng chuột trên
+  phiên Blender mở. Bộ selection lịch sử và overlay cần cập nhật gate.
+- Manifest hiện là 0.5.31. Không suy ra mức sẵn sàng phát hành từ số phiên bản,
+  test thuần Python hoặc ảnh chụp.
+
+## Thứ tự và phụ thuộc
+
+| Phase | Kết quả độc lập có thể review | Phụ thuộc bắt buộc | Commit đề xuất |
+| --- | --- | --- | --- |
+| [H01](../../tasks/release-hardening/h01-target-contract.md) | Hợp đồng target và ADR giải quyết relative/absolute, Basis, target ID, thao tác đổi target | Không | `docs(dan-form): settle deformation target contract` |
+| [H02](../../tasks/release-hardening/h02-target-io-undo.md) | Đọc/ghi đúng target ở Object/Edit Mode và Undo/Redo | H01 | `fix(dan-form): route target io and undo safely` |
+| [H03](../../tasks/release-hardening/h03-owned-object-safety.md) | Lifecycle không tự xóa dữ liệu mồ côi trong scene | Không; có thể song song H01/H02 | `fix(dan-form): make ownership recovery non-destructive` |
+| [H04](../../tasks/release-hardening/h04-native-transform.md) | G/R/S modal ổn định, gồm Scale toàn control | H02, H03 | `fix(dan-form): stabilize native transform transactions` |
+| [H05](../../tasks/release-hardening/h05-target-ux.md) | UI target rõ ràng, tạo Shape Key mới an toàn | H01, H02, H04 | `feat(dan-form): complete deformation target workflow` |
+| [H06](../../tasks/release-hardening/h06-agent-parity.md) | Agent API target đạt parity với UI | H01, H02, H05 | `feat(dan-form): expose target-aware agent operations` |
+| [H07](../../tasks/release-hardening/h07-topology-recovery.md) | Chính sách thay topology và phục hồi tường minh | H01, H03; có thể triển khai song song H05/H06 | `feat(dan-form): make topology recovery explicit` |
+| [H08](../../tasks/release-hardening/h08-runtime-architecture.md) | Handler, cache, lỗi và module boundaries được làm cứng | H03, H04, H07 | `refactor(dan-form): harden runtime boundaries` |
+| [H09](../../tasks/release-hardening/h09-release-gates.md) | Test/release gate tự lặp và có bằng chứng trên Blender | Có thể dựng harness sớm; chỉ đóng gate sau H02–H08 | `test(dan-form): establish reproducible release gates` |
+| [H10](../../tasks/release-hardening/h10-package-release.md) | Gói cài, tài liệu, manifest và báo cáo phát hành khớp mã | H09 | `chore(dan-form): prepare verified release package` |
+
+Đường găng là H01 → H02 → H04 → H05 → H06 → H09 → H10. H03 có thể
+bắt đầu ngay; H07 có thể chạy sau H01/H03. Công việc thiết kế fixture và
+harness của H09 có thể bắt đầu sớm nhưng phase chỉ hoàn tất khi các chức năng
+phụ thuộc đã qua gate. Nếu phase trước đổi hợp đồng, phase sau phải cập nhật
+test theo hợp đồng mới, không lách gate.
+
+## Quy tắc cho từng phase
+
+1. Bắt đầu từ checkout sạch; ghi commit gốc, phiên bản Blender, fixture và
+   tiêu chí pass. Giữ thay đổi trong phạm vi phase. Thay đổi kiến trúc/ngữ nghĩa
+   cần ADR trước mã; không sửa ADR đã accepted một cách ngầm định.
+2. Thực hiện unit/fixture, Blender background và UI trực tiếp theo task. Test
+   nào không chạy ghi `NOT RUN`; lỗi ghi bước tái hiện và `FAIL`. Không coi
+   exit code 0 là pass nếu log có traceback. UI trực tiếp không được thay bằng
+   background fixture khi gate yêu cầu thao tác modal thật.
+3. Ghi bằng chứng expected/actual, bản Blender/OS, mesh/key/mode, kết quả
+   cancel/undo/save/reopen khi liên quan, cùng số đo median/P95 full preview
+   và peak memory theo [hợp đồng](development-contract.md).
+4. Chỉ commit phase sau khi gate của chính phase pass; commit message đề xuất
+   ở bảng. Nếu bị chặn, giữ báo cáo `BLOCKED` hoặc `NOT RUN` và không tuyên bố
+   hoàn tất. H10 chỉ chạy khi mọi gate bắt buộc và [acceptance gates](../testing/acceptance-gates.md)
+   có bằng chứng.
+
+## Ngoài phạm vi đợt này
+
+`Save As Shape Key`, tự lan biến dạng Basis sang tất cả key, driver/corrective
+key, multi-object transaction, tự động fit ảnh, solver mới và sparse control
+không nằm trong H01–H10. Chỉ bổ sung bằng ADR và phase mới nếu có nhu cầu cùng
+fixture chứng minh. Topology recovery H07 không được âm thầm đoán lại mapping
+ID mơ hồ.
+
+---
+
+<!-- source: docs/testing/2026-09-25-release-hardening-baseline.md -->
+
+# Release hardening baseline — 2026-09-25
+
+**Status: Planning audit, not a PASS report.** This note distinguishes current
+evidence from work in the [H01–H10 roadmap](../roadmap/release-hardening-plan.md).
+The proposal supplied for Shape Key development is design input. Current
+[ADR-015](../decisions/ADR-015-shape-key-edit-target.md) remains authoritative
+until H01 explicitly amends or supersedes it.
+
+| Area | Observed state | Required phase |
+| --- | --- | --- |
+| Target selection | Active Shape Key workflow and P0 exist; relative and absolute are accepted by ADR-015 | H01 defines target identity and scope |
+| Target I/O | Explicit key in Source Edit Mode may resolve through active BMesh; Undo target path requires coverage | H02 |
+| Object ownership | Lifecycle cleanup can remove a marked scene mesh with missing Source | H03 |
+| All-control Scale | Numeric and background fixture passed for 0.5.31; physical modal mouse transform not verified | H04 |
+| Shape Key UX | Current selector/show-only exist; complete target/new-key workflow and regression evidence pending | H05 |
+| Agent | Current facade lacks target-list/selection commands and target parity evidence | H06 |
+| Topology | Fingerprint mismatch pauses edits even if visible controls appear unaffected; patch connectivity still matters | H07 |
+| Runtime | Handler/error/cache boundaries need review after safety fixes | H08 |
+| Test infrastructure | Historical selection suites are stale; overlay requires live GPU context; background Blender may return exit 0 with traceback | H09 |
+| Release | Manifest says 0.5.31; README version was stale before this docs update; release gates not complete | H10 |
+
+This is a code/document review and earlier test-evidence synthesis. It is not a
+fresh Blender UI test, model edit, or release certification. Existing historical
+reports remain dated records; do not reinterpret their old NOT RUN as PASS.
