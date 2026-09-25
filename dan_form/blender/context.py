@@ -150,7 +150,7 @@ def source_controller_pairs() -> list[tuple[bpy.types.Object, bpy.types.Object]]
 
 
 def orphaned_owned_objects() -> list[bpy.types.Object]:
-    """Return marked objects only when neither UUID nor direct parent can own them.
+    """Return marked objects without a valid structural owner.
 
     A duplicate or temporarily stale owner marker is not sufficient evidence to
     delete an object. Preserve such objects for explicit recovery.
@@ -167,7 +167,9 @@ def orphaned_owned_objects() -> list[bpy.types.Object]:
         if obj.get(UNBOUND_COPY_KEY):
             continue
         parent_is_source = getattr(obj.parent, "type", None) == "MESH" and obj.parent.get(CONTROLLER_KEY) is None
-        if controller_owner and str(controller_owner) not in source_uuids and not parent_is_source:
+        # A Controller is owned only by its direct Source parent. A matching
+        # copied UUID alone cannot make a detached Controller operational.
+        if controller_owner and not parent_is_source:
             result.append(obj)
         elif face_owner and str(face_owner) not in source_uuids and not parent_is_source:
             result.append(obj)

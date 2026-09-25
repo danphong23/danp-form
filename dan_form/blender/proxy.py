@@ -217,6 +217,6 @@ def guard_proxy_topology(source, controller, deps) -> bool:
         if owned:
             bm.free()
     runtime.PROXY_SNAPSHOTS[key] = snapshot
-    bpy.context.scene.dan_form_status = "Controller chỉ chỉnh vị trí; tạo/xóa đường trên model"
+    bpy.context.scene.dan_form_status = "The Controller edits positions only; change control lines on the model"
     return True
 

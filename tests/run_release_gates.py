@@ -2,7 +2,7 @@
 
 Examples:
     python tests/run_release_gates.py --blender "C:/.../blender.exe"
-    python tests/run_release_gates.py --blender "C:/.../blender.exe" --project copy.blend
+    python tests/run_release_gates.py --blender "C:/.../blender.exe" --project custom.blend
     python tests/run_release_gates.py --self-test-fail
 
 Blender UI/modal checks are listed as NOT RUN; this runner does not pretend a
@@ -36,6 +36,7 @@ BACKGROUND_SUITES = (
     "live_shape_key_target_workflow.py",
     "live_agent_target_api.py",
     "live_runtime_boundaries.py",
+    "live_initialize_modes.py",
 )
 TRACEBACK_MARKERS = ("Traceback (most recent call last)", "AssertionError:", "Error: Python:")
 
@@ -178,7 +179,7 @@ def _self_test_failure_detection() -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--blender", type=Path, help="Blender executable to use")
-    parser.add_argument("--project", type=Path, help="Disposable saved .blend with an initialized Source/Controller pair for H04")
+    parser.add_argument("--project", type=Path, help="Optional disposable .blend with an initialized Source/Controller pair for H04; otherwise generate one")
     parser.add_argument("--report", type=Path, help="Write the JSON report to this path")
     parser.add_argument("--self-test-fail", action="store_true", help="Verify that a deliberate traceback is classified as FAIL")
     args = parser.parse_args()
@@ -201,7 +202,7 @@ def main() -> int:
             "addon_version": _addon_version(),
             "platform": platform.platform(),
             "commit": _source_commit(),
-            "fixture_project": str(args.project) if args.project else None,
+            "fixture_project": str(args.project) if args.project else "generated two-control strip",
         },
         "static_suites": _run_static(),
         "blender_background_suites": [],
@@ -218,19 +219,32 @@ def main() -> int:
         report["blender_background_suites"].append(
             _blender_fixture(args.blender, ROOT / "tests" / name)
         )
-    if args.project is not None:
-        with tempfile.TemporaryDirectory(prefix="danp-h04-safe-copy-") as directory:
+    with tempfile.TemporaryDirectory(prefix="danp-h04-safe-copy-") as directory:
+        if args.project is not None:
             project_copy = Path(directory) / args.project.name
             shutil.copy2(args.project, project_copy)
+        else:
+            project_copy = Path(directory) / "native_transform_fixture.blend"
+            generator = _run([
+                str(args.blender), "--background", "--factory-startup", "--python",
+                str(ROOT / "tests" / "create_native_transform_fixture.py"),
+                "--", str(project_copy),
+            ], ROOT)
+            fixture_report = _parse_report(generator["output"])
+            if (generator["exit_code"] != 0 or generator["exception_in_log"]
+                    or fixture_report is None or fixture_report.get("status") != "PASS"
+                    or not project_copy.is_file()):
+                report["blender_background_suites"].append({
+                    "name": "live_native_transform.py", "status": "FAIL",
+                    "reason": "Could not generate disposable native-transform fixture",
+                    "generator_output_tail": generator["output"].splitlines()[-12:],
+                })
+                project_copy = None
+        if project_copy is not None:
             report["blender_background_suites"].append(
                 _blender_fixture(args.blender, ROOT / "tests" / "live_native_transform.py",
                                  project_copy, register_addon=True)
             )
-    else:
-        report["blender_background_suites"].append({
-            "name": "live_native_transform.py", "status": "NOT RUN",
-            "reason": "pass --project with a disposable initialized DANP .blend",
-        })
 
     checks = report["static_suites"] + report["blender_background_suites"]
     if any(item["status"] == "FAIL" for item in checks):

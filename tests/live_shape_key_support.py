@@ -64,7 +64,7 @@ def run():
         try:
             result = bpy.ops.dan_form.reset_source()
         except RuntimeError as exc:
-            if "Không xác minh được Shape Key" not in str(exc):
+            if "original Shape Key snapshot cannot be verified" not in str(exc):
                 raise
             return {"CANCELLED"}
         return result

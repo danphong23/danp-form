@@ -30,31 +30,39 @@ def _friendly_error(exc: Exception) -> str:
     if code in {"STALE_MAPPING", "TOPOLOGY_CHANGED"}:
         # STALE_MAPPING remains an accepted legacy diagnostic from old files;
         # users should see the recovery action, never an implementation code.
-        return "DANP tạm dừng: hãy Validate topology; chỉ Repair khi an toàn, nếu không hãy Undo hoặc Reset DANP."
+        return "DANP Form is paused. Validate the topology, then Repair if safe, or use Undo or Reset DANP."
     if code == "TOPOLOGY_SNAPSHOT_MISSING":
-        return "Không có bản đồ topology gốc đáng tin cậy. Hãy Undo hoặc Reset DANP để tạo mapping mới."
+        return "The original topology map is missing. Use Undo or Reset DANP to create a new mapping."
     if code == "TOPOLOGY_SNAPSHOT_INVALID":
-        return "Bản ghi topology bị lỗi; DANP không thể chứng minh mapping an toàn. Hãy Undo hoặc Reset DANP."
+        return "The topology record is invalid. Use Undo or Reset DANP before editing."
     if code == "SOURCE_ID_LAYERS_MISSING":
-        return "DANP không tìm thấy ID mesh. Hãy Sync hoặc Reset DANP trên mesh hiện tại."
+        return "Source mesh IDs are missing. Sync or Reset DANP on this mesh."
     if code.startswith("CONTROL_DATA_INVALID"):
-        return "Dữ liệu control bị lỗi; hãy Undo hoặc Reset DANP để tạo lại control trên mesh hiện tại."
+        return "Control data is invalid. Use Undo or Reset DANP to rebuild the controls."
     if code == "OPERATION_BUSY":
-        return "Đang có thao tác G/R/S; hãy xác nhận hoặc hủy thao tác trước."
+        return "A transform is in progress. Confirm or cancel it before continuing."
     if code == "OPERATION_STALE":
-        return "Phiên chỉnh sửa đã cũ; hãy xác nhận/hủy thao tác rồi bắt đầu lại."
+        return "The edit session is stale. Confirm or cancel the transform, then try again."
     if code == "WORLD_SPACE_MATRIX_REQUIRED":
-        return "Transform WORLD cần ma trận Source; hãy dùng transform Source-local của DANP."
+        return "A world-space transform needs the Source matrix. Use Source-local coordinates instead."
     if code == "SHAPE_KEY_LOCKED":
-        return "Shape Key đang chọn bị khóa. Hãy mở khóa key rồi chọn Edit Control."
+        return "The selected Shape Key is locked. Unlock it before editing the Controller."
     if code == "SHAPE_KEY_TARGET_INVALID":
-        return "Shape Key đích không còn hợp lệ. Hãy chọn lại key trên Source."
+        return "The Shape Key target is no longer valid. Select it again on the Source."
     if code in {"SHAPE_KEY_TARGET_CHANGED", "OPERATION_STALE_SHAPE_KEY"}:
-        return "Shape Key đã đổi trong lúc thao tác; DANP đã hủy lần kéo này."
+        return "The Shape Key changed during the transform. DANP Form cancelled that edit."
     if code in {"UUID_CONFLICT", "CONTROLLER_CONFLICT"}:
-        return "DANP phát hiện nhiều cặp trùng hoặc Controller không rõ chủ sở hữu. Hãy chọn cặp cần giữ và tách danh tính trước khi sửa."
+        return "Controller ownership is ambiguous. Select the pair to keep and resolve its identity."
     if code == "SHARED_DATA":
-        return "Mesh hoặc Controller đang dùng chung dữ liệu. Hãy Make Single User trước khi chỉnh bằng DANP."
+        return "The mesh or Controller shares data. Make it single-user before editing."
+    if code == "SOURCE_NOT_EDITABLE":
+        return "Select a local, single-user mesh to initialize DANP Form."
+    if code == "EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE":
+        return "Evaluated Source vertices could not be matched to the mesh. Check the modifier stack and retry."
+    if code == "CONTROLLER_BINDING_INCOMPLETE":
+        return "Controller setup did not create a valid child. Initialization was rolled back."
+    if code.isupper() and "_" in code:
+        return f"DANP Form could not complete this action ({code})."
     return code
 
 
@@ -167,11 +175,22 @@ class DANFORM_OT_initialize(bpy.types.Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         scene = context.scene
         source = context.view_layer.objects.active
+        was_editing_source = source is not None and source.mode == "EDIT"
+        previous_guard = runtime.SYNC_GUARD
+        created_controller = None
+        created_mesh = None
+        new_source_binding = False
         try:
-            _reconcile_duplicate_bindings()
             _require_structural_idle(source)
             if not _is_valid_source(source):
                 raise ValueError("SOURCE_NOT_EDITABLE")
+            # A live Edit BMesh is newer than Mesh.attributes and evaluated_get().
+            # Flush it before creating IDs or reading evaluated coordinates, then
+            # return to the user's Edit Mode and original selection afterward.
+            runtime.SYNC_GUARD = True
+            if was_editing_source:
+                bpy.ops.object.mode_set(mode="OBJECT")
+            _reconcile_duplicate_bindings()
             binding = _binding_status(source)
             if binding == "DUPLICATE_UNBOUND":
                 _clear_duplicate_source_state(source)
@@ -182,6 +201,7 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 _clear_duplicate_source_state(source)
             elif binding in {"UUID_CONFLICT", "CONTROLLER_CONFLICT", "SHARED_DATA"}:
                 raise ValueError(binding)
+            new_source_binding = not bool(source.get(SOURCE_UUID_KEY))
             controller = _find_controller(source)
             if controller is None:
                 _ensure_source_ids(source)
@@ -191,6 +211,8 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 mesh.from_pydata([], [], [])
                 mesh.update()
                 controller = bpy.data.objects.new(f"DANPFORM_CTRL_{source.name}", mesh)
+                created_controller = controller
+                created_mesh = mesh
                 _controller_collection(source, scene).objects.link(controller)
                 controller[CONTROLLER_KEY] = source[ SOURCE_UUID_KEY ]
                 controller[SCHEMA_KEY] = SCHEMA_VERSION
@@ -203,6 +225,8 @@ class DANFORM_OT_initialize(bpy.types.Operator):
                 _validate_source_topology(source)
                 _guard_proxy_topology(source, controller)
                 _capture_original_snapshot(source)
+            if _find_controller(source) != controller or controller.parent != source:
+                raise ValueError("CONTROLLER_BINDING_INCOMPLETE")
             source["dan_form_controller_name"] = controller.name
             source.pop(UNBOUND_COPY_KEY, None)
             _remember_binding(source, controller)
@@ -210,10 +234,25 @@ class DANFORM_OT_initialize(bpy.types.Operator):
             scene.dan_form_status = f"Ready: {source.name} / {controller.name}"
             self.report({"INFO"}, "DANP Form controller ready")
             return {"FINISHED"}
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
+            if created_controller is not None and created_controller.name in bpy.data.objects:
+                bpy.data.objects.remove(created_controller, do_unlink=True)
+            if created_mesh is not None and created_mesh.users == 0:
+                bpy.data.meshes.remove(created_mesh)
+            if new_source_binding:
+                _clear_duplicate_source_state(source)
+            scene.dan_form_controller = None
             scene.dan_form_status = _friendly_error(exc)
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
+        finally:
+            try:
+                if was_editing_source and source is not None and source.name in bpy.data.objects:
+                    if source.mode == "OBJECT":
+                        context.view_layer.objects.active = source
+                        bpy.ops.object.mode_set(mode="EDIT")
+            finally:
+                runtime.SYNC_GUARD = previous_guard
 
 
 class DANFORM_OT_resolve_duplicate_pair(bpy.types.Operator):
@@ -282,7 +321,7 @@ class DANFORM_OT_resolve_duplicate_pair(bpy.types.Operator):
             _remember_binding(source, controller)
             _set_scene_context(context, source, controller)
             context.scene.dan_form_status = f"DANP pair resolved: {source.name}"
-            self.report({"INFO"}, "Đã giữ cặp DANP được chọn và cấp danh tính riêng")
+            self.report({"INFO"}, "The selected DANP pair now has a unique identity")
             return {"FINISHED"}
         except ValueError as exc:
             context.scene.dan_form_status = _friendly_error(exc)
@@ -411,7 +450,7 @@ def _ui_control_index_update(scene, context: bpy.types.Context) -> None:
         try:
             _transform_session.finalize_active(source, controller, _workflow_dependencies())
         except (ValueError, RuntimeError, KeyError):
-            scene.dan_form_status = "Không thể chốt thao tác điều khiển trước khi đổi control"
+            scene.dan_form_status = "Finish or cancel the current transform before switching controls"
             return
     scene.dan_form_selected_control = control["control_uuid"]
     _ACTIVE_CONTROL_UUIDS[items[index].source_uuid] = control["control_uuid"]
@@ -930,7 +969,7 @@ class DANFORM_OT_remove_controller(bpy.types.Operator):
 class DANFORM_OT_remove(bpy.types.Operator):
     bl_idname = "dan_form.remove"
     bl_label = "Remove DANP Form"
-    bl_description = "Gỡ controller và toàn bộ thiết lập DANP Form; giữ nguyên hình học model"
+    bl_description = "Remove the Controller and DANP Form setup while preserving the model geometry"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -980,9 +1019,9 @@ class DANFORM_OT_remove(bpy.types.Operator):
                     _UI_SIGNATURES.pop(scene.as_pointer(), None)
                     _sync_ui_list(scene, None)
             _sync_context_ui_list(context)
-            context.scene.dan_form_status = "Đã gỡ DANP Form"
+            context.scene.dan_form_status = "DANP Form removed"
             _tag_viewport_redraw(context)
-            self.report({"INFO"}, "Đã gỡ DANP Form; model giữ nguyên")
+            self.report({"INFO"}, "DANP Form removed; model geometry preserved")
             return {"FINISHED"}
         finally:
             if was_edit:
@@ -1068,7 +1107,7 @@ class DANFORM_OT_reset(bpy.types.Operator):
             if was_edit:
                 bpy.ops.object.mode_set(mode="EDIT")
             context.scene.dan_form_status = (
-                f"Đã reset DANP: tạo mapping mới cho topology hiện tại của {source.name}"
+                f"DANP reset: created a new mapping for the current topology of {source.name}"
             )
             self.report({"INFO"}, "DANP reset complete; current mesh topology is now the mapping source")
             return {"FINISHED"}
@@ -1089,7 +1128,8 @@ class DANFORM_OT_unbind_orphaned_owned_object(bpy.types.Operator):
         return (
             active is not None
             and active.type == "MESH"
-            and bool(active.get(ORPHANED_OWNED_KEY))
+            and (bool(active.get(ORPHANED_OWNED_KEY))
+                 or (active.get(CONTROLLER_KEY) is not None and active.parent is None))
             and active.mode == "OBJECT"
         )
 
@@ -1105,7 +1145,7 @@ class DANFORM_OT_unbind_orphaned_owned_object(bpy.types.Operator):
         obj.pop(ORPHANED_OWNED_KEY, None)
         obj[UNBOUND_COPY_KEY] = True
         context.scene.dan_form_status = (
-            f"Đã bỏ liên kết DANP cũ trên {obj.name}; mesh và dữ liệu được giữ nguyên"
+            f"Removed stale DANP ownership from {obj.name}; mesh data preserved"
         )
         self.report({"INFO"}, "Stale DANP ownership removed; mesh data preserved")
         return {"FINISHED"}
@@ -1186,18 +1226,18 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
             _OVERLAY_CACHE.clear()
             _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
             _set_scene_context(context, source, controller)
-            context.scene.dan_form_status = "Đã reset model về dáng gốc lúc Init DANP"
+            context.scene.dan_form_status = "Model restored to the pose captured at DANP initialization"
             self.report({"INFO"}, "Source restored to the original Init pose")
             return {"FINISHED"}
         except (RuntimeError, ValueError) as exc:
             if str(exc) == "ORIGINAL_SNAPSHOT_TOPOLOGY_CHANGED":
-                message = "Không thể reset dáng gốc vì topology đã đổi; hãy Undo hoặc Reset DANP trước."
+                message = "The topology changed. Use Undo or Reset DANP before restoring the original pose."
             elif str(exc) == "ORIGINAL_SNAPSHOT_TARGET_MISMATCH":
-                message = "Snapshot Init thuộc Shape Key khác. Hãy chọn key ban đầu trước khi Reset Model."
+                message = "The Init snapshot belongs to another Shape Key. Select that key before Reset Model."
             elif str(exc) == "ORIGINAL_SNAPSHOT_TARGET_PROVENANCE_UNKNOWN":
-                message = "Không xác minh được Shape Key của snapshot Init cũ. Hãy Reset DANP để tạo snapshot mới an toàn."
+                message = "The original Shape Key snapshot cannot be verified. Reset DANP to capture a new snapshot."
             elif str(exc) in {"ORIGINAL_SNAPSHOT_MISSING", "ORIGINAL_SNAPSHOT_INVALID"}:
-                message = "Mesh này chưa có snapshot Init; hãy Remove rồi Init DANP lại."
+                message = "This mesh has no Init snapshot. Remove DANP Form and initialize it again."
             else:
                 message = _friendly_error(exc)
             context.scene.dan_form_status = message
@@ -1208,7 +1248,7 @@ class DANFORM_OT_reset_source(bpy.types.Operator):
 class DANFORM_OT_topology_locked(bpy.types.Operator):
     bl_idname = "dan_form.topology_locked"
     bl_label = "Controller Topology Locked"
-    bl_description = "Controller chỉ chỉnh vị trí; tạo/xóa đường control trên model"
+    bl_description = "The Controller edits positions only; create or remove control lines on the model"
     bl_options = {"INTERNAL"}
 
     @classmethod
@@ -1570,7 +1610,7 @@ class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
             self._last_target = None
             self._last_edge_id = None
             if str(exc) == "CONTROL_EDGE_SHARED_SELECT_FROM_LIST":
-                context.scene.dan_form_status = "Cạnh chung: chọn control trong danh sách trước"
+                context.scene.dan_form_status = "This edge belongs to multiple controls; select one in the list first"
             _tag_viewport_redraw(context)
             return
         if self._last_target is not None and target == self._last_target:
@@ -1607,10 +1647,10 @@ class DANFORM_OT_pick_selection_tool(bpy.types.Operator):
         self._last_edge_id = None
         self._last_target = None
         context.scene.dan_form_status = (
-            f"Hover để xem trước {'đoạn' if self.tool == 'SEGMENT' else 'control'}, click để chọn; Esc để hủy"
+            f"Hover to preview a {'span' if self.tool == 'SEGMENT' else 'control'}, click to select; Esc to cancel"
         )
         if self._area is not None:
-            self._area.header_text_set("DANP Pick: LMB chọn · Shift cộng · Ctrl bỏ chọn · RMB/Esc dừng · MMB/Wheel điều hướng")
+            self._area.header_text_set("DANP Pick: LMB select | Shift add | Ctrl subtract | RMB/Esc stop | MMB/Wheel navigate")
         context.window_manager.modal_handler_add(self)
         return {"RUNNING_MODAL"}
 
@@ -1998,7 +2038,7 @@ class DANFORM_OT_select_shape_key(bpy.types.Operator):
             context.view_layer.update()
             _sync_proxy(source, controller)
             key = _active_shape_key(source)
-            context.scene.dan_form_status = f"Đang chỉnh Shape Key: {key.name}"
+            context.scene.dan_form_status = f"Editing Shape Key: {key.name}"
             _tag_viewport_redraw(context)
             return {"FINISHED"}
         except (RuntimeError, ValueError) as exc:
@@ -2074,7 +2114,7 @@ class DANFORM_OT_create_shape_key(bpy.types.Operator):
             context.view_layer.update()
             if controller is not None:
                 _sync_proxy(source, controller)
-            context.scene.dan_form_status = f"Đã tạo Shape Key: {new_key.name}"
+            context.scene.dan_form_status = f"Created Shape Key: {new_key.name}"
             _tag_viewport_redraw(context)
             return {"FINISHED"}
         except (RuntimeError, ValueError, KeyError) as exc:
@@ -2100,14 +2140,14 @@ class DANFORM_OT_create_shape_key(bpy.types.Operator):
 
 
 class DANFORM_MT_shape_keys(bpy.types.Menu):
-    bl_label = "Chọn Shape Key"
+    bl_label = "Select Shape Key"
     bl_idname = "DANFORM_MT_shape_keys"
 
     def draw(self, context):
         layout = self.layout
         source, _controller = _context_source(context)
         if source is None or source.data.shape_keys is None:
-            layout.label(text="Mesh không có Shape Key")
+            layout.label(text="This mesh has no Shape Keys")
             return
         for index, key in enumerate(source.data.shape_keys.key_blocks):
             op = layout.operator(
@@ -2134,76 +2174,75 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         active = context.view_layer.objects.active
         if source is None:
             if active is not None and active.type == "MESH":
-                if active.get(ORPHANED_OWNED_KEY):
+                if (active.get(ORPHANED_OWNED_KEY)
+                        or (active.get(CONTROLLER_KEY) is not None and active.parent is None)):
                     box = layout.box()
                     box.alert = True
-                    box.label(text="Object có liên kết DANP cũ chưa xác minh", icon="ERROR")
-                    box.label(text="Dữ liệu mesh được giữ; chọn cách bỏ liên kết để dùng riêng")
+                    box.label(text="This object has no valid DANP owner", icon="ERROR")
+                    box.label(text="Unbind it to keep the mesh as a separate object")
                     box.operator(
                         DANFORM_OT_unbind_orphaned_owned_object.bl_idname,
-                        text="Bỏ liên kết DANP cũ, giữ mesh",
+                        text="Unbind DANP, Keep Mesh",
                         icon="UNLINKED",
                     )
                     return
                 state_source = active.parent if active.get(CONTROLLER_KEY) is not None else active
                 state = _binding_status(state_source)
                 if state == "DUPLICATE_UNBOUND":
-                    layout.label(text="Bản sao mesh chưa có Controller DANP", icon="INFO")
+                    layout.label(text="This mesh copy has no DANP Controller", icon="INFO")
                     layout.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
                     return
                 if state in {"UUID_CONFLICT", "CONTROLLER_CONFLICT"}:
-                    layout.label(text="Quan hệ DANP đang trùng hoặc chưa rõ", icon="ERROR")
+                    layout.label(text="DANP Controller ownership is ambiguous", icon="ERROR")
                     if active.get(CONTROLLER_KEY) is not None or len(_controller_children(state_source)) == 1:
                         layout.operator(DANFORM_OT_resolve_duplicate_pair.bl_idname, text="Keep This Pair", icon="LINKED")
                     elif not _controller_children(state_source):
-                        layout.label(text="Init mesh này sẽ tạo DANP riêng, control cũ trên mesh này bị xóa")
-                        layout.operator(DANFORM_OT_initialize.bl_idname, text="Init Mesh Riêng", icon="ADD")
+                        layout.label(text="Initializing creates independent controls for this mesh")
+                        layout.operator(DANFORM_OT_initialize.bl_idname, text="Initialize This Mesh", icon="ADD")
                     else:
-                        layout.label(text="Chọn Controller muốn giữ rồi giải quyết cặp", icon="INFO")
+                        layout.label(text="Select the Controller to keep, then resolve the pair", icon="INFO")
                     return
                 if state == "SHARED_DATA":
-                    layout.label(text="Mesh/Controller dùng chung dữ liệu", icon="ERROR")
-                    layout.label(text="Make Single User trước khi dùng DANP")
+                    layout.label(text="The mesh or Controller shares data", icon="ERROR")
+                    layout.label(text="Make it single-user before using DANP Form")
                     return
-            layout.label(text="Chọn một mesh DANP Form hoặc controller", icon="INFO")
+            layout.label(text="Select a DANP Form mesh or Controller", icon="INFO")
             return
         if active == source:
             lifecycle = layout.row(align=True)
             lifecycle.enabled = source.mode in {"OBJECT", "EDIT"}
-            if not source.get(SOURCE_UUID_KEY):
+            if controller is None and not source.get(SOURCE_UUID_KEY):
                 lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Init DANP Form", icon="ADD")
+            elif controller is None:
+                lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Rebuild Controller", icon="FILE_REFRESH")
             else:
-                if controller is None:
-                    lifecycle.operator(DANFORM_OT_initialize.bl_idname, text="Rebuild Controller", icon="FILE_REFRESH")
-                else:
-                    lifecycle.operator(DANFORM_OT_reset_source.bl_idname, text="Reset Model", icon="LOOP_BACK")
+                lifecycle.operator(DANFORM_OT_reset_source.bl_idname, text="Reset Model", icon="LOOP_BACK")
                 lifecycle.menu(DANFORM_MT_manage.bl_idname, text="Manage", icon="DOWNARROW_HLT")
-        if source.get(SOURCE_UUID_KEY) is None:
+        if controller is None:
+            if source.get(SOURCE_UUID_KEY):
+                layout.label(text="No Controller child is bound to this mesh", icon="INFO")
             return
         topology = _topology_state(source)
         if topology.get("state") == "PAUSED":
             warning = layout.box()
             warning.alert = True
-            warning.label(text="DANP tạm dừng: topology đã thay đổi", icon="ERROR")
-            warning.label(text="Kiểm tra trước; chỉ Repair nếu patch control còn nguyên")
+            warning.label(text="DANP Form is paused: topology changed", icon="ERROR")
+            warning.label(text="Validate first; Repair only if the control patches are intact")
             recovery = warning.row(align=True)
             recovery.operator(DANFORM_OT_validate_topology.bl_idname, text="Validate", icon="VIEWZOOM")
             recovery.operator(DANFORM_OT_repair_topology.bl_idname, text="Repair", icon="FILE_REFRESH")
             warning.operator(DANFORM_OT_reset.bl_idname, text="Reset DANP", icon="LOOP_BACK")
-        if controller is None:
-            layout.label(text="Nhấn Init để dựng lại controller", icon="INFO")
-            return
         key = _active_shape_key(source)
         key_row = layout.row(align=True)
-        key_row.label(text="Đang chỉnh:")
-        key_row.label(text=key.name if key is not None else "Mesh gốc", icon="SHAPEKEY_DATA" if key is not None else "MESH_DATA")
+        key_row.label(text="Editing target:")
+        key_row.label(text=key.name if key is not None else "Base Mesh", icon="SHAPEKEY_DATA" if key is not None else "MESH_DATA")
         if source.data.shape_keys is not None:
             key_row.menu(DANFORM_MT_shape_keys.bl_idname, text="", icon="DOWNARROW_HLT")
         if key is not None and key.lock_shape:
             warning = layout.box()
             warning.alert = True
-            warning.label(text=f"Shape Key ‘{key.name}’ đang khóa", icon="LOCKED")
-            warning.label(text="Mở khóa key để chỉnh bằng Controller")
+            warning.label(text=f"Shape Key '{key.name}' is locked", icon="LOCKED")
+            warning.label(text="Unlock the key before editing with the Controller")
         if active == source:
             create_key = layout.row(align=True)
             create_key.enabled = (
@@ -2285,7 +2324,7 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
             actions = layout.row(align=True)
             actions.operator(DANFORM_OT_sync_control.bl_idname, text="Sync", icon="FILE_REFRESH")
         elif not scene.dan_form_control_items:
-            layout.label(text="Edit Source rồi chọn điểm/cạnh để nhấn +", icon="INFO")
+            layout.label(text="Edit the Source and select vertices or edges, then press +", icon="INFO")
 
 
 CLASSES = (

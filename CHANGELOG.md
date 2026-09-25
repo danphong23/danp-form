@@ -1,5 +1,15 @@
 # Design Changelog
 
+## 2026-09-25 — DANP Form 0.5.36 initializes safely in Source Edit Mode
+
+- Flush the live Edit Mesh before assigning persistent IDs and building the
+  evaluated Controller proxy; restore the user's Edit Mode and selection.
+- Roll back a newly created binding and orphan Controller if initialization
+  fails. The sidebar exposes initialized controls only for a valid direct child.
+- Mark detached legacy Controllers as unowned so they can be explicitly unbound
+  while their mesh data stays intact.
+- Use English for add-on status messages, errors, tooltips, and panel labels.
+
 ## 2026-09-25 — DANP Form 0.5.35 completes target-aware functional hardening
 
 - Add target-aware Blender-side agent operations with revision checks, opaque

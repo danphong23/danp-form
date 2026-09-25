@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "0dc516748a81ca0bd384a2b2b70f152a71274a54d90e45ca3508d049c2d989c1",
-    "bytes": 29457
+    "sha256": "165205d089efe2592a75a938148befc556f4ecb2f1e29c20d63559827ca4b12d",
+    "bytes": 30036
   },
   {
     "path": "CONTRIBUTING.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "217ff614c3c1a4ad88ada032cb4456c5ebe06f46d997b0d2b8a0517246e8533c",
-    "bytes": 316268
+    "sha256": "e9eaf3824fb1ec6a9c8ba28cd4a5d5e55cd8536b51db72952544b3b61d8a5e33",
+    "bytes": 318653
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -345,6 +345,11 @@
     "bytes": 1113
   },
   {
+    "path": "docs/testing/2026-09-25-init-edit-mode.md",
+    "sha256": "1b2beb0adf8372e9f6a92b94b341c7b52bfdf5a6b35bdfe703ec7ac4c2794836",
+    "bytes": 2319
+  },
+  {
     "path": "docs/testing/2026-09-25-release-hardening-baseline.md",
     "sha256": "00b3d73ec7739410aadb1f3b496da2f456e32f3c01ecd0861df8ea388c93570f",
     "bytes": 2112
@@ -436,13 +441,13 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "a354c1320a15665657de524b6beba038628d9ef5b1f7c5db37a19ea022bf99a0",
-    "bytes": 4548
+    "sha256": "9c9498db1acb88233be4e4a41e1897ebe4197e4d13fd5d712af28248e0bb17cc",
+    "bytes": 4804
   },
   {
     "path": "README.md",
-    "sha256": "a7d10893b353d50ff6f7239d9c901084cfb47edb42901cc5e7faac037061abcd",
-    "bytes": 4424
+    "sha256": "edc4d425cb79e66249ebe70e5a36b25f9e26195626c29834add9bf2c549ce494",
+    "bytes": 4729
   },
   {
     "path": "SECURITY.md",
@@ -541,7 +546,7 @@
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
-    "sha256": "16948c3a5a310999ce843079ce46236063fea1b28b6127462153615d85028e5b",
-    "bytes": 1709
+    "sha256": "0ab75ca67254dbb03a351ad4d477e96c1ad69a65140604aa1b1c8a6bd8d3c387",
+    "bytes": 1963
   }
 ]

@@ -25,3 +25,7 @@ and Vietnamese guides were refreshed. Documentation links and hashes validate.
 The 131-file archive passes package validation and a Blender 5.2.1 extract,
 import, register, and unregister smoke test. See the
 [H10 package report](../../docs/testing/2026-09-25-h10-package-candidate.md).
+
+**0.5.36 follow-up:** Source Edit Mode Init now builds a direct Controller child
+without leaving partial state on failure. The sidebar and English messages were
+reviewed with the [Edit Mode Init report](../../docs/testing/2026-09-25-init-edit-mode.md).

@@ -25,10 +25,13 @@ lấy vị trí mới từ Source, không quay về vị trí cũ. Vertex giao n
 theo thao tác dù cũng thuộc đường khác. Không cần cha/con giữa các đường control
 hay deactivate riêng.
 
-Bản 0.5.35 hỗ trợ Blender 5.1 trở lên. Mỗi Source có một Controller con trực
+Bản 0.5.36 hỗ trợ Blender 5.1 trở lên. Mỗi Source có một Controller con trực
 tiếp; mesh sao chép không tự dùng chung Controller. Add-on chỉnh target đang chọn:
 Base nếu chưa có Shape Key, hoặc Basis/key được chọn rõ ràng. Target selection,
-G/R/S, cancel và Undo dùng cùng đường transaction.
+G/R/S, cancel và Undo dùng cùng đường transaction. Có thể Init ngay trong Source
+Edit Mode; add-on sẽ trở lại Edit Mode sau khi tạo Controller con. Nếu bản cũ để
+lại Controller rời, chọn object đó và dùng **Unbind DANP, Keep Mesh** trước khi
+Rebuild Controller trên Source.
 
 Controller Edit: Ctrl+Alt+Click chọn đoạn giữa giao điểm; Shift để chọn thêm.
 H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ toàn bộ con mắt.

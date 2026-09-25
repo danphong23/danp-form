@@ -31,7 +31,7 @@ controls/sync; patch visualization; Edit Mode deformation/proportional; human an
 external-agent MCP validation with reference images. Start with
 [implementation-plan.md](docs/roadmap/implementation-plan.md) and [tasks](tasks/README.md).
 
-Version 0.5.35 targets Blender 5.1 or newer. DANP Form keeps a child Controller
+Version 0.5.36 targets Blender 5.1 or newer. DANP Form keeps a child Controller
 bound to one Source and edits the active deformation target: Base when there are
 no Shape Keys, otherwise the explicitly selected Basis or Shape Key. Target
 selection, native G/R/S deformation, cancel and Undo share the transaction path.
@@ -44,6 +44,10 @@ Existing `dan_form` extension/operator/data IDs remain compatible. After topolog
 changes, validate or explicitly repair the mapping before editing. Duplicate
 Source meshes do not inherit a live Controller binding; initialize a separate
 Controller for the new Source. The Controller is its Source's direct child.
+Initialization also works while the Source is in Edit Mode: DANP Form flushes
+the live Edit Mesh, creates the child Controller, and restores Edit Mode.
+If an older incomplete Init left a detached Controller, select that object and
+use **Unbind DANP, Keep Mesh** before rebuilding the Source's Controller.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
 [performance report](docs/testing/phase-02-edit-performance-report.md).
 Controller Edit uses Blender's native vertex/edge selection and G/R/S transforms.

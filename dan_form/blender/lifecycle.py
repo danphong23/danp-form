@@ -70,8 +70,8 @@ def _depsgraph_update_post(scene: bpy.types.Scene, depsgraph: bpy.types.Depsgrap
                     _validate_source_topology(source)
                     if modifier_changed:
                         bpy.context.scene.dan_form_status = (
-                            "Modifier chưa Apply: DANP vẫn ánh xạ theo mesh Source gốc; "
-                            "overlay được cập nhật theo hình hiển thị."
+                            "An unapplied modifier is active. DANP still maps to the Source mesh; "
+                            "the overlay follows the evaluated shape."
                         )
                 _guard_proxy_topology(source, controller)
                 if (controller_changed and controller.mode == "EDIT"
@@ -263,8 +263,8 @@ def _set_topology_paused_status(source) -> None:
     scene = getattr(bpy.context, "scene", None)
     if scene is not None:
         scene.dan_form_status = (
-            f"DANP tạm dừng: topology của '{source.name}' đã thay đổi. "
-            "Undo để khôi phục mapping hoặc Reset DANP để tạo control mới."
+            f"DANP Form is paused: the topology of '{source.name}' changed. "
+            "Use Undo to restore the mapping or Reset DANP to create new controls."
         )
 
 
