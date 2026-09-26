@@ -5552,16 +5552,17 @@ không ghi đè bằng chứng kiểm thử lịch sử.
   registration, test runner, package builder và tài liệu chuẩn.
 - Đọc và phân tích AST toàn bộ runtime; đối chiếu classes với `CLASSES`, các
   properties/keymaps với đường gọi, và manifest/package inventory.
-- Chạy release runner trước và sau sửa phạm vi nhỏ trên Blender 5.2.1 LTS,
-  Windows 11. Mỗi lần đạt 9/9 static suites và 10/10 background suites. Tổng
-  trạng thái runner là `INCOMPLETE` do GPU/P95/memory chưa được kiểm.
+- Tại thời điểm review ban đầu, release runner trên Blender 5.2.1 LTS,
+  Windows 11 đạt 9/9 static suites và 10/10 background suites. Checkpoint C01
+  mới nhất đạt 9/9 static và 11/11 background; runner vẫn `INCOMPLETE` do
+  GPU/P95/memory chưa được kiểm.
 - Chạy [audit probes](../../tests/audit_state_consistency.py) trong tiến trình
   background riêng với scene factory chưa lưu. Không mở, chỉnh hay lưu file
   Blender của người dùng. Observer bị guard trong các probe để kiểm riêng
   ngữ nghĩa lệnh; probe native ownership gọi trực tiếp cầu nối native.
-- 11 probe thất bại trước làm sạch; sau làm sạch có 2 PASS và 9 FAIL còn mở.
-  Đây là các ca tái hiện riêng, không phải 11 nguyên nhân độc lập đã bao phủ
-  mọi tổ hợp giao diện.
+- 11 probe thất bại trước làm sạch; checkpoint C01 mới nhất có 8 PASS và 3 FAIL.
+  Ba lỗi còn lại thuộc visibility/selection. Đây là các ca tái hiện riêng,
+  không phải 11 nguyên nhân độc lập đã bao phủ mọi tổ hợp giao diện.
 
 ## Phát hiện có bằng chứng thực thi
 
@@ -5570,14 +5571,14 @@ không ghi đè bằng chứng kiểm thử lịch sử.
 | R01 | P1 | Một transaction agent đang có preview 0,25 đơn vị. Caller thứ hai trước đây hủy transaction gốc. Guard hiện chỉ rollback transaction do operator đó mở; audit giữ transaction và preview (0 displacement loss). Blender background đôi khi chặn dispatch báo transform đang chạy, nên UI feedback trên phiên tương tác chưa được kiểm lại. | FIXED; UI dispatch detail pending |
 | R02 | P1 | `transform_session.begin` trước đây tái sử dụng transaction của agent. Native bridge hiện từ chối bằng `OPERATION_BUSY`; regression xác nhận owner và preview giữ nguyên. | FIXED; timer-race matrix pending |
 | R03 | P1 | `targets_json` trước đây nhận target cho Source vertex ngoài controller mapping và di chuyển ~0,300000006. Workflow hiện kiểm mapping đã chụp trước solve/writeback. | FIXED; malformed payload matrix pending |
-| R04 | P1 | Inject lỗi sau Delete trước đây làm mất một definition. Delete hiện rollback definitions/masks/revision/proxy mesh; regression inject xác nhận. Create/Sync/Hide/Reset/Repair vẫn cần rollback gates. | PARTIAL |
+| R04 | P1 | Structural control operations hiện snapshot/rollback definitions, masks, revision và proxy; Reset và Repair còn khôi phục Source ID layers/ownership. Fault injection hiện bao phủ Create/Sync/Hide/eye/Reveal/Delete/Reset/Repair. | FIXED; verify all gates on latest commit |
 | R05 | P2 | Native Hide Unselected làm ẩn 2 controller vertices trong khi trạng thái definition vẫn On. DANP Reveal trả FINISHED nhưng cả 2 vẫn ẩn. | OPEN |
 | R06 | P2 | H với 4 đỉnh thuộc A/B đang chọn chỉ xử lý A active; 2 đỉnh của B vẫn effective. | OPEN |
 | R07 | P2 | Chọn B rồi click mắt ẩn A: selection của B bị thay bằng rỗng dù B không bị ẩn. | OPEN |
 | R08 | P2 | Reader selection ngoài Edit Mode trả `set()` thay vì cặp vertex/edge sets. | FIXED, PASS |
 | R09 | P2 | WORLD transform trước đây chấp nhận matrix singular qua `inverted_safe`; hiện dùng phép nghịch đảo có kiểm lỗi và kiểm tra giá trị hữu hạn. Static regression từ chối matrix singular. | FIXED; Blender Matrix edge cases pending |
 | R10 | P2 | `bind()` chép dunder từ facade sang module: `dan_form.operators.__name__` và spec name đều thành `dan_form`. Metadata cho reload bị thay sai. | FIXED, PASS |
-| R11 | P2 | Unregister trước đây để transaction agent mở trong registry. Hiện preview được rollback về Operation Rest và registry được dọn; regression background xác nhận cả tọa độ. | FIXED; mid-register failure rollback pending |
+| R11 | P2 | Unregister trước đây để transaction agent mở trong registry. Hiện preview được rollback về Operation Rest và registry được dọn; mid-register failure cũng rollback class/property/handler/overlay/keymap. Background regressions xác nhận. | FIXED; timer race cleanup pending |
 
 P1 là lỗi về quyền ghi/transaction hoặc trạng thái dữ liệu dở dang. P2 là lỗi
 đúng đắn/tương tác hoặc lifecycle. Một lỗi được inject để kiểm failure atomicity
@@ -5722,9 +5723,17 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
   operation start, checks 3D shape and finite coordinates before solving/writing.
 - WORLD transforms reject non-finite or non-invertible matrices instead of
   producing incorrect targets through `inverted_safe`.
-- Delete Control snapshots definitions, masks, revision, proxy mesh/generation,
-  and proxy runtime snapshot. A rebuild failure restores the pre-operation state.
+- Create/Sync/Hide/eye/Reveal/Delete snapshot definitions, masks, revision,
+  proxy mesh/generation, and proxy runtime snapshot. An injected rebuild failure
+  restores the pre-operation state.
+- Reset postpones removing the old controller and owned face objects until a
+  replacement is complete. A failed rebuild restores Source properties, ID
+  layers, binding and controller.
+- Repair restores topology metadata, paused state, identity layers and proxy if
+  the rebuild fails after ID repair.
 - Unregister cancels an open preview to Operation Rest and clears runtime state.
+- Registration failure rolls back classes, properties, handlers, overlay and
+  keymaps registered earlier in the same attempt.
 - Added `live_operation_ownership.py` to the release runner and a singular-matrix
   regression to the core suite.
 
@@ -5734,10 +5743,13 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
   overall status `INCOMPLETE` because H08 GPU overlay review and P95/peak-memory
   measurement were not run. UI gate passes in its report remain historical
   evidence, not UI interaction on this revision.
-- Operation ownership regression: 5/5 assertions passed — second caller keeps
-  the preview; native bridge rejects a different caller; unmapped target does
-  not write; Delete rolls back after injected rebuild failure; unregister
-  restores and clears an active preview.
+- Operation/structure regression: 14/14 assertions passed — caller ownership,
+  unmapped target rejection, injected failures across Create/Sync/Hide/eye/
+  Reveal/Delete/Reset, unregister recovery, and successful Reset commit.
+- Topology recovery suite passed with additional injected Repair rebuild failure;
+  ID layers, metadata, paused state and proxy were restored before a real repair.
+- Runtime boundary suite passed with an injected registration failure after two
+  class registrations; no partial class/property/overlay state remained.
 - Consistency audit: 8 PASS, 3 FAIL. Remaining defects concern native
   Hide/Reveal reconciliation, multi-control Hide, and eye actions clearing
   unrelated selection. They are queued for C02.
@@ -5746,8 +5758,6 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 
 ## Remaining C01 scope
 
-R04 has failure-injection coverage for Delete only. Create, Sync, Hide, Reveal,
-Reset, and Repair still need rollback coverage. C01 also needs registration
-failure rollback, timer/exception race coverage, review/removal of historical
-operators, and module-boundary cleanup. This checkpoint does not mark C01/C02
-complete or the add-on ready for release.
+C01 still needs native timer/exception race coverage, timer shutdown on disable,
+review/removal of historical operators, and module-boundary cleanup. This
+checkpoint does not mark C01/C02 complete or the add-on ready for release.

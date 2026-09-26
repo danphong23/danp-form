@@ -16,9 +16,10 @@ def _remove_handler_instances(handler_list, callback) -> None:
             handler_list.remove(item)
 
 
-def register(api) -> None:
+def _register_impl(api, registered_classes) -> None:
     for cls in api.CLASSES:
         bpy.utils.register_class(cls)
+        registered_classes.append(cls)
     bpy.types.Scene.dan_form_source = PointerProperty(
         name="DANP Form Source", type=bpy.types.Object,
         poll=lambda _self, obj: obj.type == "MESH",
@@ -70,6 +71,51 @@ def register(api) -> None:
     # depsgraph observer owns synchronization after the native transform;
     # registering addon macros here changes normal Edit Mode semantics.
     api._register_control_keymaps()
+
+
+def register(api) -> None:
+    """Register the extension atomically when Blender fails mid-sequence."""
+    property_names = (
+        "dan_form_source", "dan_form_controller", "dan_form_status",
+        "dan_form_selected_control", "dan_form_control_items",
+        "dan_form_control_index", "dan_form_ui_source_uuid",
+        "dan_form_overlay_enabled", "dan_form_patches_enabled",
+        "dan_form_overlay_hidden", "dan_form_overlay_xray",
+        "dan_form_overlay_width", "dan_form_proportional_profile",
+        "dan_form_proportional_radius",
+    )
+    existing_properties = {
+        name for name in property_names if hasattr(bpy.types.Scene, name)
+    }
+    registered_classes = []
+    try:
+        _register_impl(api, registered_classes)
+    except Exception:
+        # Undo every partial side effect, retaining properties/classes that
+        # existed before this registration attempt.
+        for callback, handler_list in (
+            (api._depsgraph_update_post, bpy.app.handlers.depsgraph_update_post),
+            (api._undo_post, bpy.app.handlers.undo_post),
+            (api._redo_post, bpy.app.handlers.redo_post),
+            (api._load_post, bpy.app.handlers.load_post),
+        ):
+            _remove_handler_instances(handler_list, callback)
+        for cleanup in (api._unregister_control_keymaps,
+                        api._unregister_topology_keymaps,
+                        api._unregister_overlay):
+            try:
+                cleanup()
+            except (AttributeError, RuntimeError, TypeError):
+                pass
+        for name in property_names:
+            if name not in existing_properties and hasattr(bpy.types.Scene, name):
+                delattr(bpy.types.Scene, name)
+        for cls in reversed(registered_classes):
+            try:
+                bpy.utils.unregister_class(cls)
+            except RuntimeError:
+                pass
+        raise
 
 
 def unregister(api) -> None:

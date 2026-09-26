@@ -14,9 +14,17 @@
   operation start, checks 3D shape and finite coordinates before solving/writing.
 - WORLD transforms reject non-finite or non-invertible matrices instead of
   producing incorrect targets through `inverted_safe`.
-- Delete Control snapshots definitions, masks, revision, proxy mesh/generation,
-  and proxy runtime snapshot. A rebuild failure restores the pre-operation state.
+- Create/Sync/Hide/eye/Reveal/Delete snapshot definitions, masks, revision,
+  proxy mesh/generation, and proxy runtime snapshot. An injected rebuild failure
+  restores the pre-operation state.
+- Reset postpones removing the old controller and owned face objects until a
+  replacement is complete. A failed rebuild restores Source properties, ID
+  layers, binding and controller.
+- Repair restores topology metadata, paused state, identity layers and proxy if
+  the rebuild fails after ID repair.
 - Unregister cancels an open preview to Operation Rest and clears runtime state.
+- Registration failure rolls back classes, properties, handlers, overlay and
+  keymaps registered earlier in the same attempt.
 - Added `live_operation_ownership.py` to the release runner and a singular-matrix
   regression to the core suite.
 
@@ -26,10 +34,13 @@
   overall status `INCOMPLETE` because H08 GPU overlay review and P95/peak-memory
   measurement were not run. UI gate passes in its report remain historical
   evidence, not UI interaction on this revision.
-- Operation ownership regression: 5/5 assertions passed — second caller keeps
-  the preview; native bridge rejects a different caller; unmapped target does
-  not write; Delete rolls back after injected rebuild failure; unregister
-  restores and clears an active preview.
+- Operation/structure regression: 14/14 assertions passed — caller ownership,
+  unmapped target rejection, injected failures across Create/Sync/Hide/eye/
+  Reveal/Delete/Reset, unregister recovery, and successful Reset commit.
+- Topology recovery suite passed with additional injected Repair rebuild failure;
+  ID layers, metadata, paused state and proxy were restored before a real repair.
+- Runtime boundary suite passed with an injected registration failure after two
+  class registrations; no partial class/property/overlay state remained.
 - Consistency audit: 8 PASS, 3 FAIL. Remaining defects concern native
   Hide/Reveal reconciliation, multi-control Hide, and eye actions clearing
   unrelated selection. They are queued for C02.
@@ -38,8 +49,6 @@
 
 ## Remaining C01 scope
 
-R04 has failure-injection coverage for Delete only. Create, Sync, Hide, Reveal,
-Reset, and Repair still need rollback coverage. C01 also needs registration
-failure rollback, timer/exception race coverage, review/removal of historical
-operators, and module-boundary cleanup. This checkpoint does not mark C01/C02
-complete or the add-on ready for release.
+C01 still needs native timer/exception race coverage, timer shutdown on disable,
+review/removal of historical operators, and module-boundary cleanup. This
+checkpoint does not mark C01/C02 complete or the add-on ready for release.

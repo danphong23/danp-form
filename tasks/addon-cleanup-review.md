@@ -22,11 +22,12 @@ Tiến độ checkpoint 2026-09-26:
   bridge từ chối operation khác đang mở.
 - [x] R03/R09: target giới hạn vào mapping chụp đầu operation; matrix WORLD
   suy biến/non-finite bị từ chối.
-- [x] R04 Delete: failure khi rebuild rollback definitions, masks, revision và
-  proxy mesh; regression inject lỗi có trong release runner.
+- [x] R04 Create/Sync/Hide/eye/Reveal/Delete/Reset/Repair: failure sau mutation
+  nhưng trước proxy rebuild rollback state nguồn, revision và proxy; fault
+  injection được thêm vào Blender background suites.
 - [x] R11 unregister: preview đang mở được hủy về Operation Rest và dọn registry.
-- [ ] R04 cho Create/Sync/Hide/Reset/Repair; rollback mọi bước và registration
-  failure atomicity.
+- [x] Registration failure giữa lúc đăng ký class rollback class/property/handler/
+  overlay/keymap đã tạo một phần.
 - [ ] Timer race/exception matrix; historical operator removal; module split.
 
 Bằng chứng và giới hạn hiện tại ở
@@ -57,7 +58,8 @@ Gate C01:
 - [ ] Audit R01/R02/R03/R04/R09/R11 trở thành regression PASS.
 - [ ] Caller bị reject không ảnh hưởng preview của owner.
 - [ ] Không có write ngoài captured controller targets/scope.
-- [ ] Failure không để metadata/proxy/Source ghi dở; no-op không có revision mới.
+- [x] Failure injection không để metadata/proxy/Source ID ghi dở trong các
+  structural paths đã liệt kê; no-op giữ revision.
 - [ ] Shape Key/duplicate/topology/transform suites tiếp tục pass.
 - [ ] Mỗi commit ghi đúng fixture, actual result và giới hạn UI còn chưa chạy.
 

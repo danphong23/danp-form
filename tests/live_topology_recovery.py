@@ -80,6 +80,45 @@ def run():
     bpy.ops.ed.undo_push(message="Topology before DANP Repair")
     validation_result = bpy.ops.dan_form.validate_topology()
     check(validation_result == {"FINISHED"}, "Validate action previews a safe repair")
+    repair_props = {
+        key: source.get(key) for key in (
+            addon.CONTROLS_KEY, addon.HIDDEN_VIDS_KEY, addon.HIDDEN_EIDS_KEY,
+            addon.NETWORK_REVISION_KEY, addon.TOPOLOGY_KEY, addon.NEXT_VID_KEY,
+            addon.NEXT_EID_KEY, addon.TOPOLOGY_SNAPSHOT_KEY,
+            addon.TOPOLOGY_SNAPSHOT_FINGERPRINT_KEY,
+        ) if key in source
+    }
+    repair_id_values = {
+        name: [int(item.value) for item in source.data.attributes[name].data]
+        for name in (addon.VID_ATTR, addon.EID_ATTR)
+    }
+    repair_proxy = addon._transform_session.controller_positions(controller)
+    repair_rebuild = addon._operators._rebuild_proxy
+
+    def injected_repair_failure(*_args):
+        raise ValueError("INJECTED_PROXY_REBUILD_FAILURE")
+
+    addon._operators._rebuild_proxy = injected_repair_failure
+    try:
+        try:
+            failed_repair = bpy.ops.dan_form.repair_topology()
+        except RuntimeError as exc:
+            failed_repair = ({"CANCELLED"}
+                             if "INJECTED_PROXY_REBUILD_FAILURE" in str(exc) else set())
+    finally:
+        addon._operators._rebuild_proxy = repair_rebuild
+    restored_proxy = addon._transform_session.controller_positions(controller)
+    check(failed_repair == {"CANCELLED"}
+          and all(source.get(key) == value for key, value in repair_props.items())
+          and repair_id_values == {
+              name: [int(item.value) for item in source.data.attributes[name].data]
+              for name in repair_id_values
+          }
+          and set(restored_proxy) == set(repair_proxy)
+          and all((restored_proxy[vid] - co).length <= 1e-7
+                  for vid, co in repair_proxy.items())
+          and addon._topology_state(source)["state"] == "PAUSED",
+          "failed Repair rolls IDs, metadata and proxy back to the paused state")
     repair_result = bpy.ops.dan_form.repair_topology()
     check(repair_result == {"FINISHED"}, "Repair action rebuilds the DANP Controller")
     repaired = safe_preview

@@ -22,6 +22,38 @@ def run():
             raise AssertionError(label)
         checks.append(label)
 
+    def fault_injected_mutation(label, source, controller, action):
+        before = {
+            "controls": source.get(addon.CONTROLS_KEY),
+            "vertices": source.get(addon.HIDDEN_VIDS_KEY),
+            "edges": source.get(addon.HIDDEN_EIDS_KEY),
+            "revision": source.get(addon.NETWORK_REVISION_KEY),
+            "proxy": addon._transform_session.controller_positions(controller),
+        }
+        rebuild = addon._operators._rebuild_proxy
+
+        def injected_failure(*_args):
+            raise ValueError("INJECTED_PROXY_REBUILD_FAILURE")
+
+        addon._operators._rebuild_proxy = injected_failure
+        try:
+            try:
+                result = action()
+            except RuntimeError as exc:
+                result = {"CANCELLED"} if "INJECTED_PROXY_REBUILD_FAILURE" in str(exc) else set()
+        finally:
+            addon._operators._rebuild_proxy = rebuild
+        after = addon._transform_session.controller_positions(controller)
+        check(result == {"CANCELLED"}
+              and source.get(addon.CONTROLS_KEY) == before["controls"]
+              and source.get(addon.HIDDEN_VIDS_KEY) == before["vertices"]
+              and source.get(addon.HIDDEN_EIDS_KEY) == before["edges"]
+              and source.get(addon.NETWORK_REVISION_KEY) == before["revision"]
+              and set(after) == set(before["proxy"])
+              and all((after[vid] - co).length < 1e-7
+                      for vid, co in before["proxy"].items()),
+              label)
+
     addon.register()
     addon._runtime.SYNC_GUARD = True
     mesh = bpy.data.meshes.new("Operation ownership fixture")
@@ -97,33 +129,87 @@ def run():
               "unmapped target is rejected before touching the current preview")
         agent.cancel_operation(handle["operation_id"])
 
-        definitions_before = source.get(addon.CONTROLS_KEY)
-        revision_before = source.get(addon.NETWORK_REVISION_KEY)
-        proxy_before = addon._transform_session.controller_positions(controller)
-        rebuild = addon._operators._rebuild_proxy
+        # Inject a rebuild failure in each mutation path after it has changed
+        # persistent definitions or masks but before the proxy can be accepted.
+        bpy.ops.object.mode_set(mode="OBJECT")
+        addon._select_only(bpy.context, source)
+        bpy.ops.object.mode_set(mode="EDIT")
+        source_vids, _ = addon._source_id_maps(source)
+        by_index = {index: vid for vid, index in source_vids.items()}
+        source_edges = addon._source_edge_vids(source)
+        added_vertices = {by_index[index] for index in (4, 5)}
+        addon._select_source_ids(source, added_vertices, {
+            eid for eid, endpoints in source_edges.items()
+            if set(endpoints) == added_vertices
+        })
+        fault_injected_mutation(
+            "failed Create rolls back definitions, revision and proxy",
+            source, controller,
+            lambda: bpy.ops.dan_form.create_control(control_name="Injected"),
+        )
 
-        def injected_failure(*_args):
-            raise ValueError("INJECTED_PROXY_REBUILD_FAILURE")
+        addon._activate_ui_control(bpy.context.scene, control["control_uuid"])
+        addon._select_source_ids(source, added_vertices, {
+            eid for eid, endpoints in source_edges.items()
+            if set(endpoints) == added_vertices
+        })
+        fault_injected_mutation(
+            "failed Sync rolls back membership, revision and proxy",
+            source, controller, lambda: bpy.ops.dan_form.sync_control(),
+        )
 
-        addon._operators._rebuild_proxy = injected_failure
-        try:
-            try:
-                delete_result = bpy.ops.dan_form.delete_control(
-                    control_uuid=control["control_uuid"])
-            except RuntimeError as exc:
-                delete_result = {"CANCELLED"} if "INJECTED_PROXY_REBUILD_FAILURE" in str(exc) else set()
-        finally:
-            addon._operators._rebuild_proxy = rebuild
-        proxy_after = addon._transform_session.controller_positions(controller)
-        check(delete_result == {"CANCELLED"}
-              and source.get(addon.CONTROLS_KEY) == definitions_before
-              and source.get(addon.NETWORK_REVISION_KEY) == revision_before
-              and addon._controls(source)[0]["control_uuid"] == control["control_uuid"]
-              and set(proxy_after) == set(proxy_before)
-              and all((proxy_after[vid] - co).length < 1e-7
-                      for vid, co in proxy_before.items()),
-              "failed Delete rolls back definitions, revision and proxy data")
+        bpy.ops.object.mode_set(mode="OBJECT")
+        addon._select_only(bpy.context, controller)
+        bpy.ops.object.mode_set(mode="EDIT")
+        control_vertices, control_edges = addon._control_effective(source, control)
+        addon._activate_ui_control(bpy.context.scene, control["control_uuid"])
+        addon._select_proxy_ids(controller, control_vertices, control_edges)
+        fault_injected_mutation(
+            "failed Hide rolls back masks, revision and proxy",
+            source, controller, lambda: bpy.ops.dan_form.hide_selected(),
+        )
+        fault_injected_mutation(
+            "failed eye action rolls back definition visibility and proxy",
+            source, controller,
+            lambda: bpy.ops.dan_form.set_control_visibility(
+                control_uuid=control["control_uuid"], reveal=False),
+        )
 
+        # Establish hidden state normally, then inject Reveal's rebuild failure.
+        bpy.ops.dan_form.set_control_visibility(
+            control_uuid=control["control_uuid"], reveal=False)
+        fault_injected_mutation(
+            "failed Reveal rolls back masks, revision and proxy",
+            source, controller, lambda: bpy.ops.dan_form.reveal(),
+        )
+
+        bpy.ops.object.mode_set(mode="OBJECT")
+        addon._select_only(bpy.context, source)
+        source_uuid_before_reset = source.get(addon.SOURCE_UUID_KEY)
+        fault_injected_mutation(
+            "failed Reset restores definitions, masks, revision and proxy",
+            source, controller, lambda: bpy.ops.dan_form.reset(),
+        )
+        check(addon._find_controller(source) is controller
+              and source.get(addon.SOURCE_UUID_KEY) == source_uuid_before_reset
+              and source.data.attributes.get(addon.VID_ATTR) is not None
+              and source.data.attributes.get(addon.EID_ATTR) is not None,
+              "failed Reset preserves original binding and Source identity layers")
+
+        addon._select_only(bpy.context, controller)
+        bpy.ops.object.mode_set(mode="EDIT")
+
+        fault_injected_mutation(
+            "failed Delete rolls back definitions, revision and proxy",
+            source, controller,
+            lambda: bpy.ops.dan_form.delete_control(
+                control_uuid=control["control_uuid"]),
+        )
+        check(addon._controls(source)[0]["control_uuid"] == control["control_uuid"],
+              "Delete rollback preserves the original control identity")
+
+        bpy.ops.dan_form.reveal()
+        addon._select_proxy_ids(controller, control_vertices, control_edges)
         handle = agent.begin_operation()
         expected_rest = {vid: co.copy() for vid, co in
                          addon._DANP_TRANSACTIONS[source.as_pointer()]["p0"].items()}
@@ -133,6 +219,25 @@ def run():
         check(not addon._DANP_TRANSACTIONS
               and max((restored[vid] - co).length for vid, co in expected_rest.items()) < 1e-7,
               "unregister cancels the active preview and clears transaction state")
+
+        addon.register()
+        if bpy.context.view_layer.objects.active is not None \
+                and bpy.context.view_layer.objects.active.mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+        addon._select_only(bpy.context, source)
+        old_controller = addon._find_controller(source)
+        old_controller_name = old_controller.name
+        old_uuid = source.get(addon.SOURCE_UUID_KEY)
+        reset_result = bpy.ops.dan_form.reset()
+        new_controller = addon._find_controller(source)
+        check(reset_result == {"FINISHED"} and new_controller is not None
+              and new_controller is not old_controller
+              and new_controller.parent == source
+              and old_controller_name not in bpy.data.objects
+              and source.get(addon.SOURCE_UUID_KEY) != old_uuid
+              and not addon._controls(source),
+              "successful Reset commits a new bound controller after construction")
+        addon.unregister()
         result = {"status": "PASS", "checks": checks,
                   "blender_version": bpy.app.version_string}
     finally:

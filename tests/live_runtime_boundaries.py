@@ -59,6 +59,66 @@ def run():
         check(not addon._MAPPING_CACHE and not addon._PATCH_CACHE,
               "load invalidates derived caches")
         addon.unregister()
+        original_register_class = bpy.utils.register_class
+        register_attempts = 0
+
+        def injected_register_failure(cls):
+            nonlocal register_attempts
+            register_attempts += 1
+            if register_attempts == 3:
+                raise RuntimeError("INJECTED_REGISTER_FAILURE")
+            return original_register_class(cls)
+
+        bpy.utils.register_class = injected_register_failure
+        registration_failed = False
+        try:
+            addon.register()
+        except RuntimeError as exc:
+            registration_failed = str(exc) == "INJECTED_REGISTER_FAILURE"
+        finally:
+            bpy.utils.register_class = original_register_class
+        registered_classes = [cls.__name__ for cls in addon.CLASSES
+                              if hasattr(bpy.types, cls.__name__)]
+        scene_props = (
+            "dan_form_source", "dan_form_controller", "dan_form_status",
+            "dan_form_selected_control", "dan_form_control_items",
+            "dan_form_control_index", "dan_form_ui_source_uuid",
+            "dan_form_overlay_enabled", "dan_form_patches_enabled",
+            "dan_form_overlay_hidden", "dan_form_overlay_xray",
+            "dan_form_overlay_width", "dan_form_proportional_profile",
+            "dan_form_proportional_radius",
+        )
+        check(registration_failed and not registered_classes
+              and not any(hasattr(bpy.types.Scene, name) for name in scene_props)
+              and overlay.OVERLAY_HANDLE is None
+              and not addon._runtime.DANP_TRANSACTIONS,
+              "failed mid-registration rolls back classes, properties and overlay")
+        original_register_controls = addon._register_control_keymaps
+
+        def injected_late_registration_failure():
+            original_register_controls()
+            raise RuntimeError("INJECTED_LATE_REGISTER_FAILURE")
+
+        addon._register_control_keymaps = injected_late_registration_failure
+        late_failure_seen = False
+        try:
+            addon.register()
+        except RuntimeError as exc:
+            late_failure_seen = str(exc) == "INJECTED_LATE_REGISTER_FAILURE"
+        finally:
+            addon._register_control_keymaps = original_register_controls
+        remaining_handlers = any(
+            callback in handler_list
+            for handler_list, callback in handler_specs
+        )
+        check(late_failure_seen
+              and not any(hasattr(bpy.types, cls.__name__) for cls in addon.CLASSES)
+              and not any(hasattr(bpy.types.Scene, name) for name in scene_props)
+              and not remaining_handlers
+              and not addon._runtime.TOPOLOGY_KEYMAPS
+              and not addon._runtime.CONTROL_KEYMAPS
+              and overlay.OVERLAY_HANDLE is None,
+              "late registration failure removes handlers, keymaps and overlay")
         result = {"status": "PASS", "checks": checks,
                   "blender_version": bpy.app.version_string}
     finally:

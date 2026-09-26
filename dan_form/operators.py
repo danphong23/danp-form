@@ -88,7 +88,9 @@ def _friendly_error(exc: Exception) -> str:
 def _capture_control_structure(source, controller):
     """Capture persisted control state and proxy data for a structural rollback."""
     source_keys = (CONTROLS_KEY, HIDDEN_VIDS_KEY, HIDDEN_EIDS_KEY,
-                   NETWORK_REVISION_KEY)
+                   NETWORK_REVISION_KEY, TOPOLOGY_KEY, NEXT_VID_KEY,
+                   NEXT_EID_KEY, TOPOLOGY_SNAPSHOT_KEY,
+                   TOPOLOGY_SNAPSHOT_FINGERPRINT_KEY)
     controller_keys = (PROXY_GENERATION_KEY,)
     pointer = controller.as_pointer() if controller is not None else None
     return {
@@ -141,6 +143,69 @@ def _discard_control_structure_snapshot(snapshot):
     mesh = snapshot.get("controller_data")
     if mesh is not None and mesh.users == 0 and bpy.data.meshes.get(mesh.name) is mesh:
         bpy.data.meshes.remove(mesh)
+
+
+def _atomic_control_structure(source, controller, mutation):
+    """Run one control/mask mutation with rollback across storage and proxy."""
+    snapshot = _capture_control_structure(source, controller)
+    try:
+        result = mutation()
+    except Exception:
+        _restore_control_structure(source, controller, snapshot)
+        raise
+    _discard_control_structure_snapshot(snapshot)
+    return result
+
+
+def _capture_source_id_layers(source):
+    """Capture persistent vertex/edge IDs from the authoritative mesh mode."""
+    result = {}
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        for name, collection, domain in (
+            (VID_ATTR, bm.verts, "POINT"), (EID_ATTR, bm.edges, "EDGE"),
+        ):
+            layer = collection.layers.int.get(name)
+            if layer is not None:
+                result[name] = ("INT", domain,
+                                [int(item[layer]) for item in collection])
+    else:
+        for name in (VID_ATTR, EID_ATTR):
+            attribute = source.data.attributes.get(name)
+            if attribute is not None:
+                result[name] = (attribute.data_type, attribute.domain,
+                                [int(item.value) for item in attribute.data])
+    return result
+
+
+def _restore_source_id_layers(source, saved):
+    if source.mode == "EDIT":
+        bm = bmesh.from_edit_mesh(source.data)
+        for name, collection in ((VID_ATTR, bm.verts), (EID_ATTR, bm.edges)):
+            values = saved.get(name)
+            layer = collection.layers.int.get(name)
+            if values is None:
+                if layer is not None:
+                    collection.layers.int.remove(layer)
+                continue
+            if layer is None:
+                layer = collection.layers.int.new(name)
+            if len(collection) != len(values[2]):
+                raise ValueError("SOURCE_TOPOLOGY_CHANGED_DURING_ROLLBACK")
+            for item, value in zip(collection, values[2]):
+                item[layer] = value
+        bmesh.update_edit_mesh(source.data, loop_triangles=False, destructive=False)
+        return
+    for name in (VID_ATTR, EID_ATTR):
+        attribute = source.data.attributes.get(name)
+        if attribute is not None:
+            source.data.attributes.remove(attribute)
+    for name, (data_type, domain, values) in saved.items():
+        attribute = source.data.attributes.new(name=name, type=data_type, domain=domain)
+        if len(attribute.data) != len(values):
+            raise ValueError("SOURCE_TOPOLOGY_CHANGED_DURING_ROLLBACK")
+        for item, value in zip(attribute.data, values):
+            item.value = value
 
 
 _SOURCE_DANP_KEYS = (
@@ -423,7 +488,7 @@ class DANFORM_OT_sync(bpy.types.Operator):
             _set_scene_context(context, source, controller)
             context.scene.dan_form_status = f"Synced: {controller.name}"
             return {"FINISHED"}
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -465,10 +530,17 @@ class DANFORM_OT_repair_topology(bpy.types.Operator):
 
     def execute(self, context):
         source, controller = _context_source(context)
+        snapshot = None
+        id_attributes = {}
+        topology_state = None
         try:
             _require_structural_idle(source)
             if source is None or controller is None:
                 raise ValueError("SOURCE_OR_CONTROLLER_MISSING")
+            snapshot = _capture_control_structure(source, controller)
+            pointer = source.as_pointer()
+            topology_state = copy.deepcopy(runtime.TOPOLOGY_STATES.get(pointer))
+            id_attributes = _capture_source_id_layers(source)
             report = _repair_source_topology(source)
             _update_revision(source)
             _rebuild_proxy(source, controller)
@@ -478,8 +550,17 @@ class DANFORM_OT_repair_topology(bpy.types.Operator):
                        f"+{report['added_edges']} edges; controls and Shape Keys preserved")
             context.scene.dan_form_status = summary
             self.report({"INFO"}, summary)
+            _discard_control_structure_snapshot(snapshot)
+            snapshot = None
             return {"FINISHED"}
-        except (AttributeError, RuntimeError, ValueError) as exc:
+        except Exception as exc:
+            if snapshot is not None:
+                _restore_control_structure(source, controller, snapshot)
+                _restore_source_id_layers(source, id_attributes)
+                if topology_state is None:
+                    runtime.TOPOLOGY_STATES.pop(source.as_pointer(), None)
+                else:
+                    runtime.TOPOLOGY_STATES[source.as_pointer()] = topology_state
             message = _friendly_error(exc)
             context.scene.dan_form_status = message
             self.report({"ERROR"}, message)
@@ -624,19 +705,23 @@ class DANFORM_OT_sync_control(bpy.types.Operator):
             if old_membership == new_membership:
                 context.scene.dan_form_status = "Control membership unchanged"
                 return {"FINISHED"}
-            control["vertex_ids"] = new_membership[0]
-            control["edge_ids"] = new_membership[1]
-            _json_set(source, CONTROLS_KEY, controls)
-            _prune_masks_after_remove(source)
-            _update_revision(source)
-            if controller is not None:
-                _rebuild_proxy(source, controller)
-                _sync_proxy(source, controller)
+
+            def mutate():
+                control["vertex_ids"] = new_membership[0]
+                control["edge_ids"] = new_membership[1]
+                _json_set(source, CONTROLS_KEY, controls)
+                _prune_masks_after_remove(source)
+                _update_revision(source)
+                if controller is not None:
+                    _rebuild_proxy(source, controller)
+                    _sync_proxy(source, controller)
+
+            _atomic_control_structure(source, controller, mutate)
             _set_scene_context(context, source, controller)
             context.scene.dan_form_status = f"Synced {control.get('name', 'Control')}"
             _sync_context_ui_list(context)
             return {"FINISHED"}
-        except (ValueError, RuntimeError) as exc:
+        except Exception as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -766,20 +851,24 @@ class DANFORM_OT_create_control(bpy.types.Operator):
             if region:
                 definition["region"] = region
             controls.append(definition)
-            _json_set(source, CONTROLS_KEY, controls)
-            _update_revision(source)
             controller = controller or _find_controller(source)
             if controller is None:
                 raise ValueError("CONTROLLER_MISSING")
-            _rebuild_proxy(source, controller)
-            _sync_proxy(source, controller)
+
+            def mutate():
+                _json_set(source, CONTROLS_KEY, controls)
+                _update_revision(source)
+                _rebuild_proxy(source, controller)
+                _sync_proxy(source, controller)
+
+            _atomic_control_structure(source, controller, mutate)
             _set_scene_context(context, source, controller)
             scene.dan_form_selected_control = controls[-1]["control_uuid"]
             scene.dan_form_status = f"Created {controls[-1]['name']} ({len(vertex_ids)}V/{len(edge_ids)}E)"
             _sync_context_ui_list(context)
             self.report({"INFO"}, scene.dan_form_status)
             return {"FINISHED"}
-        except ValueError as exc:
+        except Exception as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -946,9 +1035,13 @@ class DANFORM_OT_set_control_visibility(bpy.types.Operator):
         active = context.view_layer.objects.active
         was_controller_edit = active == controller and controller.mode == "EDIT"
         try:
-            changed = _mutate_control_visibility(source, control, self.reveal)
-            if changed:
-                _rebuild_proxy(source, controller)
+            def mutate():
+                changed_state = _mutate_control_visibility(source, control, self.reveal)
+                if changed_state:
+                    _rebuild_proxy(source, controller)
+                return changed_state
+
+            changed = _atomic_control_structure(source, controller, mutate)
             _set_scene_context(context, source, controller)
             context.scene.dan_form_selected_control = self.control_uuid
             context.scene.dan_form_status = ("Revealed " if self.reveal else "Hidden ") + control.get("name", "Control")
@@ -957,7 +1050,7 @@ class DANFORM_OT_set_control_visibility(bpy.types.Operator):
                 _select_proxy_ids(controller, effective_vertices, effective_edges)
             _sync_context_ui_list(context)
             return {"FINISHED"}
-        except (ValueError, RuntimeError) as exc:
+        except Exception as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -998,19 +1091,18 @@ class DANFORM_OT_delete_control(bpy.types.Operator):
         remaining = [item for item in controls if item.get("control_uuid") != self.control_uuid]
         if deleted_index < 0:
             return {"CANCELLED"}
-        snapshot = _capture_control_structure(source, controller)
         try:
-            _json_set(source, CONTROLS_KEY, remaining)
-            _prune_masks_after_remove(source)
-            _update_revision(source)
-            if controller is not None:
-                _rebuild_proxy(source, controller)
+            def mutate():
+                _json_set(source, CONTROLS_KEY, remaining)
+                _prune_masks_after_remove(source)
+                _update_revision(source)
+                if controller is not None:
+                    _rebuild_proxy(source, controller)
+
+            _atomic_control_structure(source, controller, mutate)
         except Exception as exc:
-            _restore_control_structure(source, controller, snapshot)
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
-        else:
-            _discard_control_structure_snapshot(snapshot)
         _set_scene_context(context, source, controller)
         context.scene.dan_form_selected_control = ""
         context.scene.dan_form_status = "Control deleted"
@@ -1045,14 +1137,20 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
             else:
                 edge_ids.clear()
             active_control = _active_control(context, source)
-            if active_control is not None:
-                changed = _mutate_control_masks(
-                    source, active_control, vertex_ids, edge_ids, reveal=False
-                )
-            else:
-                changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=False)
+
+            def mutate():
+                if active_control is not None:
+                    changed_state = _mutate_control_masks(
+                        source, active_control, vertex_ids, edge_ids, reveal=False
+                    )
+                else:
+                    changed_state = _mutate_masks(source, vertex_ids, edge_ids, reveal=False)
+                if changed_state:
+                    _rebuild_proxy(source, controller)
+                return changed_state
+
+            changed = _atomic_control_structure(source, controller, mutate)
             if changed:
-                _rebuild_proxy(source, controller)
                 context.scene.dan_form_status = f"Hidden {len(vertex_ids)}V/{len(edge_ids)}E"
             else:
                 context.scene.dan_form_status = "No visibility change"
@@ -1060,7 +1158,7 @@ class DANFORM_OT_hide_selected(bpy.types.Operator):
             if controller.mode == "EDIT":
                 _select_proxy_ids(controller, vertex_ids - _hidden(source, HIDDEN_VIDS_KEY), edge_ids - _hidden(source, HIDDEN_EIDS_KEY))
             return {"FINISHED"}
-        except ValueError as exc:
+        except Exception as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -1085,14 +1183,24 @@ class DANFORM_OT_reveal(bpy.types.Operator):
             payload = json.loads(self.ids_json) if self.ids_json else {}
             vertex_ids = {int(item) for item in payload.get("vertex_ids", [])}
             edge_ids = {int(item) for item in payload.get("edge_ids", [])}
-            changed = _mutate_masks(source, vertex_ids, edge_ids, reveal=True)
-            if changed:
-                _rebuild_proxy(source, controller)
+
+            def mutate():
+                changed_state = _mutate_masks(source, vertex_ids, edge_ids, reveal=True)
+                if changed_state:
+                    _rebuild_proxy(source, controller)
+                return changed_state
+
+            changed = _atomic_control_structure(source, controller, mutate)
             context.scene.dan_form_status = "Revealed all" if not vertex_ids and not edge_ids else "Revealed selection"
             _set_scene_context(context, source, controller)
             return {"FINISHED"}
-        except (ValueError, TypeError, json.JSONDecodeError) as exc:
-            self.report({"ERROR"}, f"INVALID_REVEAL_IDS: {exc}")
+        except Exception as exc:
+            message = (
+                "The reveal request is invalid. Check the vertex and edge IDs."
+                if isinstance(exc, (json.JSONDecodeError, TypeError))
+                else _friendly_error(exc)
+            )
+            self.report({"ERROR"}, message)
             return {"CANCELLED"}
 
 
@@ -1224,22 +1332,26 @@ class DANFORM_OT_reset(bpy.types.Operator):
             return {"CANCELLED"}
         was_edit = source.mode == "EDIT"
         old_uuid = str(source.get(SOURCE_UUID_KEY, ""))
+        source_properties = {
+            key: copy.deepcopy(source.get(key))
+            for key in _SOURCE_DANP_KEYS if key in source
+        }
+        source_attributes = _capture_source_id_layers(source)
+        old_controller_marker = controller.get(CONTROLLER_KEY) if controller is not None else None
+        active_control_before = _ACTIVE_CONTROL_UUIDS.get(old_uuid)
+        return_mode_before = _RETURN_MODES.get(old_uuid)
+        provenance_before = runtime.INIT_TARGET_PROVENANCE.get(source.as_pointer())
+        owned_faces = [obj for obj in bpy.data.objects
+                       if obj.get(FACE_SOURCE_UUID_KEY) == old_uuid]
+        fresh = None
         if was_edit:
             bpy.ops.object.mode_set(mode="OBJECT")
         try:
             _discard_source_runtime(source)
-            # Remove only explicitly DANP-owned runtime objects.  Face assets
-            # without the ownership marker remain untouched user data.
-            owned = [obj for obj in bpy.data.objects
-                     if obj.get(FACE_SOURCE_UUID_KEY) == old_uuid]
             if controller is not None:
-                owned.append(controller)
-            for obj in list(dict.fromkeys(owned)):
-                mesh = getattr(obj, "data", None)
-                _PROXY_SNAPSHOTS.pop(obj.as_pointer(), None)
-                bpy.data.objects.remove(obj, do_unlink=True)
-                if mesh is not None and getattr(mesh, "users", 0) == 0 and bpy.data.meshes.get(mesh.name) is mesh:
-                    bpy.data.meshes.remove(mesh)
+                # Preserve the old object until the replacement is complete.
+                # Its marker is temporarily removed to avoid ambiguous binding.
+                controller.pop(CONTROLLER_KEY, None)
             for name in (VID_ATTR, EID_ATTR):
                 attr = source.data.attributes.get(name)
                 if attr is not None:
@@ -1274,12 +1386,56 @@ class DANFORM_OT_reset(bpy.types.Operator):
             _select_only(context, source)
             if was_edit:
                 bpy.ops.object.mode_set(mode="EDIT")
+            # Commit replacement only after source mapping, proxy and UI bind
+            # have succeeded. DANP-owned face assets are left untouched on
+            # every earlier failure path.
+            for obj in [*owned_faces, *([controller] if controller is not None else [])]:
+                if obj is None or obj.name not in bpy.data.objects:
+                    continue
+                mesh_data = getattr(obj, "data", None)
+                _PROXY_SNAPSHOTS.pop(obj.as_pointer(), None)
+                bpy.data.objects.remove(obj, do_unlink=True)
+                if (mesh_data is not None and mesh_data.users == 0
+                        and bpy.data.meshes.get(mesh_data.name) is mesh_data):
+                    bpy.data.meshes.remove(mesh_data)
             context.scene.dan_form_status = (
                 f"DANP reset: created a new mapping for the current topology of {source.name}"
             )
             self.report({"INFO"}, "DANP reset complete; current mesh topology is now the mapping source")
             return {"FINISHED"}
-        except (RuntimeError, ValueError) as exc:
+        except Exception as exc:
+            if fresh is not None and fresh.name in bpy.data.objects:
+                mesh_data = fresh.data
+                _PROXY_SNAPSHOTS.pop(fresh.as_pointer(), None)
+                bpy.data.objects.remove(fresh, do_unlink=True)
+                if mesh_data.users == 0 and bpy.data.meshes.get(mesh_data.name) is mesh_data:
+                    bpy.data.meshes.remove(mesh_data)
+            _restore_source_id_layers(source, source_attributes)
+            for key in _SOURCE_DANP_KEYS:
+                if key in source:
+                    del source[key]
+            for key, value in source_properties.items():
+                source[key] = value
+            if controller is not None and controller.name in bpy.data.objects:
+                if old_controller_marker is not None:
+                    controller[CONTROLLER_KEY] = old_controller_marker
+                _remember_binding(source, controller)
+            _ACTIVE_CONTROL_UUIDS.pop(old_uuid, None)
+            if active_control_before is not None:
+                _ACTIVE_CONTROL_UUIDS[old_uuid] = active_control_before
+            _RETURN_MODES.pop(old_uuid, None)
+            if return_mode_before is not None:
+                _RETURN_MODES[old_uuid] = return_mode_before
+            if provenance_before is not None:
+                runtime.INIT_TARGET_PROVENANCE[source.as_pointer()] = provenance_before
+            _MAPPING_CACHE.pop(source.as_pointer(), None)
+            _NETWORK_CACHE.pop(source.as_pointer(), None)
+            _invalidate_patch_cache(source)
+            _OVERLAY_CACHE.clear()
+            _set_scene_context(context, source, controller)
+            _select_only(context, source)
+            if was_edit:
+                bpy.ops.object.mode_set(mode="EDIT")
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -2065,18 +2221,27 @@ class DANFORM_OT_toggle_viewport_controls(bpy.types.Operator):
         source, controller = _context_source(context)
         visible_vertices, visible_edges = _effective_proxy_elements(source)
         hide = bool(visible_vertices or visible_edges)
-        if hide:
-            edges, nodes = set(), set()
-            for control in _controls(source):
-                control_edges, control_nodes = _control_intent(source, control)
-                edges.update(control_edges)
-                nodes.update(control_nodes)
-            changed = _mutate_masks(source, nodes, edges, reveal=False)
-        else:
-            changed = _mutate_masks(source, set(), set(), reveal=True)
+
+        def mutate():
+            if hide:
+                edges, nodes = set(), set()
+                for control in _controls(source):
+                    control_edges, control_nodes = _control_intent(source, control)
+                    edges.update(control_edges)
+                    nodes.update(control_nodes)
+                changed_state = _mutate_masks(source, nodes, edges, reveal=False)
+            else:
+                changed_state = _mutate_masks(source, set(), set(), reveal=True)
+            if changed_state:
+                _rebuild_proxy(source, controller)
+            return changed_state
+
+        try:
+            changed = _atomic_control_structure(source, controller, mutate)
+        except (ValueError, RuntimeError) as exc:
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
         controller.hide_set(False, view_layer=context.view_layer)
-        if changed:
-            _rebuild_proxy(source, controller)
         _sync_context_ui_list(context)
         context.scene.dan_form_status = "Hidden all controls" if hide else "Revealed all controls"
         _tag_viewport_redraw(context)
