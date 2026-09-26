@@ -110,6 +110,7 @@ def test_action_operator_domains_have_explicit_bindings() -> None:
                  "_shape_key_operators", "_navigation_operators"):
         assert name in operators
     assert "module.bind(bindings)" in operators
+    assert '"_friendly_error"' in operators.split("__all__ =", 1)[1]
 
 
 def test_danp_classes_are_registered_or_not_defined() -> None:

@@ -426,6 +426,7 @@ __all__ = [
     "bind",
     "CLASSES",
     "_clear_duplicate_source_state",
+    "_friendly_error",
     "DANFORM_PG_ControlItem",
     "DANFORM_UL_controls",
     "DANFORM_MT_control_menu",

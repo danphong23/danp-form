@@ -237,6 +237,51 @@ def run():
                          addon._transform_session.controller_positions(controller)) <= 1e-7,
               "cancel restores Controller exactly")
 
+        # Timer registration failure must cancel the session it opened and
+        # remove every runtime handle instead of leaving a hidden busy lock.
+        timer_source_before = {
+            key: value.copy() for key, value in addon._source_positions(source).items()
+        }
+        original_timer_register = bpy.app.timers.register
+
+        def injected_timer_registration_failure(*_args, **_kwargs):
+            raise RuntimeError("INJECTED_TIMER_REGISTER_FAILURE")
+
+        bpy.app.timers.register = injected_timer_registration_failure
+        try:
+            lifecycle._observe_native_controller_transform(source, controller)
+        finally:
+            bpy.app.timers.register = original_timer_register
+        source_ptr = source.as_pointer()
+        check(source_ptr not in addon._NATIVE_TRANSFORM_SESSIONS
+              and source_ptr not in addon._DANP_TRANSACTIONS
+              and source_ptr not in addon._runtime.NATIVE_TRANSFORM_TIMERS,
+              "timer registration failure rolls back the owned native session")
+
+        # A callback exception also has to close its owner transaction. Invoke
+        # the timer body directly so the failure point is deterministic, then
+        # remove the scheduled callback just as Blender would after None.
+        lifecycle._observe_native_controller_transform(source, controller)
+        timer_callback = addon._runtime.NATIVE_TRANSFORM_TIMERS[source_ptr]
+        original_controller_positions = addon._transform_session.controller_positions
+
+        def injected_controller_read_failure(_controller):
+            raise RuntimeError("INJECTED_TIMER_CALLBACK_FAILURE")
+
+        addon._transform_session.controller_positions = injected_controller_read_failure
+        try:
+            callback_result = lifecycle._native_transform_timer(source_ptr)
+        finally:
+            addon._transform_session.controller_positions = original_controller_positions
+            if bpy.app.timers.is_registered(timer_callback):
+                bpy.app.timers.unregister(timer_callback)
+        check(callback_result is None
+              and source_ptr not in addon._NATIVE_TRANSFORM_SESSIONS
+              and source_ptr not in addon._DANP_TRANSACTIONS
+              and source_ptr not in addon._runtime.NATIVE_TRANSFORM_TIMERS
+              and _max_delta(timer_source_before, addon._source_positions(source)) <= 1e-7,
+              "timer callback exception rolls back geometry and clears owned state")
+
         report.update({
             "status": "PASS",
             "native_result": sorted(native_result),
