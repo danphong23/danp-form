@@ -1,0 +1,49 @@
+{
+  "status": "PASS_FUNCTIONAL_CANDIDATE",
+  "release_certified": false,
+  "metadata": {
+    "addon_version": "0.5.36",
+    "blender_version": "5.2.1 LTS",
+    "source_commit": "518b095909402afc0327c049db8d3828b226b929",
+    "release_runner_code_commit": "71f84151f3c1a6d55983e647a5213fb68759539f",
+    "archive_member_count": 146,
+    "archive_sha256": "c5af60203765804ef43951198aef4fed2d2beff4ebb7c33487bdf6ec183a0bd4",
+    "archive_retained_in_repository": false
+  },
+  "package_validation": {
+    "status": "PASS",
+    "checks": [
+      "ZIP integrity and unique paths",
+      "required extension root files including license and third-party notices",
+      "matching manifest and bl_info version",
+      "no tests, bytecode, cache directories, or path traversal members"
+    ]
+  },
+  "blender_smoke": {
+    "status": "PASS",
+    "blender_version": "5.2.1 LTS",
+    "checks": [
+      "archive extracts into isolated temporary extension directory",
+      "extracted package imports",
+      "add-on register succeeds",
+      "add-on unregister succeeds"
+    ],
+    "temporary_archive_removed": true
+  },
+  "release_gates": {
+    "report": "2026-09-26-release-gates-c02-license.json",
+    "static_suites": "9/9 PASS",
+    "blender_background_suites": "11/11 PASS",
+    "overall": "INCOMPLETE",
+    "remaining": [
+      "GPU-backed overlay review",
+      "representative UI P95 and peak-memory measurement",
+      "C02 Blender UI keymap/visibility Undo-Redo/save-reopen regression",
+      "maintainer copyright-holder attribution before public release"
+    ]
+  },
+  "notes": [
+    "The ZIP was built from the recorded source commit in a temporary directory and deleted after validation.",
+    "This is an installable functional candidate, not a performance-certified or public-release certification."
+  ]
+}
