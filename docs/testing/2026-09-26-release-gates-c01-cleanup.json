@@ -4,7 +4,7 @@
     "blender_version": "5.2.1 LTS",
     "addon_version": "0,5,36",
     "platform": "Windows-11-10.0.26200-SP0",
-    "commit": "c190c88dce46dc1f68c595e51526d289fbe2ec1e",
+    "commit": "5f7fbc250d2cdeb1e3968cb7ef9171e3ce92450d",
     "fixture_project": "generated two-control strip"
   },
   "static_suites": [
@@ -13,7 +13,7 @@
       "status": "PASS",
       "check_count": 3,
       "exit_code": 0,
-      "elapsed_seconds": 0.068,
+      "elapsed_seconds": 0.066,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_agent_facade_uses_shared_ui_operator_and_persistent_selection\", \"test_agent_facade_exposes_validation_and_no_direct_json_write\", \"test_agent_facade_exposes_transaction_lifecycle\"]}"
       ]
@@ -23,7 +23,7 @@
       "status": "PASS",
       "check_count": 3,
       "exit_code": 0,
-      "elapsed_seconds": 0.069,
+      "elapsed_seconds": 0.068,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_controller_resolution_uses_direct_parentage_and_unique_binding\", \"test_copy_lifecycle_rekeys_full_pair_and_clears_mesh_only_duplicate\", \"test_duplicate_ownership_decision_is_documented\"]}"
       ]
@@ -43,7 +43,7 @@
       "status": "PASS",
       "check_count": 19,
       "exit_code": 0,
-      "elapsed_seconds": 0.116,
+      "elapsed_seconds": 0.115,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_moving_boundary_interpolates_toward_stationary_boundary\", \"test_nonuniform_loop_targets_are_not_reduced_to_one_average_vector\", \"test_finite_radius_cannot_expand_or_cross_patch_scope\", \"test_noop_target_clears_to_operation_rest_exactly\", \"test_shared_free_vertex_conflict_is_rejected_before_writeback\", \"test_single_control_owns_rotation_of_the_whole_patch\", \"test_single_control_owns_scale_of_the_whole_patch\", \"test_all_selected_controls_scale_as_one_mesh_across_patch_cuts\", \"test_single_planar_control_keeps_axis_scale_continuous_for_free_patch_vertices\", \"test_axis_scale_keeps_unchanged_selected_loop_in_the_transforming_region\", \"test_radius_zero_preserves_ratio_between_moving_and_stationary_boundaries\", \"test_cylinder_rings_keep_their_longitudinal_ratios_when_controls_approach\", \"test_unselected_control_is_an_identity_anchor_for_shared_patch\", \"test_native_proportional_targets_shape_the_patch_from_each_vertex\", \"test_no_movement_with_selection_intent_is_exact_no_op\", \"test_canonical_operation_resolves_absolute_targets_for_agent_and_ui\", \"test_canonical_operation_matches_xyz_rotation_order_on_each_axis\", \"test_world_space_requires_an_explicit_source_matrix\", \"test_world_space_rejects_a_singular_source_matrix\"]}"
       ]
@@ -53,7 +53,7 @@
       "status": "PASS",
       "check_count": 8,
       "exit_code": 0,
-      "elapsed_seconds": 0.199,
+      "elapsed_seconds": 0.172,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_extracted_modules_exist\", \"test_facade_uses_extracted_boundaries\", \"test_edit_mode_ids_are_written_to_live_bmesh\", \"test_mutable_ui_state_uses_shared_runtime\", \"test_unregistered_legacy_picker_implementation_is_removed\", \"test_sidebar_classes_have_a_ui_module_boundary\", \"test_action_operator_domains_have_explicit_bindings\", \"test_danp_classes_are_registered_or_not_defined\"]}"
       ]
@@ -63,7 +63,7 @@
       "status": "PASS",
       "check_count": 6,
       "exit_code": 0,
-      "elapsed_seconds": 0.117,
+      "elapsed_seconds": 0.088,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_manifest_and_package_exist\", \"test_phase1_contract_symbols\", \"test_phase2_contract_symbols\", \"test_phase2_ux_documents_exist\", \"test_native_control_list_contract_symbols\", \"test_phase3_patch_contract_symbols\"]}"
       ]
@@ -73,7 +73,7 @@
       "status": "PASS",
       "check_count": 13,
       "exit_code": 0,
-      "elapsed_seconds": 0.095,
+      "elapsed_seconds": 0.08,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_phase4_transaction_primitives_exist\", \"test_phase4_hard_constraints_and_profiles_are_present\", \"test_explicit_target_mapping_is_not_replaced_by_delta_defaults\", \"test_phase4_operator_and_ui_are_registered\", \"test_native_grs_uses_blender_edit_transform_without_legacy_macros\", \"test_native_session_commits_original_targets_before_selection_changes\", \"test_native_targets_are_coordinate_deltas_and_source_write_is_idempotent\", \"test_native_completion_uses_blender_modal_boundary_not_quiet_time\", \"test_native_undo_keeps_history_and_resyncs_proxy\", \"test_operation_freezes_proxy_and_modifier_generations\", \"test_topology_lock_uses_the_native_modal_boundary\", \"test_world_transform_cannot_fall_through_as_source_local\", \"test_transform_selection_intent_is_carried_separately_from_measured_targets\"]}"
       ]
@@ -83,7 +83,7 @@
       "status": "PASS",
       "check_count": 3,
       "exit_code": 0,
-      "elapsed_seconds": 0.078,
+      "elapsed_seconds": 0.075,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_corrupt_definitions_fail_before_any_migration_write\", \"test_invalid_membership_and_masks_do_not_drop_a_definition\", \"test_valid_legacy_masks_project_onto_overlapping_controls\"]}"
       ]
@@ -93,7 +93,7 @@
       "status": "PASS",
       "check_count": 5,
       "exit_code": 0,
-      "elapsed_seconds": 0.076,
+      "elapsed_seconds": 0.083,
       "output_tail": [
         "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_topology_changes_pause_instead_of_writing_stale_mapping\", \"test_reset_is_registered_and_undoable\", \"test_cleanup_marks_stale_ownership_without_deleting_objects\", \"test_modifier_contract_mentions_base_mapping_and_evaluated_display\", \"test_explicit_topology_preview_and_repair_fail_closed\"]}"
       ]
@@ -105,7 +105,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.617,
+      "elapsed_seconds": 2.512,
       "report": {
         "status": "PASS",
         "checks": [
@@ -153,7 +153,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.678,
+      "elapsed_seconds": 2.693,
       "report": {
         "patches": 2,
         "samples": {
@@ -182,7 +182,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.858,
+      "elapsed_seconds": 3.049,
       "report": {
         "status": "PASS",
         "checks": [
@@ -269,7 +269,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.795,
+      "elapsed_seconds": 2.915,
       "report": {
         "status": "PASS",
         "checks": [
@@ -310,7 +310,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.796,
+      "elapsed_seconds": 2.785,
       "report": {
         "status": "PASS",
         "checks": [
@@ -348,7 +348,7 @@
         "checks_count": 21
       },
       "output_tail": [
-        "00:02.531  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h07_topology_recovery.blend\"",
+        "00:02.547  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h07_topology_recovery.blend\"",
         "Info: Topology repair is safe: +3 vertices, +3 edges, -0 vertices, -0 edges; 1 protected faces unchanged",
         "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
         "Info: DANP mapping repaired: +3 vertices, +3 edges; controls and Shape Keys preserved",
@@ -364,7 +364,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 3.273,
+      "elapsed_seconds": 2.766,
       "report": {
         "status": "PASS",
         "checks": [
@@ -417,7 +417,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.983,
+      "elapsed_seconds": 2.788,
       "report": {
         "status": "PASS",
         "checks": [
@@ -448,7 +448,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.743,
+      "elapsed_seconds": 2.709,
       "report": {
         "status": "PASS",
         "checks": [
@@ -498,7 +498,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.801,
+      "elapsed_seconds": 2.768,
       "report": {
         "status": "PASS",
         "checks": [
@@ -539,7 +539,7 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.904,
+      "elapsed_seconds": 2.764,
       "report": {
         "status": "PASS",
         "checks": [
@@ -586,9 +586,9 @@
       "status": "PASS",
       "exit_code": 0,
       "exception_in_log": false,
-      "elapsed_seconds": 2.877,
+      "elapsed_seconds": 2.739,
       "report": {
-        "file": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-f7w8y9b5\\native_transform_fixture.blend",
+        "file": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-6ygkv2h4\\native_transform_fixture.blend",
         "dirty_before": false,
         "checks": [
           "native Blender transform finishes",
@@ -614,7 +614,9 @@
           "consecutive native Scale starts from the committed pose",
           "cancel test creates a live Source preview",
           "cancel restores Source exactly",
-          "cancel restores Controller exactly"
+          "cancel restores Controller exactly",
+          "timer registration failure rolls back the owned native session",
+          "timer callback exception rolls back geometry and clears owned state"
         ],
         "status": "PASS",
         "native_result": [
@@ -631,8 +633,8 @@
         "runtime_clean": true
       },
       "output_tail": [
-        "00:02.296  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-f7w8y9b5\\native_transform_fixture.blend\"",
-        "DANP_RESULT_JSON={\"file\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp-h04-safe-copy-f7w8y9b5\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
+        "00:02.156  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-6ygkv2h4\\native_transform_fixture.blend\"",
+        "DANP_RESULT_JSON={\"file\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp-h04-safe-copy-6ygkv2h4\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\", \"timer registration failure rolls back the owned native session\", \"timer callback exception rolls back geometry and clears owned state\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
         "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
         "",
         "Blender quit"

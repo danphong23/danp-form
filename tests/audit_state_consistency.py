@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT))
 sys.dont_write_bytecode = True
 import dan_form as addon
 from dan_form import agent
+from dan_form.operator_actions import structure as structure_operators
 from dan_form.core.operation import OperationTransform, targets_from_transform
 
 
@@ -164,16 +165,18 @@ def run():
 
         source, controller, controls = fixture()
         before = source.get(addon.CONTROLS_KEY)
-        rebuild = addon._operators._rebuild_proxy
+        # The compatibility facade re-exports registered operators, but the
+        # extracted class resolves this helper in its owning domain module.
+        rebuild = structure_operators._rebuild_proxy
 
         def failing_rebuild(*args):
             raise ValueError("AUDIT_INJECTED_REBUILD_FAILURE")
 
-        addon._operators._rebuild_proxy = failing_rebuild
+        structure_operators._rebuild_proxy = failing_rebuild
         try:
             action = invoke(bpy.ops.dan_form.delete_control, control_uuid=controls[0]["control_uuid"])
         finally:
-            addon._operators._rebuild_proxy = rebuild
+            structure_operators._rebuild_proxy = rebuild
         record("delete_failure_atomicity", source.get(addon.CONTROLS_KEY) != before,
                action=action, definitions_before=len(controls), definitions_after=len(addon._controls(source)))
 

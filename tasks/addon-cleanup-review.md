@@ -1,6 +1,6 @@
 # DANP Form — Làm sạch sau comprehensive review
 
-**Trạng thái: C01 đang triển khai; checkpoint safety đầu tiên đã kiểm chứng. C02 còn mở.**
+**Trạng thái: C01 hoàn tất và đã qua regression gates; C02 còn mở.**
 Baseline: `f8dbcaa`, version 0.5.36. Bằng chứng:
 [review ngày 2026-09-26](../docs/testing/2026-09-26-comprehensive-addon-review.md).
 Các mục dưới đây là cleanup của hợp đồng hiện có; preview/hover mới chờ các gate.
@@ -36,7 +36,8 @@ Tiến độ checkpoint 2026-09-26:
   registration symbols and explicit bind boundary.
 - [x] Split registered operator classes into structural, selection, visibility,
   deformation, Shape Key and navigation modules with an explicit bind boundary.
-- [ ] Deeper native timer failure/race and exception-injection matrix.
+- [x] Native timer registration failure, callback exception rollback, Undo/Redo
+  invalidation, and unregister cancellation matrix; see the latest release report.
 
 Bằng chứng và giới hạn hiện tại ở
 [checkpoint C01](../docs/testing/2026-09-26-c01-operation-safety.md).
@@ -64,13 +65,15 @@ Triển khai tuần tự; commit các phạm vi sửa có thể kiểm chứng �
 
 Gate C01:
 
-- [ ] Audit R01/R02/R03/R04/R09/R11 trở thành regression PASS.
-- [ ] Caller bị reject không ảnh hưởng preview của owner.
-- [ ] Không có write ngoài captured controller targets/scope.
+- [x] Regression suites cho transaction ownership, structural rollback,
+  target scope, finite/singular transforms, timer lifecycle và registration
+  rollback đều PASS trên runner hiện tại. Ba lỗi audit R05–R07 thuộc C02.
+- [x] Caller bị reject không ảnh hưởng preview của owner.
+- [x] Không có write ngoài captured controller targets/scope.
 - [x] Failure injection không để metadata/proxy/Source ID ghi dở trong các
   structural paths đã liệt kê; no-op giữ revision.
-- [ ] Shape Key/duplicate/topology/transform suites tiếp tục pass.
-- [ ] Mỗi commit ghi đúng fixture, actual result và giới hạn UI còn chưa chạy.
+- [x] Shape Key/duplicate/topology/transform suites tiếp tục pass.
+- [x] Mỗi commit ghi đúng fixture, actual result và giới hạn UI còn chưa chạy.
 
 ## C02 — Một hợp đồng tương tác, kiểm thử UX và package
 

@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "e40d402ab406ca870f39d76a8dab44111bf80a4b540573b3e8f3f5b3df87398e",
-    "bytes": 349746
+    "sha256": "57ceee0661f26243d0299e8267bd4d98e9ebdfbf1720547f2a19a79bb6ab0184",
+    "bytes": 351887
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -356,13 +356,13 @@
   },
   {
     "path": "docs/testing/2026-09-26-c01-operation-safety.md",
-    "sha256": "c8d9a5d568264d000ff31272f295438b24a23a879ca5ffa4272e61dd644b3f38",
-    "bytes": 5118
+    "sha256": "e4f132f0d356dae656e7488a6fbeaf2955bda7fc232ffe12caf1da62d0db786a",
+    "bytes": 5476
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
-    "sha256": "4331aaac7451320ef5740aade9de923ead6cf8a6390679f1f5459d3cb27b56e9",
-    "bytes": 13800
+    "sha256": "3b8640fd2c74073112dcdc9270698937f7cce64d1ba2241e2e9bb104380f54d1",
+    "bytes": 15583
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "23041f81aa5dc38addfd6798e64fedb75474521f0f18a5719b9daf02dcb22025",
-    "bytes": 7375
+    "sha256": "174a4caafbc44300530668d6db68c723536f3cf1d754896b2a4b1c51387aaa37",
+    "bytes": 7609
   },
   {
     "path": "tasks/phase-01-bootstrap.md",

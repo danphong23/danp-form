@@ -164,3 +164,29 @@ trước, thống nhất visibility/selection tiếp theo, rồi tối ưu đo �
 thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau khi các
 đường tương tác nền đạt gate. Các việc còn mở không được coi là đã sửa chỉ vì
 đã có kế hoạch hoặc vì bộ test cũ pass.
+
+## Addendum — trạng thái sau khi hoàn tất C01
+
+Addendum này cập nhật trạng thái triển khai sau các thay đổi tiếp theo; các phát
+hiện R05–R07 và giới hạn release ban đầu ở trên cần được đối chiếu với gate mới
+nhất.
+
+- C01 hoàn tất tại revision `5f7fbc2`: lifecycle timer được hủy đúng lúc,
+  callback exception và lỗi đăng ký timer được fault-inject, operator được tách
+  theo miền trách nhiệm, UI panel có module riêng, và picker không đăng ký cùng
+  state preview dư thừa đã được gỡ khỏi runtime.
+- Release runner ở revision này đạt 9/9 static suites và 11/11 Blender 5.2.1
+  background suites. Chi tiết và giới hạn nằm trong
+  [runner report](2026-09-26-release-gates-c01-cleanup.json) và
+  [C01 checkpoint](2026-09-26-c01-operation-safety.md).
+- Consistency audit đã được chạy lại trên Blender 5.2.1 factory scene sau refactor:
+  8 PASS, 3 FAIL. R05 native Hide/Reveal chưa hòa giải với definition state;
+  R06 multi-control Hide chưa xử lý toàn bộ control liên quan; R07 thao tác mắt
+  có thể xóa selection không liên quan. Fault injection Delete được cập nhật để
+  nhắm đúng module operator sau khi tách mã và hiện PASS. Xem
+  [C02 audit baseline](2026-09-26-c02-audit-baseline.json).
+- Overall release runner hiện `INCOMPLETE`: H08 GPU overlay review và P95/peak
+  memory measurement chưa được thực hiện. Bản quyền còn placeholder; chưa được
+  coi là sẵn sàng đóng gói/phát hành công khai.
+- Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
+  hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.

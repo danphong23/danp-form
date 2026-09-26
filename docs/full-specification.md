@@ -5723,6 +5723,32 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 đường tương tác nền đạt gate. Các việc còn mở không được coi là đã sửa chỉ vì
 đã có kế hoạch hoặc vì bộ test cũ pass.
 
+## Addendum — trạng thái sau khi hoàn tất C01
+
+Addendum này cập nhật trạng thái triển khai sau các thay đổi tiếp theo; các phát
+hiện R05–R07 và giới hạn release ban đầu ở trên cần được đối chiếu với gate mới
+nhất.
+
+- C01 hoàn tất tại revision `5f7fbc2`: lifecycle timer được hủy đúng lúc,
+  callback exception và lỗi đăng ký timer được fault-inject, operator được tách
+  theo miền trách nhiệm, UI panel có module riêng, và picker không đăng ký cùng
+  state preview dư thừa đã được gỡ khỏi runtime.
+- Release runner ở revision này đạt 9/9 static suites và 11/11 Blender 5.2.1
+  background suites. Chi tiết và giới hạn nằm trong
+  [runner report](2026-09-26-release-gates-c01-cleanup.json) và
+  [C01 checkpoint](2026-09-26-c01-operation-safety.md).
+- Consistency audit đã được chạy lại trên Blender 5.2.1 factory scene sau refactor:
+  8 PASS, 3 FAIL. R05 native Hide/Reveal chưa hòa giải với definition state;
+  R06 multi-control Hide chưa xử lý toàn bộ control liên quan; R07 thao tác mắt
+  có thể xóa selection không liên quan. Fault injection Delete được cập nhật để
+  nhắm đúng module operator sau khi tách mã và hiện PASS. Xem
+  [C02 audit baseline](2026-09-26-c02-audit-baseline.json).
+- Overall release runner hiện `INCOMPLETE`: H08 GPU overlay review và P95/peak
+  memory measurement chưa được thực hiện. Bản quyền còn placeholder; chưa được
+  coi là sẵn sàng đóng gói/phát hành công khai.
+- Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
+  hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.
+
 ---
 
 <!-- source: docs/testing/2026-09-26-c01-operation-safety.md -->
@@ -5730,7 +5756,7 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 # C01 checkpoint — operation safety
 
 **Date:** 2026-09-26
-**Status:** verified checkpoint; C01 remains open.
+**Status:** C01 complete; release readiness still has separate open gates.
 **Runtime:** Blender 5.2.1 LTS, Windows 11, generated factory-startup fixtures.
 
 ## Changes in this checkpoint
@@ -5762,7 +5788,8 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 
 ## Results
 
-- Release runner: 9/9 static suites and 11/11 Blender background suites passed;
+- Latest release runner at `5f7fbc2`: 9/9 static suites and 11/11 Blender
+  background suites passed;
   overall status `INCOMPLETE` because H08 GPU overlay review and P95/peak-memory
   measurement were not run. UI gate passes in its report remain historical
   evidence, not UI interaction on this revision.
@@ -5781,16 +5808,17 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 - The user's open Blender file was not touched. Tests ran in separate
   background processes with disposable factory-startup scenes.
 
-## Remaining C01 scope
+## C01 closure
 
-C01 still needs native timer registration/exception injection coverage. Timer
-shutdown on disable, stale timer cancellation on Undo/Redo/load, legacy picker
-cleanup, the panel boundary and operator-domain extraction are covered. This checkpoint
-does not mark C01/C02 complete or the add-on ready for release.
+Native timer registration failure and callback exception rollback are now
+covered by `live_native_transform.py`. The callback restores the operation and
+clears its owned session after the injected exception. Combined with the
+Undo/Redo/load invalidation and unregister tests, all C01 safety/lifecycle gates
+are complete. This does not mark C02 or release readiness complete.
 
 ## Timer lifecycle follow-up
 
-**Revision:** `c190c88` (`refactor(danp-form): split operators and remove dead picker`)
+**Revision:** `5f7fbc2` (`fix(danp-form): cover native timer exception cleanup`)
 
 - Runtime stores native transform and Undo/Redo timer callback identities so
   they can be explicitly cancelled when the add-on unregisters.
@@ -5806,13 +5834,16 @@ does not mark C01/C02 complete or the add-on ready for release.
   timer cancellation on Undo, stable UI-module binding, cancellation of both
   timer kinds in two enable/disable cycles, domain binding and late registration
   rollback.
+- `live_native_transform.py`: 26 checks pass, including timer registration
+  failure rollback and callback exception recovery.
 - Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass
-  at revision `c190c88`.
+  at revision `5f7fbc2`.
   Overall remains `INCOMPLETE`: GPU-backed H08 overlay review and P95/peak
   memory measurements are still not run. See the [runner report](2026-09-26-release-gates-c01-cleanup.json).
 - The runner used generated factory-startup fixtures in separate processes;
   it did not touch the user's open Blender model.
 
-Timer shutdown, session invalidation, module identity and all current operation
-regressions pass. Timer registration failure and callback exception injection
-remain open in C01.
+Timer shutdown, session invalidation, module identity, timer failure recovery,
+and all current C01 operation regressions pass. The full report remains
+`INCOMPLETE` only because H08 GPU overlay review and P95/peak-memory measurement
+are outstanding; the known R05–R07 visibility/selection defects are C02 work.
