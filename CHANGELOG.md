@@ -15,7 +15,9 @@
   suites. Blender UI keymap/Undo-Redo, GPU overlay and representative performance
   gates remain open; this is not a release certification.
 - Replace the design-era license note with the GPL-3.0-or-later text declared in
-  the manifest. Copyright attribution and dependency notices still need review.
+  the manifest. `THIRD_PARTY_NOTICES.md` records the optional NumPy acceleration
+  and confirms that no third-party code or binary is bundled. Maintainer
+  copyright-holder attribution still needs review before public release.
 
 ## 2026-09-25 — DANP Form 0.5.36 initializes safely in Source Edit Mode
 
