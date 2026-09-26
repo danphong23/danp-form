@@ -52,6 +52,13 @@ def run():
             addon._undo_post(None)
             check(not addon._MAPPING_CACHE and not addon._PATCH_CACHE,
                   f"cycle {cycle + 1}: undo invalidates derived caches")
+            check(not bpy.app.timers.is_registered(transform_timer)
+                  and not addon._runtime.NATIVE_TRANSFORM_TIMERS
+                  and bpy.app.timers.is_registered(undo_timer),
+                  f"cycle {cycle + 1}: undo cancels stale transform timers only")
+            transform_timer = lambda: 60.0
+            bpy.app.timers.register(transform_timer, first_interval=60.0)
+            addon._runtime.NATIVE_TRANSFORM_TIMERS[cycle + 101] = transform_timer
             addon.unregister()
             check(all(callback not in handlers for handlers, callback in handler_specs),
                   f"cycle {cycle + 1}: unregister removes persistent handlers")

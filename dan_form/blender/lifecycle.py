@@ -21,13 +21,8 @@ from .workflows import update_revision
 NATIVE_POLL_INTERVAL = 0.01
 
 
-def _cancel_runtime_timers() -> None:
-    """Unregister every timer owned by the current DANP runtime."""
-    callbacks = list(runtime.NATIVE_TRANSFORM_TIMERS.values())
-    runtime.NATIVE_TRANSFORM_TIMERS.clear()
-    undo_callback = runtime.NATIVE_UNDO_TIMER_CALLBACK
-    runtime.NATIVE_UNDO_TIMER_CALLBACK = None
-    for callback in (*callbacks, undo_callback):
+def _unregister_timers(callbacks) -> None:
+    for callback in callbacks:
         if callback is None:
             continue
         try:
@@ -35,6 +30,21 @@ def _cancel_runtime_timers() -> None:
                 bpy.app.timers.unregister(callback)
         except (ReferenceError, RuntimeError, ValueError):
             continue
+
+
+def _cancel_native_transform_timers() -> None:
+    """Stop transform callbacks before their sessions are invalidated."""
+    callbacks = list(runtime.NATIVE_TRANSFORM_TIMERS.values())
+    runtime.NATIVE_TRANSFORM_TIMERS.clear()
+    _unregister_timers(callbacks)
+
+
+def _cancel_runtime_timers() -> None:
+    """Unregister every timer owned by the current DANP runtime."""
+    undo_callback = runtime.NATIVE_UNDO_TIMER_CALLBACK
+    runtime.NATIVE_UNDO_TIMER_CALLBACK = None
+    _cancel_native_transform_timers()
+    _unregister_timers((undo_callback,))
 
 
 def _forget_native_timer(source_ptr: int) -> None:
@@ -491,6 +501,7 @@ def _native_transform_timer(source_ptr):
 @persistent
 def _refresh_runtime(_unused=None, direction=None) -> None:
     runtime.PICK_SESSION += 1
+    _cancel_native_transform_timers()
     runtime.NATIVE_TRANSFORM_SESSIONS.clear()
     runtime.TOPOLOGY_STATES.clear()
     runtime.MODIFIER_SIGNATURES.clear()
@@ -527,6 +538,7 @@ def _redo_post(_unused=None) -> None:
 
 @persistent
 def _load_post(_unused=None) -> None:
+    _cancel_runtime_timers()
     runtime.INIT_TARGET_PROVENANCE.clear()
     runtime.NATIVE_UNDO_RECORDS.clear()
     runtime.SHAPE_PREVIEW_STATES.clear()
