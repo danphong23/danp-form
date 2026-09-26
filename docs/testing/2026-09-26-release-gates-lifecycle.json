@@ -640,4 +640,4 @@
     "H08_overlay_gpu_review": "NOT RUN: requires a GPU-backed Blender UI",
     "performance_p95_and_peak_memory": "NOT RUN: pending representative UI instrumentation"
   }
-}
+}
