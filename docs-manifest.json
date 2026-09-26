@@ -46,8 +46,8 @@
   },
   {
     "path": "docs/architecture/module-boundaries.md",
-    "sha256": "f05b126b21f84aa5bdcbce1f5dcdd4267de652d69d089bb50bee4dc1e5d69bbd",
-    "bytes": 3863
+    "sha256": "748119443ece60f8c71bbbc34648aeb960c3cbfbbff1f68b3d3dc05c5a9ad85d",
+    "bytes": 4143
   },
   {
     "path": "docs/architecture/multi-template.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "dd82f8c0bb38a891e13aea49c8128b23ac12727051c770d79c964cde44f71add",
-    "bytes": 348058
+    "sha256": "698457baa0b75c098147a94f641fd9ba1026cc02105b02a3d556416ee0895b8b",
+    "bytes": 348881
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -356,8 +356,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-c01-operation-safety.md",
-    "sha256": "a9e094e122ce88d2b7dd1729654595f2d64209b77d8a14273bd5d93c99118385",
-    "bytes": 4679
+    "sha256": "a69a513f61d7b3b255c5ea375975052914ab4bdca76c41ab53bdead5e6754d39",
+    "bytes": 4954
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
@@ -366,8 +366,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
-    "sha256": "7c1c9fc92b5f3ef79c6bc2aa319b3b10dd2f23bd2e0811f01e41f40fedf77725",
-    "bytes": 3123
+    "sha256": "d45b4ea07048fd30d1ea94ccc6842974870325dd7f49eedce1bccc3d7817da2a",
+    "bytes": 3391
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "661619ee9307b0cdf330e467b5980b3627a2002fb29a91947c989711062c718a",
-    "bytes": 6946
+    "sha256": "85a8b76183b0fefd8407a41973595c055ae3be343a66b8ae4d16a371c6985749",
+    "bytes": 7223
   },
   {
     "path": "tasks/phase-01-bootstrap.md",

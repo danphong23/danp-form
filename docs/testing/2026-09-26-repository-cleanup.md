@@ -25,8 +25,13 @@ repository before deletion. Git metadata was preserved.
 - Generated `docs/full-specification.md`, `docs-manifest.json`, and
   `MANIFEST_SHA256.txt`: referenced by documentation tools, intentionally retained.
 - Legacy picker fixtures moved to `tests/history/` with explicit warnings.
-  Their operators/properties are no longer registered in 0.5.36. The historical
-  report links were updated; current release discovery is unchanged.
+  Their legacy segment operator was not registered in 0.5.36 and its dead
+  implementation has now been removed; the active picker still supports
+  segment selection. The historical report links were updated; current release
+  discovery is unchanged.
+- Sidebar, UIList, PropertyGroup and menu classes now live in `ui/panel.py`;
+  `operators.py` re-exports their existing symbols and registration remains
+  unchanged.
 - Historical architecture/UX status is distinguished from current H01–H10
   references. The obsolete H02 "known gap" text in module boundaries now points
   to the implemented adapters and their actual report.

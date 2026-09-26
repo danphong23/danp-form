@@ -3699,13 +3699,18 @@ runtime caches and transaction buffers are disposable.
   `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
   invalidation. The root facade only passes itself as the compatibility API
   object.
-- `operators.py` owns Blender operators, picking helpers, UIList and sidebar
-  classes. Its `bind()` hook injects facade adapters only after package import.
+- `operators.py` owns Blender action operators and picking helpers. Its
+  `bind()` hook injects facade adapters only after package import.
+- `ui/panel.py` owns the PropertyGroup, UIList, menus and sidebar layout. It
+  receives compatibility adapters through `bind()` and is re-exported by
+  `operators.py` so registration and existing private facade callers retain
+  the same class symbols. The panel rename callback writes only the selected
+  control name to Source storage.
 - `ui/overlay.py` owns viewport drawing and display-only patch batches. It has
   the same bind boundary and never changes Source geometry.
-- `__init__.py` remains a small compatibility facade while the remaining Blender
-  adapters, core geometry and UI modules are extracted incrementally. Lifecycle
-  callbacks are no longer defined in the facade.
+- `__init__.py` remains a compatibility facade for Blender adapters, core
+  geometry, operators and UI modules. Lifecycle callbacks are no longer defined
+  in the facade.
 
 Existing scripts and live regression checks can continue to use the old private
 facade names during the migration. New modules must import runtime state through
@@ -5448,8 +5453,13 @@ repository before deletion. Git metadata was preserved.
 - Generated `docs/full-specification.md`, `docs-manifest.json`, and
   `MANIFEST_SHA256.txt`: referenced by documentation tools, intentionally retained.
 - Legacy picker fixtures moved to `tests/history/` with explicit warnings.
-  Their operators/properties are no longer registered in 0.5.36. The historical
-  report links were updated; current release discovery is unchanged.
+  Their legacy segment operator was not registered in 0.5.36 and its dead
+  implementation has now been removed; the active picker still supports
+  segment selection. The historical report links were updated; current release
+  discovery is unchanged.
+- Sidebar, UIList, PropertyGroup and menu classes now live in `ui/panel.py`;
+  `operators.py` re-exports their existing symbols and registration remains
+  unchanged.
 - Historical architecture/UX status is distinguished from current H01–H10
   references. The obsolete H02 "known gap" text in module boundaries now points
   to the implemented adapters and their actual report.
@@ -5763,14 +5773,14 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 
 ## Remaining C01 scope
 
-C01 still needs deeper native timer/exception race coverage, review/removal of
-historical operators, and module-boundary cleanup. Timer shutdown on disable is
-now covered. This checkpoint does not mark C01/C02 complete or the add-on ready
-for release.
+C01 still needs deeper native timer/exception race coverage and extraction of
+the remaining operator domains. Timer shutdown on disable, the dead legacy
+operator removal and the first UI module boundary are covered. This checkpoint
+does not mark C01/C02 complete or the add-on ready for release.
 
 ## Timer lifecycle follow-up
 
-**Revision:** `74cb568` (`fix(danp-form): cancel stale transform timers on undo`)
+**Revision:** `48302fb` (`refactor(danp-form): extract sidebar UI module`)
 
 - Runtime stores native transform and Undo/Redo timer callback identities so
   they can be explicitly cancelled when the add-on unregisters.
@@ -5778,14 +5788,17 @@ for release.
   load cancels both transform and pending Undo/Redo callbacks.
 - The native transform callback removes its per-Source handle on every normal
   terminal path. Registration/unregistration clears retained references.
+- The unregistered legacy segment operator class was removed after confirming
+  the active picker still owns segment selection. Sidebar/list/menu classes now
+  live under `ui/panel.py` and are re-exported with unchanged registration IDs.
 - `live_runtime_boundaries.py`: 26 assertions pass, including stale transform
-  timer cancellation on Undo, cancellation of both timer kinds in two
-  enable/disable cycles, and late registration rollback.
+  timer cancellation on Undo, stable UI-module binding, cancellation of both
+  timer kinds in two enable/disable cycles, and late registration rollback.
 - Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass.
   Overall remains `INCOMPLETE`: GPU-backed H08 overlay review and P95/peak
   memory measurements are still not run. See the [runner report](2026-09-26-release-gates-lifecycle.json).
 - The runner used generated factory-startup fixtures in separate processes;
   it did not touch the user's open Blender model.
 
-Timer shutdown is covered; deeper concurrent timer/exception injection, legacy
-operator removal, and further operator module extraction remain C01 work.
+Timer shutdown is covered; deeper concurrent timer/exception injection and
+further operator-domain extraction remain C01 work.

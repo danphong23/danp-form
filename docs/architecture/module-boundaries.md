@@ -36,13 +36,18 @@ runtime caches and transaction buffers are disposable.
   `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
   invalidation. The root facade only passes itself as the compatibility API
   object.
-- `operators.py` owns Blender operators, picking helpers, UIList and sidebar
-  classes. Its `bind()` hook injects facade adapters only after package import.
+- `operators.py` owns Blender action operators and picking helpers. Its
+  `bind()` hook injects facade adapters only after package import.
+- `ui/panel.py` owns the PropertyGroup, UIList, menus and sidebar layout. It
+  receives compatibility adapters through `bind()` and is re-exported by
+  `operators.py` so registration and existing private facade callers retain
+  the same class symbols. The panel rename callback writes only the selected
+  control name to Source storage.
 - `ui/overlay.py` owns viewport drawing and display-only patch batches. It has
   the same bind boundary and never changes Source geometry.
-- `__init__.py` remains a small compatibility facade while the remaining Blender
-  adapters, core geometry and UI modules are extracted incrementally. Lifecycle
-  callbacks are no longer defined in the facade.
+- `__init__.py` remains a compatibility facade for Blender adapters, core
+  geometry, operators and UI modules. Lifecycle callbacks are no longer defined
+  in the facade.
 
 Existing scripts and live regression checks can continue to use the old private
 facade names during the migration. New modules must import runtime state through

@@ -30,8 +30,11 @@ Tiến độ checkpoint 2026-09-26:
   overlay/keymap đã tạo một phần.
 - [x] Unregister timer handles for native transform and Undo/Redo; repeated
   enable/disable regression confirms callbacks cancel and runtime handles clear.
-- [ ] Deeper timer race/exception matrix; historical operator removal; module
-  split.
+- [x] Remove the unregistered legacy `select_segment` operator after dependency
+  review; keep its current segment-pick tool and archive-only historical fixture.
+- [x] Extract sidebar/list/menu classes into `ui/panel.py` with the same
+  registration symbols and explicit bind boundary.
+- [ ] Deeper timer race/exception matrix; extract remaining operator domains.
 
 Bằng chứng và giới hạn hiện tại ở
 [checkpoint C01](../docs/testing/2026-09-26-c01-operation-safety.md).
