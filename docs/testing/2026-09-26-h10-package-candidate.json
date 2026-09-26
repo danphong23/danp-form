@@ -4,10 +4,10 @@
   "metadata": {
     "addon_version": "0.5.36",
     "blender_version": "5.2.1 LTS",
-    "source_commit": "518b095909402afc0327c049db8d3828b226b929",
+    "source_commit": "31260e85e07cd2c081ace124f50d5cc12cf41b1d",
     "release_runner_code_commit": "71f84151f3c1a6d55983e647a5213fb68759539f",
     "archive_member_count": 146,
-    "archive_sha256": "c5af60203765804ef43951198aef4fed2d2beff4ebb7c33487bdf6ec183a0bd4",
+    "archive_sha256": "11eb94ea814157971ef6c8dc09b8f2376b6de437f63925f35c0756f3bf504a94",
     "archive_retained_in_repository": false
   },
   "package_validation": {
