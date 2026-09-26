@@ -17,6 +17,12 @@ from . import runtime
 from .core.operation import OperationTransform
 
 
+# Updated once by the sidebar draw, then read by each UIList row.  This keeps
+# selection-state calculation to one BMesh scan per panel redraw and makes draw
+# strictly read-only.
+_UI_SELECTION_STATES: dict[str, str] = {}
+
+
 # Helper names used by operator methods are bound to the facade at register time.
 def bind(api) -> None:
     for name in dir(api):
@@ -491,6 +497,19 @@ class DANFORM_UL_controls(bpy.types.UIList):
         # restores the same effective membership.  A fully masked definition
         # is revealed explicitly by ``mutate_control_visibility``.
         toggle.reveal = item.state == "Hidden"
+        selection_state = _UI_SELECTION_STATES.get(item.control_uuid, "NONE")
+        marker_icon = {
+            "FULL": "CHECKBOX_HLT",
+            "PARTIAL": "RADIOBUT_ON",
+            "NONE": "CHECKBOX_DEHLT",
+        }.get(selection_state, "CHECKBOX_DEHLT")
+        select = row.operator(
+            "dan_form.select_control",
+            text="",
+            icon=marker_icon,
+            emboss=False,
+        )
+        select.control_uuid = item.control_uuid
         row.prop(item, "control_name", text="", emboss=False)
         if item.state == "Partial":
             row.label(text="~")
@@ -727,10 +746,16 @@ class DANFORM_OT_rename_control(bpy.types.Operator):
 class DANFORM_OT_select_control(bpy.types.Operator):
     bl_idname = "dan_form.select_control"
     bl_label = "Select Control"
-    bl_description = "Select this definition in the current Source or controller edit context"
-    bl_options = {"REGISTER", "UNDO"}
+    bl_description = "Select this control; Shift-click to add it to the current mesh selection"
+    # Selection and active-row changes are transient UI state, like Blender's
+    # native selection tools, and must not consume a geometry Undo step.
+    bl_options = {"REGISTER"}
     control_uuid: StringProperty(default="")
     add_to_selection: BoolProperty(name="Add to Selection", default=False)
+
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set[str]:
+        self.add_to_selection = bool(event.shift)
+        return self.execute(context)
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         source, controller = _context_source(context)
@@ -744,11 +769,31 @@ class DANFORM_OT_select_control(bpy.types.Operator):
         try:
             if controller is not None:
                 _transform_session.finalize_active(source, controller, _workflow_dependencies())
+            # A row's action button also makes that row active for the shared
+            # Rename/Sync/Reorder/Delete controls.  Suppress the index callback
+            # here because it would replace selection before a Shift-add.
+            scene = context.scene
+            for index, item in enumerate(scene.dan_form_control_items):
+                if item.control_uuid == self.control_uuid:
+                    previous_guard = runtime.UI_SYNC_GUARD
+                    runtime.UI_SYNC_GUARD = True
+                    try:
+                        scene.dan_form_control_index = index
+                        scene.dan_form_selected_control = self.control_uuid
+                        _ACTIVE_CONTROL_UUIDS[item.source_uuid] = self.control_uuid
+                    finally:
+                        runtime.UI_SYNC_GUARD = previous_guard
+                    break
             vertex_ids = {int(value) for value in control.get("vertex_ids", [])}
             edge_ids = {int(value) for value in control.get("edge_ids", [])}
-            context.scene.dan_form_selected_control = self.control_uuid
+            scene.dan_form_selected_control = self.control_uuid
             if active == source and source.mode == "EDIT":
                 _select_source_ids(source, vertex_ids, edge_ids, self.add_to_selection)
+            elif active == controller and controller.mode == "OBJECT":
+                _select_only(context, controller)
+                bpy.ops.object.mode_set(mode="EDIT")
+                effective_vertices, effective_edges = _control_effective(source, control)
+                _select_proxy_ids(controller, effective_vertices, effective_edges, self.add_to_selection)
             elif active == controller and controller.mode == "EDIT":
                 effective_vertices, effective_edges = _control_effective(source, control)
                 _select_proxy_ids(controller, effective_vertices, effective_edges, self.add_to_selection)
@@ -758,9 +803,13 @@ class DANFORM_OT_select_control(bpy.types.Operator):
                 _select_source_ids(source, vertex_ids, edge_ids, self.add_to_selection)
             else:
                 raise ValueError("EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
-            context.scene.dan_form_status = f"Selected {control.get('name', 'Control')}"
+            context.scene.dan_form_status = (
+                f"Added {control.get('name', 'Control')} to selection"
+                if self.add_to_selection else f"Selected {control.get('name', 'Control')}"
+            )
+            _tag_viewport_redraw(context)
             return {"FINISHED"}
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
             self.report({"ERROR"}, _friendly_error(exc))
             return {"CANCELLED"}
 
@@ -2172,6 +2221,8 @@ class DANFORM_PT_sidebar(bpy.types.Panel):
         scene = context.scene
         source, controller = _context_source(context)
         active = context.view_layer.objects.active
+        global _UI_SELECTION_STATES
+        _UI_SELECTION_STATES = _control_selection_states(source, active) if source is not None else {}
         if source is None:
             if active is not None and active.type == "MESH":
                 if (active.get(ORPHANED_OWNED_KEY)

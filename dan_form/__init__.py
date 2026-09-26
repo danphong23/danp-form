@@ -25,6 +25,7 @@ from .storage import source_uuid as _source_uuid
 from .core.controls import control_effective as _core_control_effective
 from .core.controls import control_intent as _core_control_intent
 from .core.controls import effective_elements as _core_effective_elements
+from .core.controls import selection_state as _core_selection_state
 from .core.patches import partition_faces as _core_partition_faces
 from .core.proportional import alpha as _core_proportional_alpha
 from .core.graph import distances as _core_graph_distances
@@ -69,6 +70,7 @@ from .blender.selection import _select_proxy_ids as _select_proxy_ids
 from .blender.selection import _select_source_ids as _select_source_ids
 from .blender.selection import _source_positions as _source_positions
 from .blender.selection import _source_selection as _source_selection
+from .blender.selection import selected_source_vertex_ids as _selected_source_vertex_ids
 from .blender.workflows import WorkflowDeps as _WorkflowDeps
 from .blender.workflows import deform_begin as _workflow_deform_begin
 from .blender.workflows import deform_cancel as _workflow_deform_cancel
@@ -204,6 +206,24 @@ def _control_state(source: bpy.types.Object, control: dict) -> tuple[str, int, i
     effective = len(effective_vertices) + len(effective_edges)
     state = "On" if effective == total else ("Hidden" if effective == 0 else "Partial")
     return state, effective, total
+
+
+def _control_selection_states(source: bpy.types.Object, active: bpy.types.Object) -> dict[str, str]:
+    """Project the current Edit selection onto control rows without writing data."""
+    if source is None or active not in {source, _find_controller(source)} or active.mode != "EDIT":
+        return {}
+    try:
+        selected_ids = _selected_source_vertex_ids(active)
+        states = {}
+        for control in _controls(source):
+            if active == source:
+                membership = {int(value) for value in control.get("vertex_ids", [])}
+            else:
+                membership, _edges = _control_effective(source, control)
+            states[str(control.get("control_uuid", ""))] = _core_selection_state(membership, selected_ids)
+        return states
+    except (AttributeError, RuntimeError, ValueError, KeyError):
+        return {}
 
 
 def _active_control(context: bpy.types.Context, source: bpy.types.Object) -> dict | None:

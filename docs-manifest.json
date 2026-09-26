@@ -66,8 +66,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "c72454d9145075a5ee82b220f538d64dadf3fd287b565f4c32ae714a5bac04a6",
-    "bytes": 10474
+    "sha256": "8f59ebb4c8c6c31e11f25ac6309fb84c7303d7c942b423a13d00209708d040ba",
+    "bytes": 11040
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "0743f9153bea9fd035801c8869f9604de49651d0ee26f6c99a1970024f6c5c3c",
-    "bytes": 323488
+    "sha256": "45a9809f2964a1268c538c0f474371efb65e38c48944ff59cd926e33c01806e3",
+    "bytes": 327930
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -271,8 +271,8 @@
   },
   {
     "path": "docs/roadmap/phase-02-native-list-ux.md",
-    "sha256": "ff8b9902ed76b07e53261def16a327f234b9debf5df3ff44c4f2be916268f003",
-    "bytes": 11799
+    "sha256": "2d3188b104607555b370ab36f37c42089d6e065db562886d080c7ca979df5746",
+    "bytes": 13074
   },
   {
     "path": "docs/roadmap/phase-02-ux-upgrade.md",
@@ -440,6 +440,11 @@
     "bytes": 2670
   },
   {
+    "path": "docs/testing/selection-phase-1-report.md",
+    "sha256": "7d4697a3dd8f3c057ed5d0078ff2077d039b390dde1312bcbd207295fe4df18b",
+    "bytes": 2536
+  },
+  {
     "path": "LICENSE.md",
     "sha256": "de53550a75fddf84f4bd9e966ef69fb1f2259a4af71c7067a11281d5acad9d57",
     "bytes": 262
@@ -476,8 +481,8 @@
   },
   {
     "path": "tasks/phase-02-native-list-ux.md",
-    "sha256": "b4a911bc0689a5b67f4863e81d957376135bfa7720a8605e5a4f49668a90ee36",
-    "bytes": 7068
+    "sha256": "e01d8fde54d929ec7714ded5324c713d57b23eea3bfb2fcaa1371d9019ad30bc",
+    "bytes": 7626
   },
   {
     "path": "tasks/phase-02-ux-upgrade.md",

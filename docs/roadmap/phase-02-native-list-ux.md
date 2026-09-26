@@ -1,5 +1,25 @@
 # Phase 2 — Sidebar gọn theo danh sách Blender
 
+## Selection UX bổ sung — Phase 1
+
+Đợt 1 bổ sung chọn nhiều control từ danh sách và trạng thái chọn suy ra trực
+tiếp từ selection Edit Mode bằng persistent vertex IDs. Mỗi dòng có một nút
+selection độc lập: click thay selection, Shift-click thêm membership; dòng được
+nhấn trở thành active cho các thao tác chung. Marker phân biệt đủ/một phần/rỗng,
+cho phép nhiều control chồng lấp cùng hiện selected. Source Edit dùng membership
+đã lưu; Controller Edit dùng effective membership sau Hide. Trạng thái chỉ là
+projection UI và thao tác chọn không tạo bước Undo hình học.
+
+Kiểm chứng và giới hạn được ghi trong [báo cáo selection UX Phase 1](../testing/selection-phase-1-report.md).
+
+### Lộ trình selection UX
+
+- [x] **Phase 1 — Chọn trong danh sách:** Shift-add; row marker FULL/PARTIAL/NONE;
+  dùng persistent IDs; giữ một active row cho các thao tác quản lý.
+- [ ] **Phase 2 — Chọn nhanh trong viewport:** rà soát shortcut pick control đang có,
+  xác định hành vi khi chồng lấp/ẩn và bổ sung luồng chọn nhanh chỉ khi không cạnh
+  tranh với Blender native selection. Không đổi solver, pivot hay topology.
+
 **Trạng thái: UIList đã triển khai; lifecycle và controller cố định topology
 trong 0.2.2 theo phản hồi ngày 2026-09-18.**
 

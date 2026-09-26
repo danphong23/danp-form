@@ -75,8 +75,15 @@ def test_native_control_list_contract_symbols() -> None:
         "dan_form_control_items",
         "dan_form_control_index",
         "_sync_ui_list",
+        "_control_selection_states",
+        "selected_source_vertex_ids",
+        "Shift-click to add it to the current mesh selection",
+        "_UI_SELECTION_STATES",
     ):
         assert symbol in source
+    select = source.split("class DANFORM_OT_select_control(", 1)[1].split("class ", 1)[0]
+    assert 'self.add_to_selection = bool(event.shift)' in select
+    assert 'bl_options = {"REGISTER"}' in select
     assert (ROOT / "docs" / "roadmap" / "phase-02-native-list-ux.md").is_file()
     assert (ROOT / "tasks" / "phase-02-native-list-ux.md").is_file()
 

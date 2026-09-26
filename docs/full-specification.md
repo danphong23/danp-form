@@ -1139,23 +1139,30 @@ rare display/maintenance actions belong in the list menu.
 With X-Ray off, the overlay uses the normal depth test and is occluded by the opaque
 mesh. X-Ray explicitly disables that test when the user needs to inspect controls
 through the model.
-Controller Edit keeps Blender's native selection tools as the only selection
-surface. Box, circle, lasso, click, Shift and Ctrl selection operate directly on
-the Controller Edit mesh; the control list remains the shortcut for selecting a
-stored membership. DANP does not add a second hover picker, segment picker,
-"select all" button or Add-to-Selection toggle that can compete with Blender's
-selection state.
+Controller Edit keeps Blender's native selection tools for direct mesh picking.
+The control list also selects saved memberships: clicking a row's selection
+marker replaces the mesh selection, and Shift-clicking that marker adds its
+membership. The clicked row becomes the single active row for shared actions
+such as Rename, Sync, Reorder and Delete. Each row derives a full, partial or
+empty selection marker from selected persistent vertex IDs; overlapping controls
+can therefore show selected together. Hidden controls have no effective
+membership in Controller Edit and display as unselected. Source Edit derives the
+marker from stored Source membership. This projection is read-only. DANP does not
+add a hover picker, segment picker or persistent Add-to-Selection toggle.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
 events, context, masks, selected row and object transforms invalidate the relevant
 display; idle redraw only draws existing buffers. Topology/ID caches contain no
 long-lived BMesh handles or coordinate buffers. Colored point markers represent
 explicit point handles, including a point definition sharing an edge vertex;
 ordinary edge endpoints use the colored line and Blender's native Edit selection.
-The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
+The sidebar uses a Blender-native list: inline names, eye state and a selection
+marker with Shift-add, shared +/− and
 up/down controls, and Sync below it only in Source Edit Mode. Clicking a row immediately highlights
-its effective control geometry. In Source/controller Edit Mode it also replaces the
-active mesh selection with that definition; in Object Mode it keeps object/mode.
-Selecting a hidden definition never reveals its canonical masks.
+its effective control geometry. In Source/controller Edit Mode, clicking the row's
+selection marker replaces mesh selection; Shift-click adds that definition's
+vertices to the current selection. In Object Mode it keeps object/mode. Selecting
+a hidden definition never reveals its canonical masks. Row selection is transient
+and is not an Undo step; it does not change definitions or mesh geometry.
 
 Edit Control activates the model's controller, enters its Edit Mode and selects the
 active definition. Back to Model returns to the Source in the Object/Edit Mode used
@@ -2812,6 +2819,26 @@ remain lifecycle evidence for Gate P2; they do not invalidate the UX checks abov
 <!-- source: docs/roadmap/phase-02-native-list-ux.md -->
 
 # Phase 2 — Sidebar gọn theo danh sách Blender
+
+## Selection UX bổ sung — Phase 1
+
+Đợt 1 bổ sung chọn nhiều control từ danh sách và trạng thái chọn suy ra trực
+tiếp từ selection Edit Mode bằng persistent vertex IDs. Mỗi dòng có một nút
+selection độc lập: click thay selection, Shift-click thêm membership; dòng được
+nhấn trở thành active cho các thao tác chung. Marker phân biệt đủ/một phần/rỗng,
+cho phép nhiều control chồng lấp cùng hiện selected. Source Edit dùng membership
+đã lưu; Controller Edit dùng effective membership sau Hide. Trạng thái chỉ là
+projection UI và thao tác chọn không tạo bước Undo hình học.
+
+Kiểm chứng và giới hạn được ghi trong [báo cáo selection UX Phase 1](../testing/selection-phase-1-report.md).
+
+### Lộ trình selection UX
+
+- [x] **Phase 1 — Chọn trong danh sách:** Shift-add; row marker FULL/PARTIAL/NONE;
+  dùng persistent IDs; giữ một active row cho các thao tác quản lý.
+- [ ] **Phase 2 — Chọn nhanh trong viewport:** rà soát shortcut pick control đang có,
+  xác định hành vi khi chồng lấp/ẩn và bổ sung luồng chọn nhanh chỉ khi không cạnh
+  tranh với Blender native selection. Không đổi solver, pivot hay topology.
 
 **Trạng thái: UIList đã triển khai; lifecycle và controller cố định topology
 trong 0.2.2 theo phản hồi ngày 2026-09-18.**
@@ -5434,3 +5461,54 @@ relative links and both hash manifests consistent. No identical standalone
 Markdown files were found in the docs/tasks/test inventory; the consolidated
 specification is an intentional generated copy.
 No new release archive was built and no GitHub publication was performed.
+
+---
+
+<!-- source: docs/testing/selection-phase-1-report.md -->
+
+# Selection UX Phase 1 — Test report
+
+**Result: automated checks pass; the real Blender mouse gesture is not yet UI-verified.**
+
+## Delivered
+
+- Each control row has a dedicated selection marker/button. A normal click
+  replaces the current mesh selection; Shift-click adds the control membership.
+- The clicked row becomes the one active row used by shared row actions.
+- The marker is derived at panel draw from the current Edit Mode selection and
+  persistent Source vertex IDs. It shows full, partial or empty selection.
+- Source Edit compares against stored control vertices. Controller Edit compares
+  against effective vertices after DANP Hide masks. Empty/hidden memberships are
+  never treated as fully selected. Overlapping controls can show selected at once.
+- Selection is a transient UX action; the operator does not register a geometry
+  Undo step or modify Source geometry/control definitions.
+
+## Automated verification
+
+Blender 5.2.1 LTS, Windows 11; addon source version 0.5.36.
+
+| Check | Result |
+| --- | --- |
+| Static suites | 9/9 pass (63 assertions) |
+| Blender background suites | 10/10 pass (includes 21 checks for multi-select) |
+| Selection core cases | Full/partial/none, empty membership, overlapping memberships, hidden effective membership pass |
+| Icon enum compatibility | `CHECKBOX_HLT`, `RADIOBUT_ON`, `CHECKBOX_DEHLT` confirmed in Blender 5.2.1 |
+| Full release-gate status | Incomplete only because existing H08 GPU review and performance p95/memory UI gates remain NOT RUN |
+
+The new regression uses an isolated temporary Blender process and a disposable
+mesh. It exercises replacement, additive selection, active-row identity,
+selection-state derivation in Source and Controller Edit, overlap, Hide masks,
+and confirms selection leaves Source geometry and control definitions unchanged.
+
+## Live Blender session and remaining UI check
+
+MCP read-only inspection found
+`Project/2. toon/girl_chibi_1_compare.blend` open with the Controller in Edit Mode;
+the file was already dirty. No changes were made or saved in that session.
+The actual Shift-mouse gesture and marker appearance in the sidebar were not
+tested in the live UI, to preserve that dirty model. The event path is covered by
+the operator's `invoke` implementation and source-level regression; a visual
+mouse check remains useful before calling the interaction fully UX-verified.
+
+The overall release runner reports `INCOMPLETE` due unrelated H08 and performance
+gates. This does not block the selection Phase 1 automated gates above.

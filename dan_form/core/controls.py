@@ -71,3 +71,19 @@ def effective_elements(
         # bulk Hide/Show unable to distinguish an empty network from a network
         # containing orphaned vertices.
     return sorted(visible_vertices.intersection(vertex_ids)), sorted(visible_edges)
+
+
+def selection_state(membership: set[int], selected_ids: set[int]) -> str:
+    """Classify a control's persistent vertex membership against a mesh selection.
+
+    Empty or fully hidden memberships are deliberately unselected; otherwise
+    the usual subset/intersection rules distinguish full, partial and none.
+    """
+    membership = set(membership)
+    selected_ids = set(selected_ids)
+    if not membership:
+        return "NONE"
+    overlap = membership & selected_ids
+    if not overlap:
+        return "NONE"
+    return "FULL" if membership <= selected_ids else "PARTIAL"

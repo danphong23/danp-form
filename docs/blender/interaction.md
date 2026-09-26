@@ -47,23 +47,30 @@ rare display/maintenance actions belong in the list menu.
 With X-Ray off, the overlay uses the normal depth test and is occluded by the opaque
 mesh. X-Ray explicitly disables that test when the user needs to inspect controls
 through the model.
-Controller Edit keeps Blender's native selection tools as the only selection
-surface. Box, circle, lasso, click, Shift and Ctrl selection operate directly on
-the Controller Edit mesh; the control list remains the shortcut for selecting a
-stored membership. DANP does not add a second hover picker, segment picker,
-"select all" button or Add-to-Selection toggle that can compete with Blender's
-selection state.
+Controller Edit keeps Blender's native selection tools for direct mesh picking.
+The control list also selects saved memberships: clicking a row's selection
+marker replaces the mesh selection, and Shift-clicking that marker adds its
+membership. The clicked row becomes the single active row for shared actions
+such as Rename, Sync, Reorder and Delete. Each row derives a full, partial or
+empty selection marker from selected persistent vertex IDs; overlapping controls
+can therefore show selected together. Hidden controls have no effective
+membership in Controller Edit and display as unselected. Source Edit derives the
+marker from stored Source membership. This projection is read-only. DANP does not
+add a hover picker, segment picker or persistent Add-to-Selection toggle.
 Overlay positions use one bulk mesh read and retained GPU buffers. Geometry
 events, context, masks, selected row and object transforms invalidate the relevant
 display; idle redraw only draws existing buffers. Topology/ID caches contain no
 long-lived BMesh handles or coordinate buffers. Colored point markers represent
 explicit point handles, including a point definition sharing an edge vertex;
 ordinary edge endpoints use the colored line and Blender's native Edit selection.
-The sidebar uses a Blender-native list: inline names and eye state, shared +/− and
+The sidebar uses a Blender-native list: inline names, eye state and a selection
+marker with Shift-add, shared +/− and
 up/down controls, and Sync below it only in Source Edit Mode. Clicking a row immediately highlights
-its effective control geometry. In Source/controller Edit Mode it also replaces the
-active mesh selection with that definition; in Object Mode it keeps object/mode.
-Selecting a hidden definition never reveals its canonical masks.
+its effective control geometry. In Source/controller Edit Mode, clicking the row's
+selection marker replaces mesh selection; Shift-click adds that definition's
+vertices to the current selection. In Object Mode it keeps object/mode. Selecting
+a hidden definition never reveals its canonical masks. Row selection is transient
+and is not an Undo step; it does not change definitions or mesh geometry.
 
 Edit Control activates the model's controller, enters its Edit Mode and selects the
 active definition. Back to Model returns to the Source in the Object/Edit Mode used

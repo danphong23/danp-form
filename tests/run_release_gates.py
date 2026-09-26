@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT / "tests"
 STATIC_FILES = sorted(STATIC_DIR.glob("test_*.py"))
 BACKGROUND_SUITES = (
+    "live_control_multiselect.py",
     "live_all_control_scale.py",
     "live_shape_key_support.py",
     "live_owned_object_safety.py",

@@ -1,5 +1,14 @@
 # Phase 2 bổ sung — Native list UX
 
+Selection UX is being delivered in two bounded phases. Phase 1 adds Shift-click
+multi-control selection and full/partial/empty row markers derived from the
+current Edit selection. See the [Phase 1 report](../docs/testing/selection-phase-1-report.md).
+
+- [x] Phase 1 — dedicated row selection action, Shift-add, derived row state,
+  overlap/hidden/empty tests, active row for shared actions.
+- [ ] Phase 2 — review the existing viewport quick-pick shortcut and define its
+  overlap/hidden behavior before changing it; do not alter deformation or pivots.
+
 **Trạng thái: core UIList đã triển khai; lifecycle và controller cố định topology 0.2.2 đã qua regression live.
 Các checkbox rộng bên dưới vẫn là gate cần bằng chứng riêng, không tự đánh dấu hoàn tất.**
 

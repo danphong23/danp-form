@@ -10,6 +10,34 @@ from ..constants import *
 from .mesh import _resolve_shape_key, _source_edge_vids, _source_id_maps, _source_vertices, _validate_source_topology
 
 
+def selected_source_vertex_ids(obj: bpy.types.Object) -> set[int]:
+    """Read selected mesh vertices/endpoints as persistent Source IDs.
+
+    This is a read-only UI projection helper.  Empty selection is a valid
+    result, unlike the operation-oriented selection readers below.
+    """
+    if obj is None or obj.mode != "EDIT" or bpy.context.view_layer.objects.active != obj:
+        return set()
+    bm = bmesh.from_edit_mesh(obj.data)
+    if obj.get(CONTROLLER_KEY) is not None:
+        layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
+        if layer is None:
+            return set()
+        result = {int(vertex[layer]) for vertex in bm.verts if vertex.select and not vertex.hide}
+        for edge in bm.edges:
+            if edge.select and not edge.hide:
+                result.update(int(vertex[layer]) for vertex in edge.verts if not vertex.hide)
+        return result
+    layer = bm.verts.layers.int.get(VID_ATTR)
+    if layer is None:
+        return set()
+    result = {int(vertex[layer]) for vertex in bm.verts if vertex.select and not vertex.hide}
+    for edge in bm.edges:
+        if edge.select and not edge.hide:
+            result.update(int(vertex[layer]) for vertex in edge.verts if not vertex.hide)
+    return result
+
+
 def _source_selection(source: bpy.types.Object) -> tuple[set[int], set[int]]:
     if source.mode != "EDIT" or bpy.context.view_layer.objects.active != source:
         raise ValueError("SOURCE_EDIT_MODE_REQUIRED")

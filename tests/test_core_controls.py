@@ -60,6 +60,24 @@ def test_revealed_edge_restores_endpoints_and_edge():
     assert edges == [10]
 
 
+def test_control_selection_is_full_partial_none_and_empty_is_none():
+    assert MODULE.selection_state({1, 2}, {1, 2, 3}) == "FULL"
+    assert MODULE.selection_state({1, 2}, {2, 3}) == "PARTIAL"
+    assert MODULE.selection_state({1, 2}, {3}) == "NONE"
+    assert MODULE.selection_state(set(), {1, 2, 3}) == "NONE"
+
+
+def test_overlapping_control_memberships_can_both_be_fully_selected():
+    selected = {2, 3}
+    assert MODULE.selection_state({2, 3}, selected) == "FULL"
+    assert MODULE.selection_state({1, 2, 3}, selected) == "PARTIAL"
+
+
+def test_hidden_membership_is_not_vacuously_selected():
+    visible_membership = set()
+    assert MODULE.selection_state(visible_membership, {1, 2, 3}) == "NONE"
+
+
 def test_overlapping_controls_keep_shared_geometry_when_one_definition_hides_it():
     controls = [
         {
