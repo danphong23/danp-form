@@ -42,9 +42,20 @@ def targets_from_transform(p0, selected, transform: OperationTransform,
     """
     world_to_source = None
     if transform.space == "WORLD":
-        if source_to_world is None or not hasattr(source_to_world, "inverted_safe"):
+        if source_to_world is None or not hasattr(source_to_world, "inverted"):
             raise ValueError("WORLD_SPACE_MATRIX_REQUIRED")
-        world_to_source = source_to_world.inverted_safe()
+        try:
+            rows = tuple(tuple(float(value) for value in row) for row in source_to_world)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("WORLD_SPACE_MATRIX_INVALID") from exc
+        if len(rows) != 4 or any(len(row) != 4 for row in rows):
+            raise ValueError("WORLD_SPACE_MATRIX_INVALID")
+        if any(not math.isfinite(value) for row in rows for value in row):
+            raise ValueError("WORLD_SPACE_MATRIX_INVALID")
+        try:
+            world_to_source = source_to_world.inverted()
+        except (ValueError, ZeroDivisionError, TypeError, OverflowError) as exc:
+            raise ValueError("WORLD_SPACE_MATRIX_SINGULAR") from exc
 
     def matrix_point(matrix, value, reference):
         try:

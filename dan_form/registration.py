@@ -96,7 +96,23 @@ def unregister(api) -> None:
         api._FACE_CACHE, api._OVERLAY_CACHE, api._runtime.SHAPE_EVAL_SIGNATURES,
     ):
         cache.clear()
+    # Disabling/reloading during a preview must restore the captured Source
+    # pose while the owning objects and transaction are still resolvable.
+    for source_ptr, tx in list(api._DANP_TRANSACTIONS.items()):
+        source = next((obj for obj in bpy.data.objects
+                       if obj.as_pointer() == source_ptr), None)
+        controller = next((obj for obj in bpy.data.objects
+                           if obj.as_pointer() == tx.get("controller")), None)
+        try:
+            if source is not None and controller is not None and not tx.get("closed"):
+                api._deform_cancel(source, controller)
+        except (AttributeError, ReferenceError, RuntimeError, ValueError):
+            pass
+        finally:
+            if api._DANP_TRANSACTIONS.get(source_ptr) is tx:
+                api._DANP_TRANSACTIONS.pop(source_ptr, None)
     api._NATIVE_TRANSFORM_SESSIONS.clear()
+    api._DANP_TRANSACTIONS.clear()
     api._NATIVE_UNDO_RECORDS.clear()
     api._runtime.TOPOLOGY_STATES.clear()
     api._runtime.SHAPE_PREVIEW_STATES.clear()

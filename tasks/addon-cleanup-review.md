@@ -1,6 +1,6 @@
 # DANP Form — Làm sạch sau comprehensive review
 
-**Trạng thái: review và cleanup phạm vi nhỏ đã xong; safety và UX còn mở.**
+**Trạng thái: C01 đang triển khai; checkpoint safety đầu tiên đã kiểm chứng. C02 còn mở.**
 Baseline: `f8dbcaa`, version 0.5.36. Bằng chứng:
 [review ngày 2026-09-26](../docs/testing/2026-09-26-comprehensive-addon-review.md).
 Các mục dưới đây là cleanup của hợp đồng hiện có; preview/hover mới chờ các gate.
@@ -15,6 +15,22 @@ Các mục dưới đây là cleanup của hợp đồng hiện có; preview/hov
 - [x] Ghi lỗi đã tái hiện và giới hạn nghiệm thu lịch sử.
 
 ## C01 — Safety, lifecycle và ranh giới mã
+
+Tiến độ checkpoint 2026-09-26:
+
+- [x] R01/R02: busy caller không mượn hoặc hủy transaction của owner; native
+  bridge từ chối operation khác đang mở.
+- [x] R03/R09: target giới hạn vào mapping chụp đầu operation; matrix WORLD
+  suy biến/non-finite bị từ chối.
+- [x] R04 Delete: failure khi rebuild rollback definitions, masks, revision và
+  proxy mesh; regression inject lỗi có trong release runner.
+- [x] R11 unregister: preview đang mở được hủy về Operation Rest và dọn registry.
+- [ ] R04 cho Create/Sync/Hide/Reset/Repair; rollback mọi bước và registration
+  failure atomicity.
+- [ ] Timer race/exception matrix; historical operator removal; module split.
+
+Bằng chứng và giới hạn hiện tại ở
+[checkpoint C01](../docs/testing/2026-09-26-c01-operation-safety.md).
 
 Triển khai tuần tự; commit các phạm vi sửa có thể kiểm chứng độc lập.
 

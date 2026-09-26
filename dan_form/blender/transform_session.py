@@ -80,8 +80,11 @@ def _has_native_transform(context: bpy.types.Context) -> bool:
 def begin(source, controller, deps, operation: str, controller_rest=None) -> dict:
     key = source.as_pointer()
     tx = deps.transactions.get(key)
-    if tx is None:
-        tx = _deform_begin(source, controller)
+    if tx is not None and not tx.get("closed"):
+        # A native transform is a distinct caller. Sharing an existing
+        # transaction would let its timer commit/cancel another caller's work.
+        raise ValueError("OPERATION_BUSY")
+    tx = _deform_begin(source, controller)
     session = {
         "source": source.as_pointer(),
         "controller": controller.as_pointer(),
@@ -133,15 +136,24 @@ def update(source, controller, deps, session, profile="LINEAR", radius=0.0,
 
 def commit(source, deps) -> None:
     key = source.as_pointer()
+    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
+    expected = session.get("transaction") if session else None
     tx = deps.transactions.get(key)
-    if tx is not None:
+    if expected is not None and tx is not expected:
+        raise ValueError("OPERATION_OWNER_MISMATCH")
+    if tx is not None and expected is not None:
         _deform_commit(source)
     runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
 
 
 def cancel(source, controller, deps) -> None:
     key = source.as_pointer()
-    if key in deps.transactions:
+    session = runtime.NATIVE_TRANSFORM_SESSIONS.get(key)
+    expected = session.get("transaction") if session else None
+    tx = deps.transactions.get(key)
+    if expected is not None and tx is not expected:
+        raise ValueError("OPERATION_OWNER_MISMATCH")
+    if tx is not None and expected is not None:
         # Cancellation restores both Source and Controller.  Updating the
         # Controller can synchronously invoke the depsgraph observer while
         # this session is still registered; without the guard, that observer
@@ -181,8 +193,9 @@ def finalize_active(source, controller, deps) -> bool:
             cancel(source, controller, deps)
     except (ValueError, RuntimeError, KeyError):
         # Do not leave a half-open transaction blocking the next command.
-        runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
-        deps.transactions.pop(key, None)
+        if deps.transactions.get(key) is session.get("transaction"):
+            runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
+            deps.transactions.pop(key, None)
         raise
     return True
 

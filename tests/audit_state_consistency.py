@@ -137,9 +137,17 @@ def run():
         addon._select_proxy_ids(controller, av, ae)
         operation = agent.begin_operation()
         owner = addon._DANP_TRANSACTIONS[source.as_pointer()]
-        native = addon._transform_session.begin(source, controller, addon._workflow_dependencies(), "NATIVE")
-        record("native_transaction_owner", native.get("transaction") is owner,
-               agent_operation_id=operation["operation_id"], native_reused_agent_transaction=native.get("transaction") is owner)
+        try:
+            native = addon._transform_session.begin(
+                source, controller, addon._workflow_dependencies(), "NATIVE")
+            native_rejected = False
+            native_reused = native.get("transaction") is owner
+        except ValueError as exc:
+            native_rejected = str(exc) == "OPERATION_BUSY"
+            native_reused = False
+        record("native_transaction_owner", not (native_rejected and not native_reused),
+               agent_operation_id=operation["operation_id"], native_rejected=native_rejected,
+               native_reused_agent_transaction=native_reused)
 
         source, controller, controls = fixture()
         av, ae = addon._control_effective(source, controls[0])

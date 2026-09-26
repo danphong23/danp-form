@@ -185,6 +185,29 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         targets = targets_from_transform(p0, tx["selected"], operation_transform)
     if targets is None:
         targets = {vid: p0[vid] + Vector(delta) for vid in tx["selected"]}
+    if not isinstance(targets, dict):
+        raise ValueError("TARGETS_MUST_BE_MAPPING")
+    captured_mapping = set(tx.get("controller_pre", {}))
+    normalized_targets = {}
+    for raw_id, position in targets.items():
+        if isinstance(raw_id, bool):
+            raise ValueError("TARGET_ID_INVALID")
+        if isinstance(raw_id, int):
+            vertex_id = int(raw_id)
+        elif isinstance(raw_id, str) and raw_id.strip().lstrip("-").isdigit():
+            vertex_id = int(raw_id)
+        else:
+            raise ValueError("TARGET_ID_INVALID")
+        if vertex_id not in captured_mapping or vertex_id not in p0:
+            raise ValueError("TARGET_OUTSIDE_CONTROLLER_MAPPING")
+        try:
+            coordinate = tuple(float(component) for component in position)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("TARGET_INVALID") from exc
+        if len(coordinate) != 3 or not all(math.isfinite(value) for value in coordinate):
+            raise ValueError("NON_FINITE_RESULT")
+        normalized_targets[vertex_id] = Vector(coordinate)
+    targets = normalized_targets
     moved = set(targets)
     intent = set(tx["selected"] if selection_intent is None else selection_intent)
     active = moved | intent

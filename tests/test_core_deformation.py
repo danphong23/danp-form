@@ -503,3 +503,22 @@ def test_world_space_requires_an_explicit_source_matrix():
         assert str(exc) == "WORLD_SPACE_MATRIX_REQUIRED"
     else:
         raise AssertionError("WORLD transforms must not be silently treated as local")
+
+
+def test_world_space_rejects_a_singular_source_matrix():
+    class SingularMatrix:
+        def __iter__(self):
+            return iter(((0.0, 0.0, 0.0, 0.0), (0.0, 1.0, 0.0, 0.0),
+                          (0.0, 0.0, 1.0, 0.0), (0.0, 0.0, 0.0, 1.0)))
+
+        def inverted(self):
+            raise ValueError("matrix is singular")
+
+    transform = OPERATION.OperationTransform(operation="MOVE", space="WORLD")
+    try:
+        OPERATION.targets_from_transform({0: V(1, 2, 3)}, {0}, transform,
+                                         source_to_world=SingularMatrix())
+    except ValueError as exc:
+        assert str(exc) == "WORLD_SPACE_MATRIX_SINGULAR"
+    else:
+        raise AssertionError("singular WORLD frames must be rejected")

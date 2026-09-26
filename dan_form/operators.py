@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import uuid
+import copy
 from types import SimpleNamespace
 
 import bmesh
@@ -51,8 +52,16 @@ def _friendly_error(exc: Exception) -> str:
         return "A transform is in progress. Confirm or cancel it before continuing."
     if code == "OPERATION_STALE":
         return "The edit session is stale. Confirm or cancel the transform, then try again."
+    if code == "OPERATION_OWNER_MISMATCH":
+        return "This transform belongs to another edit operation. Finish that operation first."
     if code == "WORLD_SPACE_MATRIX_REQUIRED":
         return "A world-space transform needs the Source matrix. Use Source-local coordinates instead."
+    if code == "WORLD_SPACE_MATRIX_SINGULAR":
+        return "The Source transform cannot be inverted. Apply or correct its object transform before using world coordinates."
+    if code == "WORLD_SPACE_MATRIX_INVALID":
+        return "The Source transform contains invalid values. Correct the object transform and try again."
+    if code == "TARGET_OUTSIDE_CONTROLLER_MAPPING":
+        return "A target is not represented by this Controller. Sync or rebuild the Controller before editing."
     if code == "SHAPE_KEY_LOCKED":
         return "The selected Shape Key is locked. Unlock it before editing the Controller."
     if code == "SHAPE_KEY_TARGET_INVALID":
@@ -74,6 +83,64 @@ def _friendly_error(exc: Exception) -> str:
     if code.isupper() and "_" in code:
         return f"DANP Form could not complete this action ({code})."
     return code
+
+
+def _capture_control_structure(source, controller):
+    """Capture persisted control state and proxy data for a structural rollback."""
+    source_keys = (CONTROLS_KEY, HIDDEN_VIDS_KEY, HIDDEN_EIDS_KEY,
+                   NETWORK_REVISION_KEY)
+    controller_keys = (PROXY_GENERATION_KEY,)
+    pointer = controller.as_pointer() if controller is not None else None
+    return {
+        "source": {key: source.get(key) for key in source_keys if key in source},
+        "source_keys": source_keys,
+        "controller": ({key: controller.get(key) for key in controller_keys
+                        if key in controller} if controller is not None else {}),
+        "controller_keys": controller_keys,
+        "controller_data": controller.data.copy() if controller is not None else None,
+        "proxy_snapshot": copy.deepcopy(_PROXY_SNAPSHOTS.get(pointer)) if pointer is not None else None,
+        "pointer": pointer,
+    }
+
+
+def _restore_control_structure(source, controller, snapshot):
+    for key in snapshot["source_keys"]:
+        if key in snapshot["source"]:
+            source[key] = snapshot["source"][key]
+        else:
+            source.pop(key, None)
+    if controller is not None:
+        for key in snapshot["controller_keys"]:
+            if key in snapshot["controller"]:
+                controller[key] = snapshot["controller"][key]
+            else:
+                controller.pop(key, None)
+        previous_data = snapshot.get("controller_data")
+        if previous_data is not None:
+            failed_data = controller.data
+            controller.data = previous_data
+            if failed_data is not previous_data and failed_data.users == 0:
+                bpy.data.meshes.remove(failed_data)
+        pointer = snapshot.get("pointer")
+        if pointer is not None:
+            if snapshot["proxy_snapshot"] is None:
+                _PROXY_SNAPSHOTS.pop(pointer, None)
+            else:
+                _PROXY_SNAPSHOTS[pointer] = snapshot["proxy_snapshot"]
+    if snapshot.get("controller_data") is not None and controller is None:
+        bpy.data.meshes.remove(snapshot["controller_data"])
+    _MAPPING_CACHE.pop(source.as_pointer(), None)
+    _NETWORK_CACHE.pop(source.as_pointer(), None)
+    _PATCH_CACHE.pop(source.as_pointer(), None)
+    _PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
+    _FACE_CACHE.pop(source.as_pointer(), None)
+    _OVERLAY_CACHE.clear()
+
+
+def _discard_control_structure_snapshot(snapshot):
+    mesh = snapshot.get("controller_data")
+    if mesh is not None and mesh.users == 0 and bpy.data.meshes.get(mesh.name) is mesh:
+        bpy.data.meshes.remove(mesh)
 
 
 _SOURCE_DANP_KEYS = (
@@ -931,11 +998,19 @@ class DANFORM_OT_delete_control(bpy.types.Operator):
         remaining = [item for item in controls if item.get("control_uuid") != self.control_uuid]
         if deleted_index < 0:
             return {"CANCELLED"}
-        _json_set(source, CONTROLS_KEY, remaining)
-        _prune_masks_after_remove(source)
-        _update_revision(source)
-        if controller is not None:
-            _rebuild_proxy(source, controller)
+        snapshot = _capture_control_structure(source, controller)
+        try:
+            _json_set(source, CONTROLS_KEY, remaining)
+            _prune_masks_after_remove(source)
+            _update_revision(source)
+            if controller is not None:
+                _rebuild_proxy(source, controller)
+        except Exception as exc:
+            _restore_control_structure(source, controller, snapshot)
+            self.report({"ERROR"}, _friendly_error(exc))
+            return {"CANCELLED"}
+        else:
+            _discard_control_structure_snapshot(snapshot)
         _set_scene_context(context, source, controller)
         context.scene.dan_form_selected_control = ""
         context.scene.dan_form_status = "Control deleted"
@@ -1399,8 +1474,9 @@ class DANFORM_OT_deform(bpy.types.Operator):
         source, controller = _context_source(context)
         if source is None or controller is None:
             return {"CANCELLED"}
+        owned_tx = None
         try:
-            _deform_begin(source, controller)
+            owned_tx = _deform_begin(source, controller)
             targets = None
             operation_transform = None
             if self.targets_json:
@@ -1427,7 +1503,8 @@ class DANFORM_OT_deform(bpy.types.Operator):
             return {"FINISHED"}
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             try:
-                if source.as_pointer() in _DANP_TRANSACTIONS:
+                if (owned_tx is not None
+                        and _DANP_TRANSACTIONS.get(source.as_pointer()) is owned_tx):
                     _deform_cancel(source, controller)
             except (ValueError, RuntimeError):
                 pass

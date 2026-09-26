@@ -29,17 +29,17 @@ không ghi đè bằng chứng kiểm thử lịch sử.
 
 | ID | Mức | Phát hiện và bằng chứng | Trạng thái sau làm sạch |
 | --- | --- | --- | --- |
-| R01 | P1 | Một transaction agent đang có preview 0,25 đơn vị. Gọi `dan_form.deform` thứ hai báo busy nhưng hủy transaction gốc và trả Source khỏi preview, mất 0,25 đơn vị của preview đó. | OPEN |
-| R02 | P1 | `transform_session.begin` tái sử dụng transaction đang thuộc agent thay vì từ chối người gọi khác. Native và agent có thể cùng giữ một transaction. | OPEN |
-| R03 | P1 | `targets_json` nhận target cho Source vertex ID không thuộc controller; operator trả FINISHED và di chuyển đỉnh đó khoảng 0,300000006 đơn vị. | OPEN |
-| R04 | P1 | Inject lỗi tại rebuild sau Delete: operator lỗi, nhưng definitions đã giảm từ 2 xuống 1. Lệnh không có rollback toàn bộ metadata/proxy. | OPEN |
+| R01 | P1 | Một transaction agent đang có preview 0,25 đơn vị. Caller thứ hai trước đây hủy transaction gốc. Guard hiện chỉ rollback transaction do operator đó mở; audit giữ transaction và preview (0 displacement loss). Blender background đôi khi chặn dispatch báo transform đang chạy, nên UI feedback trên phiên tương tác chưa được kiểm lại. | FIXED; UI dispatch detail pending |
+| R02 | P1 | `transform_session.begin` trước đây tái sử dụng transaction của agent. Native bridge hiện từ chối bằng `OPERATION_BUSY`; regression xác nhận owner và preview giữ nguyên. | FIXED; timer-race matrix pending |
+| R03 | P1 | `targets_json` trước đây nhận target cho Source vertex ngoài controller mapping và di chuyển ~0,300000006. Workflow hiện kiểm mapping đã chụp trước solve/writeback. | FIXED; malformed payload matrix pending |
+| R04 | P1 | Inject lỗi sau Delete trước đây làm mất một definition. Delete hiện rollback definitions/masks/revision/proxy mesh; regression inject xác nhận. Create/Sync/Hide/Reset/Repair vẫn cần rollback gates. | PARTIAL |
 | R05 | P2 | Native Hide Unselected làm ẩn 2 controller vertices trong khi trạng thái definition vẫn On. DANP Reveal trả FINISHED nhưng cả 2 vẫn ẩn. | OPEN |
 | R06 | P2 | H với 4 đỉnh thuộc A/B đang chọn chỉ xử lý A active; 2 đỉnh của B vẫn effective. | OPEN |
 | R07 | P2 | Chọn B rồi click mắt ẩn A: selection của B bị thay bằng rỗng dù B không bị ẩn. | OPEN |
 | R08 | P2 | Reader selection ngoài Edit Mode trả `set()` thay vì cặp vertex/edge sets. | FIXED, PASS |
-| R09 | P2 | WORLD transform chấp nhận matrix singular diag(0,1,1,1) qua `inverted_safe`; target (1,2,3) thành (0,2,3) thay vì bị từ chối. | OPEN |
+| R09 | P2 | WORLD transform trước đây chấp nhận matrix singular qua `inverted_safe`; hiện dùng phép nghịch đảo có kiểm lỗi và kiểm tra giá trị hữu hạn. Static regression từ chối matrix singular. | FIXED; Blender Matrix edge cases pending |
 | R10 | P2 | `bind()` chép dunder từ facade sang module: `dan_form.operators.__name__` và spec name đều thành `dan_form`. Metadata cho reload bị thay sai. | FIXED, PASS |
-| R11 | P2 | Unregister với một agent operation mở vẫn để lại một entry trong `DANP_TRANSACTIONS`. | OPEN |
+| R11 | P2 | Unregister trước đây để transaction agent mở trong registry. Hiện preview được rollback về Operation Rest và registry được dọn; regression background xác nhận cả tọa độ. | FIXED; mid-register failure rollback pending |
 
 P1 là lỗi về quyền ghi/transaction hoặc trạng thái dữ liệu dở dang. P2 là lỗi
 đúng đắn/tương tác hoặc lifecycle. Một lỗi được inject để kiểm failure atomicity

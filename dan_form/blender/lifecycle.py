@@ -380,12 +380,15 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
                 first_interval=0.0,
             )
     except (ValueError, RuntimeError, KeyError):
-        runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
-        if key in deps.transactions:
+        owner_session = session
+        owner_tx = owner_session.get("transaction") if owner_session else None
+        if owner_tx is not None and deps.transactions.get(key) is owner_tx:
             try:
                 _transform_session.cancel(source, controller, deps)
             except (ValueError, RuntimeError):
-                deps.transactions.pop(key, None)
+                if deps.transactions.get(key) is owner_tx:
+                    deps.transactions.pop(key, None)
+        runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
 
 
 def _native_transform_timer(source_ptr):

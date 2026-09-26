@@ -37,6 +37,7 @@ BACKGROUND_SUITES = (
     "live_shape_key_target_workflow.py",
     "live_agent_target_api.py",
     "live_runtime_boundaries.py",
+    "live_operation_ownership.py",
     "live_initialize_modes.py",
 )
 TRACEBACK_MARKERS = ("Traceback (most recent call last)", "AssertionError:", "Error: Python:")
