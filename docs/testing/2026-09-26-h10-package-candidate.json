@@ -5,7 +5,7 @@
     "addon_version": "0.5.36",
     "blender_version": "5.2.1 LTS",
     "source_commit": "31260e85e07cd2c081ace124f50d5cc12cf41b1d",
-    "release_runner_code_commit": "71f84151f3c1a6d55983e647a5213fb68759539f",
+    "release_runner_code_commit": "178a82e58bcf729e0122e53cd3d39b2c1a226411",
     "archive_member_count": 146,
     "archive_sha256": "11eb94ea814157971ef6c8dc09b8f2376b6de437f63925f35c0756f3bf504a94",
     "archive_retained_in_repository": false
@@ -31,7 +31,7 @@
     "temporary_archive_removed": true
   },
   "release_gates": {
-    "report": "2026-09-26-release-gates-c02-license.json",
+    "report": "2026-09-27-release-gates-c02-test-safety.json",
     "static_suites": "9/9 PASS",
     "blender_background_suites": "11/11 PASS",
     "overall": "INCOMPLETE",

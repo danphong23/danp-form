@@ -1,0 +1,669 @@
+{
+  "status": "INCOMPLETE",
+  "metadata": {
+    "blender_version": "5.2.1 LTS",
+    "addon_version": "0,5,36",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "commit": "178a82e58bcf729e0122e53cd3d39b2c1a226411",
+    "fixture_project": "generated two-control strip"
+  },
+  "static_suites": [
+    {
+      "name": "test_agent_facade_static.py",
+      "status": "PASS",
+      "check_count": 3,
+      "exit_code": 0,
+      "elapsed_seconds": 0.078,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_agent_facade_uses_shared_ui_operator_and_persistent_selection\", \"test_agent_facade_exposes_validation_and_no_direct_json_write\", \"test_agent_facade_exposes_transaction_lifecycle\"]}"
+      ]
+    },
+    {
+      "name": "test_context_ownership_static.py",
+      "status": "PASS",
+      "check_count": 3,
+      "exit_code": 0,
+      "elapsed_seconds": 0.067,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_controller_resolution_uses_direct_parentage_and_unique_binding\", \"test_copy_lifecycle_rekeys_full_pair_and_clears_mesh_only_duplicate\", \"test_duplicate_ownership_decision_is_documented\"]}"
+      ]
+    },
+    {
+      "name": "test_core_controls.py",
+      "status": "PASS",
+      "check_count": 8,
+      "exit_code": 0,
+      "elapsed_seconds": 0.067,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_hidden_edge_endpoints_do_not_become_standalone_vertices\", \"test_standalone_point_remains_visible_until_its_node_is_hidden\", \"test_revealed_edge_restores_endpoints_and_edge\", \"test_control_selection_is_full_partial_none_and_empty_is_none\", \"test_overlapping_control_memberships_can_both_be_fully_selected\", \"test_hidden_membership_is_not_vacuously_selected\", \"test_overlapping_controls_keep_shared_geometry_when_one_definition_hides_it\", \"test_disabled_definition_releases_only_its_membership\"]}"
+      ]
+    },
+    {
+      "name": "test_core_deformation.py",
+      "status": "PASS",
+      "check_count": 19,
+      "exit_code": 0,
+      "elapsed_seconds": 0.158,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_moving_boundary_interpolates_toward_stationary_boundary\", \"test_nonuniform_loop_targets_are_not_reduced_to_one_average_vector\", \"test_finite_radius_cannot_expand_or_cross_patch_scope\", \"test_noop_target_clears_to_operation_rest_exactly\", \"test_shared_free_vertex_conflict_is_rejected_before_writeback\", \"test_single_control_owns_rotation_of_the_whole_patch\", \"test_single_control_owns_scale_of_the_whole_patch\", \"test_all_selected_controls_scale_as_one_mesh_across_patch_cuts\", \"test_single_planar_control_keeps_axis_scale_continuous_for_free_patch_vertices\", \"test_axis_scale_keeps_unchanged_selected_loop_in_the_transforming_region\", \"test_radius_zero_preserves_ratio_between_moving_and_stationary_boundaries\", \"test_cylinder_rings_keep_their_longitudinal_ratios_when_controls_approach\", \"test_unselected_control_is_an_identity_anchor_for_shared_patch\", \"test_native_proportional_targets_shape_the_patch_from_each_vertex\", \"test_no_movement_with_selection_intent_is_exact_no_op\", \"test_canonical_operation_resolves_absolute_targets_for_agent_and_ui\", \"test_canonical_operation_matches_xyz_rotation_order_on_each_axis\", \"test_world_space_requires_an_explicit_source_matrix\", \"test_world_space_rejects_a_singular_source_matrix\"]}"
+      ]
+    },
+    {
+      "name": "test_module_split_static.py",
+      "status": "PASS",
+      "check_count": 9,
+      "exit_code": 0,
+      "elapsed_seconds": 0.185,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_extracted_modules_exist\", \"test_facade_uses_extracted_boundaries\", \"test_edit_mode_ids_are_written_to_live_bmesh\", \"test_mutable_ui_state_uses_shared_runtime\", \"test_unregistered_legacy_picker_implementation_is_removed\", \"test_sidebar_classes_have_a_ui_module_boundary\", \"test_action_operator_domains_have_explicit_bindings\", \"test_danp_classes_are_registered_or_not_defined\", \"test_visibility_shortcuts_and_native_hide_recovery_share_contract\"]}"
+      ]
+    },
+    {
+      "name": "test_phase1_static.py",
+      "status": "PASS",
+      "check_count": 9,
+      "exit_code": 0,
+      "elapsed_seconds": 0.118,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_manifest_and_package_exist\", \"test_distribution_license_matches_manifest\", \"test_third_party_notice_is_packaged\", \"test_destructive_selection_fixture_refuses_live_ui\", \"test_phase1_contract_symbols\", \"test_phase2_contract_symbols\", \"test_phase2_ux_documents_exist\", \"test_native_control_list_contract_symbols\", \"test_phase3_patch_contract_symbols\"]}"
+      ]
+    },
+    {
+      "name": "test_phase4_static.py",
+      "status": "PASS",
+      "check_count": 13,
+      "exit_code": 0,
+      "elapsed_seconds": 0.078,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_phase4_transaction_primitives_exist\", \"test_phase4_hard_constraints_and_profiles_are_present\", \"test_explicit_target_mapping_is_not_replaced_by_delta_defaults\", \"test_phase4_operator_and_ui_are_registered\", \"test_native_grs_uses_blender_edit_transform_without_legacy_macros\", \"test_native_session_commits_original_targets_before_selection_changes\", \"test_native_targets_are_coordinate_deltas_and_source_write_is_idempotent\", \"test_native_completion_uses_blender_modal_boundary_not_quiet_time\", \"test_native_undo_keeps_history_and_resyncs_proxy\", \"test_operation_freezes_proxy_and_modifier_generations\", \"test_topology_lock_uses_the_native_modal_boundary\", \"test_world_transform_cannot_fall_through_as_source_local\", \"test_transform_selection_intent_is_carried_separately_from_measured_targets\"]}"
+      ]
+    },
+    {
+      "name": "test_storage.py",
+      "status": "PASS",
+      "check_count": 3,
+      "exit_code": 0,
+      "elapsed_seconds": 0.084,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_corrupt_definitions_fail_before_any_migration_write\", \"test_invalid_membership_and_masks_do_not_drop_a_definition\", \"test_valid_legacy_masks_project_onto_overlapping_controls\"]}"
+      ]
+    },
+    {
+      "name": "test_topology_recovery_static.py",
+      "status": "PASS",
+      "check_count": 5,
+      "exit_code": 0,
+      "elapsed_seconds": 0.084,
+      "output_tail": [
+        "DANP_STATIC_RESULT={\"status\": \"PASS\", \"checks\": [\"test_topology_changes_pause_instead_of_writing_stale_mapping\", \"test_reset_is_registered_and_undoable\", \"test_cleanup_marks_stale_ownership_without_deleting_objects\", \"test_modifier_contract_mentions_base_mapping_and_evaluated_display\", \"test_explicit_topology_preview_and_repair_fail_closed\"]}"
+      ]
+    }
+  ],
+  "blender_background_suites": [
+    {
+      "name": "live_control_multiselect.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.615,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "initialize disposable selection fixture",
+          "create definition 1",
+          "create definition 2",
+          "create definition 3",
+          "Shift-add operator unions the second control with current selection",
+          "add selection retains earlier vertices",
+          "row action makes clicked control active for shared row actions",
+          "Shift-clicking an already selected control toggles its membership off",
+          "Shift-deselect preserves the other control membership",
+          "clicking the only selected control toggles it off",
+          "repeat-click leaves mesh selection empty",
+          "shared selected point derives partial states for both overlapping controls",
+          "unrelated control derives unselected state",
+          "all vertices derive full state",
+          "overlapping controls can report partial while another is full",
+          "transient selection does not create a geometry Undo step",
+          "plain selection replaces prior selection",
+          "plain selection leaves only clicked control selected",
+          "select and add operations leave definitions and geometry untouched",
+          "fully hidden effective membership is not vacuously selected",
+          "controller selection state resolves persistent proxy IDs to Source membership",
+          "selecting from Controller Object Mode enters Controller Edit",
+          "Controller Object Mode selection selects the effective proxy membership",
+          "additive selection also works in Controller Edit",
+          "Controller Shift-add preserves previous proxy vertices",
+          "H hides multi-control selection with one Source-wide operation",
+          "multi-control H releases every selected control vertex",
+          "Alt-H Show restores canonical masks",
+          "eye hides only its definition",
+          "eye rebuild preserves unrelated selected control handles",
+          "eye restores its definition",
+          "Shift-H keeps selected controls and masks the rest",
+          "Shift-H preserves selection and hides unselected membership",
+          "Alt-H reveals the Shift-H result",
+          "Shift-H also uses selected spans in Edge mode",
+          "Edge-mode Shift-H leaves exactly the selected span visible",
+          "Alt-H restores Edge-mode visibility",
+          "Shift-H accepts an empty selection as Hide All",
+          "empty-selection Shift-H hides all effective vertices",
+          "Alt-H restores empty-selection Hide All",
+          "native F3 Hide produces transient hidden Controller flags",
+          "Alt-H accepts a native hidden Controller as a reveal request",
+          "Alt-H clears native flags without changing canonical eye/mask state"
+        ],
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Info: DANP Form controller ready",
+        "Info: Created Fixture 1 (2V/0E)",
+        "Info: Created Fixture 2 (2V/0E)",
+        "Info: Created Fixture 3 (2V/0E)",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"initialize disposable selection fixture\", \"create definition 1\", \"create definition 2\", \"create definition 3\", \"Shift-add operator unions the second control with current selection\", \"add selection retains earlier vertices\", \"row action makes clicked control active for shared row actions\", \"Shift-clicking an already selected control toggles its membership off\", \"Shift-deselect preserves the other control membership\", \"clicking the only selected control toggles it off\", \"repeat-click leaves mesh selection empty\", \"shared selected point derives partial states for both overlapping controls\", \"unrelated control derives unselected state\", \"all vertices derive full state\", \"overlapping controls can report partial while another is full\", \"transient selection does not create a geometry Undo step\", \"plain selection replaces prior selection\", \"plain selection leaves only clicked control selected\", \"select and add operations leave definitions and geometry untouched\", \"fully hidden effective membership is not vacuously selected\", \"controller selection state resolves persistent proxy IDs to Source membership\", \"selecting from Controller Object Mode enters Controller Edit\", \"Controller Object Mode selection selects the effective proxy membership\", \"additive selection also works in Controller Edit\", \"Controller Shift-add preserves previous proxy vertices\", \"H hides multi-control selection with one Source-wide operation\", \"multi-control H releases every selected control vertex\", \"Alt-H Show restores canonical masks\", \"eye hides only its definition\", \"eye rebuild preserves unrelated selected control handles\", \"eye restores its definition\", \"Shift-H keeps selected controls and masks the rest\", \"Shift-H preserves selection and hides unselected membership\", \"Alt-H reveals the Shift-H result\", \"Shift-H also uses selected spans in Edge mode\", \"Edge-mode Shift-H leaves exactly the selected span visible\", \"Alt-H restores Edge-mode visibility\", \"Shift-H accepts an empty selection as Hide All\", \"empty-selection Shift-H hides all effective vertices\", \"Alt-H restores empty-selection Hide All\", \"native F3 Hide produces transient hidden Controller flags\", \"Alt-H accepts a native hidden Controller as a reveal request\", \"Alt-H clears native flags without changing canonical eye/mask state\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_all_control_scale.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.282,
+      "report": {
+        "patches": 2,
+        "samples": {
+          "0.4": 9.541398640621973e-07,
+          "0.5": 0.0,
+          "0.7": 5.960464477539063e-08,
+          "0.9": 1.9073486328125e-06,
+          "0.98": 9.548999355079142e-07,
+          "1.0": 0.0
+        },
+        "source_vertices": 10,
+        "status": "PASS"
+      },
+      "output_tail": [
+        "Info: DANP Form controller ready",
+        "Info: Created Control 1 (4V/4E)",
+        "Info: Created Control 2 (4V/4E)",
+        "{\"patches\": 2, \"samples\": {\"0.4\": 9.541398640621973e-07, \"0.5\": 0.0, \"0.7\": 5.960464477539063e-08, \"0.9\": 1.9073486328125e-06, \"0.98\": 9.548999355079142e-07, \"1.0\": 0.0}, \"source_vertices\": 10, \"status\": \"PASS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_shape_key_support.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.459,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "Init accepts Basis Shape Key",
+          "Source Edit Mode explicitly writes the requested expression key",
+          "explicit Edit Mode key write leaves active Basis unchanged",
+          "control creation with Shape Keys",
+          "Blender depsgraph detects Shape Key value changes without an explicit sync action",
+          "controller follows the visible full Shape Key pose",
+          "controller follows the visible blended Shape Key pose",
+          "partial key value produces an intermediate visible pose",
+          "Subdivision creates a topology-changing evaluated surface",
+          "topology-changing modifiers retain one coordinate per Source ID",
+          "Subdivision fallback evaluates the real blended Shape Key pose",
+          "controller follows Shape Keys on the Source cage under Subdivision",
+          "controller returns to the visible Basis pose when key value reaches zero",
+          "Subdivision fallback evaluates stored Basis at value zero",
+          "Subdivision fallback evaluates stored expression after zero-to-one change",
+          "controller follows a zero-to-one Shape Key change under Subdivision",
+          "Basis receives controller deformation",
+          "other Shape Key remains unchanged",
+          "Shape Key edit does not write base mesh",
+          "cancel restores the targeted Basis",
+          "sidebar selector switches the Source target key",
+          "active expression receives controller deformation",
+          "editing expression leaves Basis unchanged",
+          "cancel restores the targeted expression",
+          "operator commits deformation into the active expression",
+          "commit changes active key coordinates",
+          "Shape Key commit records the key-specific undo target",
+          "Undo history stores stable Shape Key identity instead of a KeyBlock reference",
+          "Undo target identity fails closed when the captured key no longer resolves",
+          "Undo bridge restores the edited key after controller undo",
+          "Redo bridge reapplies the edited key after controller redo",
+          "Undo bridge writes its historical target while Source edits Basis",
+          "Redo bridge writes its historical target while Source edits Basis",
+          "absolute Shape Key time blends on the Source cage under Subdivision",
+          "absolute Shape Key stack writes the explicit key coordinates",
+          "absolute key mode and evaluation time remain unchanged",
+          "controller deformation writes active absolute Shape Key",
+          "absolute Shape Key deformation leaves Basis unchanged",
+          "Undo bridge restores the stored absolute Shape Key",
+          "Redo bridge reapplies the stored absolute Shape Key",
+          "Reset Model restores the original captured Basis target",
+          "Reset Model restores original Basis coordinates",
+          "Reset Model rejects a same-name replacement Shape Key",
+          "failed Reset Model leaves replacement key unchanged",
+          "Reset Model fails closed when saved key provenance is unavailable",
+          "unknown Reset provenance causes no key writes",
+          "renaming the target during preview aborts before another write",
+          "cancel restores the captured key after rename",
+          "locked active key rejects deformation",
+          "locked key remains unchanged",
+          "mid-operation key switch is rejected",
+          "cancel after target switch restores original key",
+          "focus controller with expression key",
+          "controller mode shows selected Shape Key clearly",
+          "return to Source",
+          "return restores prior Shape Key display setting",
+          "Source can remove all Shape Keys",
+          "Controller edits base mesh after all Shape Keys are removed",
+          "cancel restores base mesh after Shape Key removal",
+          "Create Control works after all Shape Keys are removed",
+          "control list contains the newly created no-key control"
+        ],
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Info: DANP Form controller ready",
+        "Info: Created Control 1 (4V/4E)",
+        "Info: Source restored to the original Init pose",
+        "Error: The original Shape Key snapshot cannot be verified. Reset DANP to capture a new snapshot.",
+        "Error: The original Shape Key snapshot cannot be verified. Reset DANP to capture a new snapshot.",
+        "Info: Created Control 2 (4V/4E)",
+        "{'status': 'PASS', 'checks': ['Init accepts Basis Shape Key', 'Source Edit Mode explicitly writes the requested expression key', 'explicit Edit Mode key write leaves active Basis unchanged', 'control creation with Shape Keys', 'Blender depsgraph detects Shape Key value changes without an explicit sync action', 'controller follows the visible full Shape Key pose', 'controller follows the visible blended Shape Key pose', 'partial key value produces an intermediate visible pose', 'Subdivision creates a topology-changing evaluated surface', 'topology-changing modifiers retain one coordinate per Source ID', 'Subdivision fallback evaluates the real blended Shape Key pose', 'controller follows Shape Keys on the Source cage under Subdivision', 'controller returns to the visible Basis pose when key value reaches zero', 'Subdivision fallback evaluates stored Basis at value zero', 'Subdivision fallback evaluates stored expression after zero-to-one change', 'controller follows a zero-to-one Shape Key change under Subdivision', 'Basis receives controller deformation', 'other Shape Key remains unchanged', 'Shape Key edit does not write base mesh', 'cancel restores the targeted Basis', 'sidebar selector switches the Source target key', 'active expression receives controller deformation', 'editing expression leaves Basis unchanged', 'cancel restores the targeted expression', 'operator commits deformation into the active expression', 'commit changes active key coordinates', 'Shape Key commit records the key-specific undo target', 'Undo history stores stable Shape Key identity instead of a KeyBlock reference', 'Undo target identity fails closed when the captured key no longer resolves', 'Undo bridge restores the edited key after controller undo', 'Redo bridge reapplies the edited key after controller redo', 'Undo bridge writes its historical target while Source edits Basis', 'Redo bridge writes its historical target while Source edits Basis', 'absolute Shape Key time blends on the Source cage under Subdivision', 'absolute Shape Key stack writes the explicit key coordinates', 'absolute key mode and evaluation time remain unchanged', 'controller deformation writes active absolute Shape Key', 'absolute Shape Key deformation leaves Basis unchanged', 'Undo bridge restores the stored absolute Shape Key', 'Redo bridge reapplies the stored absolute Shape Key', 'Reset Model restores the original captured Basis target', 'Reset Model restores original Basis coordinates', 'Reset Model rejects a same-name replacement Shape Key', 'failed Reset Model leaves replacement key unchanged', 'Reset Model fails closed when saved key provenance is unavailable', 'unknown Reset provenance causes no key writes', 'renaming the target during preview aborts before another write', 'cancel restores the captured key after rename', 'locked active key rejects deformation', 'locked key remains unchanged', 'mid-operation key switch is rejected', 'cancel after target switch restores original key', 'focus controller with expression key', 'controller mode shows selected Shape Key clearly', 'return to Source', 'return restores prior Shape Key display setting', 'Source can remove all Shape Keys', 'Controller edits base mesh after all Shape Keys are removed', 'cancel restores base mesh after Shape Key removal', 'Create Control works after all Shape Keys are removed', 'control list contains the newly created no-key control'], 'blender_version': '5.2.1 LTS'}",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"Init accepts Basis Shape Key\", \"Source Edit Mode explicitly writes the requested expression key\", \"explicit Edit Mode key write leaves active Basis unchanged\", \"control creation with Shape Keys\", \"Blender depsgraph detects Shape Key value changes without an explicit sync action\", \"controller follows the visible full Shape Key pose\", \"controller follows the visible blended Shape Key pose\", \"partial key value produces an intermediate visible pose\", \"Subdivision creates a topology-changing evaluated surface\", \"topology-changing modifiers retain one coordinate per Source ID\", \"Subdivision fallback evaluates the real blended Shape Key pose\", \"controller follows Shape Keys on the Source cage under Subdivision\", \"controller returns to the visible Basis pose when key value reaches zero\", \"Subdivision fallback evaluates stored Basis at value zero\", \"Subdivision fallback evaluates stored expression after zero-to-one change\", \"controller follows a zero-to-one Shape Key change under Subdivision\", \"Basis receives controller deformation\", \"other Shape Key remains unchanged\", \"Shape Key edit does not write base mesh\", \"cancel restores the targeted Basis\", \"sidebar selector switches the Source target key\", \"active expression receives controller deformation\", \"editing expression leaves Basis unchanged\", \"cancel restores the targeted expression\", \"operator commits deformation into the active expression\", \"commit changes active key coordinates\", \"Shape Key commit records the key-specific undo target\", \"Undo history stores stable Shape Key identity instead of a KeyBlock reference\", \"Undo target identity fails closed when the captured key no longer resolves\", \"Undo bridge restores the edited key after controller undo\", \"Redo bridge reapplies the edited key after controller redo\", \"Undo bridge writes its historical target while Source edits Basis\", \"Redo bridge writes its historical target while Source edits Basis\", \"absolute Shape Key time blends on the Source cage under Subdivision\", \"absolute Shape Key stack writes the explicit key coordinates\", \"absolute key mode and evaluation time remain unchanged\", \"controller deformation writes active absolute Shape Key\", \"absolute Shape Key deformation leaves Basis unchanged\", \"Undo bridge restores the stored absolute Shape Key\", \"Redo bridge reapplies the stored absolute Shape Key\", \"Reset Model restores the original captured Basis target\", \"Reset Model restores original Basis coordinates\", \"Reset Model rejects a same-name replacement Shape Key\", \"failed Reset Model leaves replacement key unchanged\", \"Reset Model fails closed when saved key provenance is unavailable\", \"unknown Reset provenance causes no key writes\", \"renaming the target during preview aborts before another write\", \"cancel restores the captured key after rename\", \"locked active key rejects deformation\", \"locked key remains unchanged\", \"mid-operation key switch is rejected\", \"cancel after target switch restores original key\", \"focus controller with expression key\", \"controller mode shows selected Shape Key clearly\", \"return to Source\", \"return restores prior Shape Key display setting\", \"Source can remove all Shape Keys\", \"Controller edits base mesh after all Shape Keys are removed\", \"cancel restores base mesh after Shape Key removal\", \"Create Control works after all Shape Keys are removed\", \"control list contains the newly created no-key control\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_owned_object_safety.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.254,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "load handler keeps stale owned objects",
+          "load handler marks stale ownership for repair",
+          "undo handler keeps stale owned objects and their mesh data",
+          "depsgraph keeps stale Controller object",
+          "depsgraph keeps stale face object",
+          "depsgraph keeps both mesh datablocks",
+          "stale objects are marked for recovery",
+          "Controller geometry remains unchanged",
+          "face helper geometry remains unchanged",
+          "explicit unbind recovery is available",
+          "explicit unbind operator participates in Blender Undo",
+          "explicit recovery preserves Controller mesh data",
+          "explicit recovery removes stale owner markers and leaves object unbound",
+          "explicit recovery preserves world transform",
+          "explicit recovery preserves vertex coordinates",
+          "stale warning clears when matching owner returns",
+          "reappearing owner does not replace or remove helper mesh"
+        ],
+        "not_run": [
+          "interactive panel click followed by Ctrl+Z; background fixture has no UI event loop"
+        ],
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Info: Stale DANP ownership removed; mesh data preserved",
+        "{'status': 'PASS', 'checks': ['load handler keeps stale owned objects', 'load handler marks stale ownership for repair', 'undo handler keeps stale owned objects and their mesh data', 'depsgraph keeps stale Controller object', 'depsgraph keeps stale face object', 'depsgraph keeps both mesh datablocks', 'stale objects are marked for recovery', 'Controller geometry remains unchanged', 'face helper geometry remains unchanged', 'explicit unbind recovery is available', 'explicit unbind operator participates in Blender Undo', 'explicit recovery preserves Controller mesh data', 'explicit recovery removes stale owner markers and leaves object unbound', 'explicit recovery preserves world transform', 'explicit recovery preserves vertex coordinates', 'stale warning clears when matching owner returns', 'reappearing owner does not replace or remove helper mesh'], 'not_run': ['interactive panel click followed by Ctrl+Z; background fixture has no UI event loop'], 'blender_version': '5.2.1 LTS'}",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"load handler keeps stale owned objects\", \"load handler marks stale ownership for repair\", \"undo handler keeps stale owned objects and their mesh data\", \"depsgraph keeps stale Controller object\", \"depsgraph keeps stale face object\", \"depsgraph keeps both mesh datablocks\", \"stale objects are marked for recovery\", \"Controller geometry remains unchanged\", \"face helper geometry remains unchanged\", \"explicit unbind recovery is available\", \"explicit unbind operator participates in Blender Undo\", \"explicit recovery preserves Controller mesh data\", \"explicit recovery removes stale owner markers and leaves object unbound\", \"explicit recovery preserves world transform\", \"explicit recovery preserves vertex coordinates\", \"stale warning clears when matching owner returns\", \"reappearing owner does not replace or remove helper mesh\"], \"not_run\": [\"interactive panel click followed by Ctrl+Z; background fixture has no UI event loop\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_topology_recovery.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.323,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "unchanged Source topology validates against the control patch",
+          "disconnected unassigned geometry previews a safe repair",
+          "Validate action previews a safe repair",
+          "failed Repair rolls IDs, metadata and proxy back to the paused state",
+          "Repair action rebuilds the DANP Controller",
+          "repair reports exact additions",
+          "successful repair refreshes topology state",
+          "repair preserves control definition and masks",
+          "repair assigns unique persistent IDs to new vertices",
+          "repair assigns unique persistent IDs to new edges",
+          "repair leaves existing Shape Key coordinates unchanged",
+          "repair leaves Basis coordinates unchanged",
+          "deleting a disconnected component previews a safe repair",
+          "repair accepts deletion outside protected control patches",
+          "recovery snapshot survives save and reopen",
+          "count-preserving connectivity fixture retains vertex/edge/face counts",
+          "connectivity change with unchanged counts is rejected",
+          "deleting a control edge is rejected",
+          "loop cut in a disabled control patch is still rejected",
+          "failed patch repair changes neither Source coordinates nor IDs",
+          "duplicate persistent ID is rejected as ambiguous"
+        ],
+        "source": "H07_Source",
+        "shape_key_count": 2,
+        "original_vertex_ids": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "undo_redo": "NOT RUN: Blender disables global undo in background mode",
+        "checks_count": 21
+      },
+      "output_tail": [
+        "00:02.094  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h07_topology_recovery.blend\"",
+        "Info: Topology repair is safe: +3 vertices, +3 edges, -0 vertices, -0 edges; 1 protected faces unchanged",
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Info: DANP mapping repaired: +3 vertices, +3 edges; controls and Shape Keys preserved",
+        "Info: Saved as \"danp_h07_topology_recovery.blend\"",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"unchanged Source topology validates against the control patch\", \"disconnected unassigned geometry previews a safe repair\", \"Validate action previews a safe repair\", \"failed Repair rolls IDs, metadata and proxy back to the paused state\", \"Repair action rebuilds the DANP Controller\", \"repair reports exact additions\", \"successful repair refreshes topology state\", \"repair preserves control definition and masks\", \"repair assigns unique persistent IDs to new vertices\", \"repair assigns unique persistent IDs to new edges\", \"repair leaves existing Shape Key coordinates unchanged\", \"repair leaves Basis coordinates unchanged\", \"deleting a disconnected component previews a safe repair\", \"repair accepts deletion outside protected control patches\", \"recovery snapshot survives save and reopen\", \"count-preserving connectivity fixture retains vertex/edge/face counts\", \"connectivity change with unchanged counts is rejected\", \"deleting a control edge is rejected\", \"loop cut in a disabled control patch is still rejected\", \"failed patch repair changes neither Source coordinates nor IDs\", \"duplicate persistent ID is rejected as ambiguous\"], \"source\": \"H07_Source\", \"shape_key_count\": 2, \"original_vertex_ids\": [1, 2, 3, 4], \"undo_redo\": \"NOT RUN: Blender disables global undo in background mode\", \"checks_count\": 21}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_shape_key_target_workflow.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.416,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "initialize Source without keys",
+          "create one control for target-mode checks",
+          "New Shape Key creates Basis and target when Source had no keys",
+          "Basis is created before the new key",
+          "new Basis preserves Base mesh coordinates",
+          "new key copies the original Base coordinates",
+          "new key is active with zero relative value",
+          "entering Controller Edit succeeds for active target",
+          "Controller Edit isolates the active key for preview (show_only=True, active=DANPFORM_CTRL_H05_Source, mode=EDIT)",
+          "target selector changes target while Controller Edit is active",
+          "leaving Controller Edit through Blender mode switch restores prior preview",
+          "returning from Controller Edit restores Source",
+          "leaving Controller Edit restores the previous preview setting",
+          "New Shape Key succeeds from active relative target",
+          "relative key copies active target stored coordinates",
+          "new relative key uses the stable Basis as its relative reference",
+          "adding a relative key preserves all existing values and mute states",
+          "adding a relative key preserves existing key coordinates",
+          "adding a relative key preserves existing Shape Key drivers",
+          "relative creation preserves target preview and stack mode",
+          "New Shape Key succeeds from active absolute target",
+          "absolute key receives a unique frame beyond the current evaluation",
+          "absolute creation preserves evaluation time and stack mode",
+          "absolute key copies active target stored coordinates",
+          "adding an absolute key preserves all existing values and mute states",
+          "adding an absolute key preserves existing key coordinates",
+          "adding an absolute key preserves existing Shape Key drivers",
+          "adding an absolute key does not change the current evaluated pose",
+          "absolute creation preserves the previous key preview setting"
+        ],
+        "shape_key_count": 5,
+        "absolute_eval_time": 15.0,
+        "active_target": "Absolute Copy",
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Info: DANP Form controller ready",
+        "Info: Created Control 1 (4V/4E)",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"initialize Source without keys\", \"create one control for target-mode checks\", \"New Shape Key creates Basis and target when Source had no keys\", \"Basis is created before the new key\", \"new Basis preserves Base mesh coordinates\", \"new key copies the original Base coordinates\", \"new key is active with zero relative value\", \"entering Controller Edit succeeds for active target\", \"Controller Edit isolates the active key for preview (show_only=True, active=DANPFORM_CTRL_H05_Source, mode=EDIT)\", \"target selector changes target while Controller Edit is active\", \"leaving Controller Edit through Blender mode switch restores prior preview\", \"returning from Controller Edit restores Source\", \"leaving Controller Edit restores the previous preview setting\", \"New Shape Key succeeds from active relative target\", \"relative key copies active target stored coordinates\", \"new relative key uses the stable Basis as its relative reference\", \"adding a relative key preserves all existing values and mute states\", \"adding a relative key preserves existing key coordinates\", \"adding a relative key preserves existing Shape Key drivers\", \"relative creation preserves target preview and stack mode\", \"New Shape Key succeeds from active absolute target\", \"absolute key receives a unique frame beyond the current evaluation\", \"absolute creation preserves evaluation time and stack mode\", \"absolute key copies active target stored coordinates\", \"adding an absolute key preserves all existing values and mute states\", \"adding an absolute key preserves existing key coordinates\", \"adding an absolute key preserves existing Shape Key drivers\", \"adding an absolute key does not change the current evaluated pose\", \"absolute creation preserves the previous key preview setting\"], \"shape_key_count\": 5, \"absolute_eval_time\": 15.0, \"active_target\": \"Absolute Copy\", \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_agent_target_api.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.328,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "list returns Basis and keys with lock/active state and revision",
+          "target selection shares UI operator and stale revisions fail closed",
+          "locked target can be listed/selected but cannot begin deformation",
+          "absolute full selected-ID targets write captured key and commit by handle",
+          "changing target mid-operation rejects writes and cancel restores captured target",
+          "Base target cancel restores exact data and operation remains source-local"
+        ],
+        "source_count": 2,
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Info: DANP Form controller ready",
+        "Info: Created Agent Test (4V/4E)",
+        "Info: DANP Form controller ready",
+        "Info: Created Agent Test (4V/4E)",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"list returns Basis and keys with lock/active state and revision\", \"target selection shares UI operator and stale revisions fail closed\", \"locked target can be listed/selected but cannot begin deformation\", \"absolute full selected-ID targets write captured key and commit by handle\", \"changing target mid-operation rejects writes and cancel restores captured target\", \"Base target cancel restores exact data and operation remains source-local\"], \"source_count\": 2, \"blender_version\": \"5.2.1 LTS\"}",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"list returns Basis and keys with lock/active state and revision\", \"target selection shares UI operator and stale revisions fail closed\", \"locked target can be listed/selected but cannot begin deformation\", \"absolute full selected-ID targets write captured key and commit by handle\", \"changing target mid-operation rejects writes and cancel restores captured target\", \"Base target cancel restores exact data and operation remains source-local\"], \"source_count\": 2, \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_runtime_boundaries.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.438,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "cycle 1: binding preserves dan_form.operators module identity",
+          "cycle 1: binding preserves dan_form.blender.lifecycle module identity",
+          "cycle 1: binding preserves dan_form.ui.overlay module identity",
+          "cycle 1: binding preserves dan_form.ui.panel module identity",
+          "cycle 1: unsupported selection context returns an empty pair",
+          "cycle 1: each persistent handler registered once",
+          "cycle 1: sidebar class belongs to the UI module",
+          "cycle 1: overlay handler registered",
+          "cycle 1: undo invalidates derived caches",
+          "cycle 1: undo cancels stale transform timers only",
+          "cycle 1: unregister removes persistent handlers",
+          "cycle 1: unregister removes overlay handler",
+          "cycle 1: unregister cancels owned timers and clears handles",
+          "cycle 2: binding preserves dan_form.operators module identity",
+          "cycle 2: binding preserves dan_form.blender.lifecycle module identity",
+          "cycle 2: binding preserves dan_form.ui.overlay module identity",
+          "cycle 2: binding preserves dan_form.ui.panel module identity",
+          "cycle 2: unsupported selection context returns an empty pair",
+          "cycle 2: each persistent handler registered once",
+          "cycle 2: sidebar class belongs to the UI module",
+          "cycle 2: overlay handler registered",
+          "cycle 2: undo invalidates derived caches",
+          "cycle 2: undo cancels stale transform timers only",
+          "cycle 2: unregister removes persistent handlers",
+          "cycle 2: unregister removes overlay handler",
+          "cycle 2: unregister cancels owned timers and clears handles",
+          "re-register after repeated cycles leaves one handler per event",
+          "load invalidates derived caches",
+          "failed mid-registration rolls back classes, properties and overlay",
+          "late registration failure removes handlers, keymaps and overlay"
+        ],
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"cycle 1: binding preserves dan_form.operators module identity\", \"cycle 1: binding preserves dan_form.blender.lifecycle module identity\", \"cycle 1: binding preserves dan_form.ui.overlay module identity\", \"cycle 1: binding preserves dan_form.ui.panel module identity\", \"cycle 1: unsupported selection context returns an empty pair\", \"cycle 1: each persistent handler registered once\", \"cycle 1: sidebar class belongs to the UI module\", \"cycle 1: overlay handler registered\", \"cycle 1: undo invalidates derived caches\", \"cycle 1: undo cancels stale transform timers only\", \"cycle 1: unregister removes persistent handlers\", \"cycle 1: unregister removes overlay handler\", \"cycle 1: unregister cancels owned timers and clears handles\", \"cycle 2: binding preserves dan_form.operators module identity\", \"cycle 2: binding preserves dan_form.blender.lifecycle module identity\", \"cycle 2: binding preserves dan_form.ui.overlay module identity\", \"cycle 2: binding preserves dan_form.ui.panel module identity\", \"cycle 2: unsupported selection context returns an empty pair\", \"cycle 2: each persistent handler registered once\", \"cycle 2: sidebar class belongs to the UI module\", \"cycle 2: overlay handler registered\", \"cycle 2: undo invalidates derived caches\", \"cycle 2: undo cancels stale transform timers only\", \"cycle 2: unregister removes persistent handlers\", \"cycle 2: unregister removes overlay handler\", \"cycle 2: unregister cancels owned timers and clears handles\", \"re-register after repeated cycles leaves one handler per event\", \"load invalidates derived caches\", \"failed mid-registration rolls back classes, properties and overlay\", \"late registration failure removes handlers, keymaps and overlay\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"cycle 1: binding preserves dan_form.operators module identity\", \"cycle 1: binding preserves dan_form.blender.lifecycle module identity\", \"cycle 1: binding preserves dan_form.ui.overlay module identity\", \"cycle 1: binding preserves dan_form.ui.panel module identity\", \"cycle 1: unsupported selection context returns an empty pair\", \"cycle 1: each persistent handler registered once\", \"cycle 1: sidebar class belongs to the UI module\", \"cycle 1: overlay handler registered\", \"cycle 1: undo invalidates derived caches\", \"cycle 1: undo cancels stale transform timers only\", \"cycle 1: unregister removes persistent handlers\", \"cycle 1: unregister removes overlay handler\", \"cycle 1: unregister cancels owned timers and clears handles\", \"cycle 2: binding preserves dan_form.operators module identity\", \"cycle 2: binding preserves dan_form.blender.lifecycle module identity\", \"cycle 2: binding preserves dan_form.ui.overlay module identity\", \"cycle 2: binding preserves dan_form.ui.panel module identity\", \"cycle 2: unsupported selection context returns an empty pair\", \"cycle 2: each persistent handler registered once\", \"cycle 2: sidebar class belongs to the UI module\", \"cycle 2: overlay handler registered\", \"cycle 2: undo invalidates derived caches\", \"cycle 2: undo cancels stale transform timers only\", \"cycle 2: unregister removes persistent handlers\", \"cycle 2: unregister removes overlay handler\", \"cycle 2: unregister cancels owned timers and clears handles\", \"re-register after repeated cycles leaves one handler per event\", \"load invalidates derived caches\", \"failed mid-registration rolls back classes, properties and overlay\", \"late registration failure removes handlers, keymaps and overlay\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_operation_ownership.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.279,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "second caller is rejected without changing the agent preview",
+          "native bridge rejects another caller's transaction",
+          "unmapped target is rejected before touching the current preview",
+          "failed Create rolls back definitions, revision and proxy",
+          "failed Sync rolls back membership, revision and proxy",
+          "failed Hide rolls back masks, revision and proxy",
+          "failed eye action rolls back definition visibility and proxy",
+          "failed Reveal rolls back masks, revision and proxy",
+          "failed Reset restores definitions, masks, revision and proxy",
+          "failed Reset preserves original binding and Source identity layers",
+          "failed Delete rolls back definitions, revision and proxy",
+          "Delete rollback preserves the original control identity",
+          "unregister cancels the active preview and clears transaction state",
+          "successful Reset commits a new bound controller after construction"
+        ],
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
+        "Info: DANP reset complete; current mesh topology is now the mapping source",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"second caller is rejected without changing the agent preview\", \"native bridge rejects another caller's transaction\", \"unmapped target is rejected before touching the current preview\", \"failed Create rolls back definitions, revision and proxy\", \"failed Sync rolls back membership, revision and proxy\", \"failed Hide rolls back masks, revision and proxy\", \"failed eye action rolls back definition visibility and proxy\", \"failed Reveal rolls back masks, revision and proxy\", \"failed Reset restores definitions, masks, revision and proxy\", \"failed Reset preserves original binding and Source identity layers\", \"failed Delete rolls back definitions, revision and proxy\", \"Delete rollback preserves the original control identity\", \"unregister cancels the active preview and clears transaction state\", \"successful Reset commits a new bound controller after construction\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"second caller is rejected without changing the agent preview\", \"native bridge rejects another caller's transaction\", \"unmapped target is rejected before touching the current preview\", \"failed Create rolls back definitions, revision and proxy\", \"failed Sync rolls back membership, revision and proxy\", \"failed Hide rolls back masks, revision and proxy\", \"failed eye action rolls back definition visibility and proxy\", \"failed Reveal rolls back masks, revision and proxy\", \"failed Reset restores definitions, masks, revision and proxy\", \"failed Reset preserves original binding and Source identity layers\", \"failed Delete rolls back definitions, revision and proxy\", \"Delete rollback preserves the original control identity\", \"unregister cancels the active preview and clears transaction state\", \"successful Reset commits a new bound controller after construction\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_initialize_modes.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.314,
+      "report": {
+        "status": "PASS",
+        "checks": [
+          "Init succeeds in Source Edit Mode",
+          "Init restores Source Edit Mode and active object",
+          "Init creates exactly one bound direct Controller child",
+          "Init leaves no orphan Controller object",
+          "sidebar shows bound controls only for the real child",
+          "selected Edit Mesh geometry can create a control immediately",
+          "new control proxy contains selected source geometry",
+          "proxy uses current Edit Mesh coordinates",
+          "failed Init is reported as cancelled",
+          "failed Init restores Source Edit Mode",
+          "failed Init clears new Source binding and child",
+          "failed Init removes the newly created orphan Controller",
+          "sidebar returns to Init after failed initialization",
+          "detached Controller offers Unbind before any lifecycle handler runs",
+          "detached legacy Controller is marked as unowned despite matching UUID",
+          "Source with UUID but no child offers Rebuild, not initialized controls",
+          "detached Controller offers explicit non-destructive unbind",
+          "legacy object can be unbound while preserving its mesh",
+          "legacy Source can rebuild a valid child after explicit unbind",
+          "Object Mode initialization remains available",
+          "Object Mode initialization creates a bound child"
+        ],
+        "blender_version": "5.2.1 LTS"
+      },
+      "output_tail": [
+        "Info: DANP Form controller ready",
+        "Info: Created Control 1 (4V/4E)",
+        "Error: DANP Form could not complete this action (INJECTED_FAILURE).",
+        "Info: Stale DANP ownership removed; mesh data preserved",
+        "Info: DANP Form controller ready",
+        "Info: DANP Form controller ready",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"Init succeeds in Source Edit Mode\", \"Init restores Source Edit Mode and active object\", \"Init creates exactly one bound direct Controller child\", \"Init leaves no orphan Controller object\", \"sidebar shows bound controls only for the real child\", \"selected Edit Mesh geometry can create a control immediately\", \"new control proxy contains selected source geometry\", \"proxy uses current Edit Mesh coordinates\", \"failed Init is reported as cancelled\", \"failed Init restores Source Edit Mode\", \"failed Init clears new Source binding and child\", \"failed Init removes the newly created orphan Controller\", \"sidebar returns to Init after failed initialization\", \"detached Controller offers Unbind before any lifecycle handler runs\", \"detached legacy Controller is marked as unowned despite matching UUID\", \"Source with UUID but no child offers Rebuild, not initialized controls\", \"detached Controller offers explicit non-destructive unbind\", \"legacy object can be unbound while preserving its mesh\", \"legacy Source can rebuild a valid child after explicit unbind\", \"Object Mode initialization remains available\", \"Object Mode initialization creates a bound child\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "DANP_RESULT_JSON={\"status\": \"PASS\", \"checks\": [\"Init succeeds in Source Edit Mode\", \"Init restores Source Edit Mode and active object\", \"Init creates exactly one bound direct Controller child\", \"Init leaves no orphan Controller object\", \"sidebar shows bound controls only for the real child\", \"selected Edit Mesh geometry can create a control immediately\", \"new control proxy contains selected source geometry\", \"proxy uses current Edit Mesh coordinates\", \"failed Init is reported as cancelled\", \"failed Init restores Source Edit Mode\", \"failed Init clears new Source binding and child\", \"failed Init removes the newly created orphan Controller\", \"sidebar returns to Init after failed initialization\", \"detached Controller offers Unbind before any lifecycle handler runs\", \"detached legacy Controller is marked as unowned despite matching UUID\", \"Source with UUID but no child offers Rebuild, not initialized controls\", \"detached Controller offers explicit non-destructive unbind\", \"legacy object can be unbound while preserving its mesh\", \"legacy Source can rebuild a valid child after explicit unbind\", \"Object Mode initialization remains available\", \"Object Mode initialization creates a bound child\"], \"blender_version\": \"5.2.1 LTS\"}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    },
+    {
+      "name": "live_native_transform.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "exception_in_log": false,
+      "elapsed_seconds": 2.451,
+      "report": {
+        "file": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-rpbkxty6\\native_transform_fixture.blend",
+        "dirty_before": false,
+        "checks": [
+          "native Blender transform finishes",
+          "depsgraph observer starts native transform session",
+          "native Controller transform deforms Source",
+          "adjacent unselected control remains stationary",
+          "native proportional radius deforms nearby patch vertices",
+          "native transform commits and closes runtime transaction",
+          "commit records paired Source undo state",
+          "unrelated undo does not rewind the latest transform",
+          "paired undo restores Source exactly",
+          "paired redo restores Source exactly",
+          "native Rotate transform finishes",
+          "depsgraph observer starts native Rotate session",
+          "native Rotate transform deforms Source",
+          "adjacent control remains stationary during Rotate",
+          "native Rotate transform commits",
+          "native Scale transform finishes",
+          "depsgraph observer starts native Scale session",
+          "native Scale transform deforms Source",
+          "adjacent control remains stationary during Scale",
+          "native Scale transform commits",
+          "consecutive native Scale starts from the committed pose",
+          "cancel test creates a live Source preview",
+          "cancel restores Source exactly",
+          "cancel restores Controller exactly",
+          "timer registration failure rolls back the owned native session",
+          "timer callback exception rolls back geometry and clears owned state"
+        ],
+        "status": "PASS",
+        "native_result": [
+          "FINISHED"
+        ],
+        "selected_vertices": 2,
+        "adjacent_only_vertices": 2,
+        "preview_delta": 0.009999999873689375,
+        "adjacent_stationary_error": 0.0,
+        "dirty_after": false,
+        "restored_active": "DANP Native Transform Fixture",
+        "restored_mode": "OBJECT",
+        "source_restore_error": 0.0,
+        "runtime_clean": true
+      },
+      "output_tail": [
+        "00:01.828  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-rpbkxty6\\native_transform_fixture.blend\"",
+        "DANP_RESULT_JSON={\"file\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp-h04-safe-copy-rpbkxty6\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\", \"timer registration failure rolls back the owned native session\", \"timer callback exception rolls back geometry and clears owned state\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
+        "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
+        "",
+        "Blender quit"
+      ]
+    }
+  ],
+  "ui_gates": {
+    "H04_modal_mouse_grs": "PASS: user accepted; see docs/testing/2026-09-25-h04-native-transform.md",
+    "H05_target_selector_and_new_key": "PASS: direct UI verification recorded in docs/testing/2026-09-25-h05-target-ux.md",
+    "H07_repair_undo_redo": "PASS: user accepted; see docs/testing/2026-09-25-h07-topology-recovery.md",
+    "H08_overlay_gpu_review": "NOT RUN: requires a GPU-backed Blender UI",
+    "performance_p95_and_peak_memory": "NOT RUN: pending representative UI instrumentation"
+  }
+}
