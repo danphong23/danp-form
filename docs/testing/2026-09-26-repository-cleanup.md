@@ -66,5 +66,7 @@ The design-era `LICENSE.md` placeholder has been replaced with the complete GNU
 GPL version 3 text, matching `GPL-3.0-or-later` in `blender_manifest.toml`. The
 text is the unmodified GPLv3 supplied in Blender's license bundle; the file also
 links to the authoritative [GNU license page](https://www.gnu.org/licenses/gpl).
-The repository still does not identify a named copyright holder or provide a
-third-party notices inventory, so this does not certify public release readiness.
+The archive now includes `THIRD_PARTY_NOTICES.md`, which records that NumPy is
+optional, not bundled, and has a pure-Python solver fallback. The repository
+still does not identify a named copyright holder, so this does not certify
+public release readiness.

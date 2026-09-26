@@ -82,4 +82,5 @@ rộng sau lộ trình này. Controller con là quan hệ object Blender; không
 ## License
 
 DANP Form được phân phối theo [GPL-3.0-or-later](LICENSE.md), khớp với
-manifest của Blender extension.
+manifest của Blender extension. Xem [thông báo thư viện bên thứ ba](THIRD_PARTY_NOTICES.md)
+để biết danh mục dependency và NumPy tùy chọn để tăng tốc.

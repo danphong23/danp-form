@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "c42c8954b801b7c7de6ec191514881b612a5b36cfe409bd127833d41c5c83ee4",
-    "bytes": 354426
+    "sha256": "b08c57e93bcdc3cef02f70a0ce64997b3349bb7e3d87c0b29bc299f092bc9968",
+    "bytes": 354896
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -341,8 +341,8 @@
   },
   {
     "path": "docs/testing/2026-09-25-h10-package-candidate.md",
-    "sha256": "478289890f269d4f2b629c7b725a2ddb56b276787e579b9269a32dd10b29d11c",
-    "bytes": 1113
+    "sha256": "8b4cc07d54f10f0910fe0491b3f63c837e13f74db81b98996cc2059bafbee6f3",
+    "bytes": 1437
   },
   {
     "path": "docs/testing/2026-09-25-init-edit-mode.md",
@@ -361,13 +361,13 @@
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
-    "sha256": "052f9bb74c361ab05c3516abf22397e0626c000e747ac6398141dc0f924f4cd6",
-    "bytes": 16494
+    "sha256": "563688c7d97a77c807615eaf5690d85024bc8b7190e49bc2b5f60ac9a18050c7",
+    "bytes": 16542
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
-    "sha256": "f249ff63ec4f60d661666b287eb312b292f8be6440c0cf12e7e295a266eea69e",
-    "bytes": 3926
+    "sha256": "700605931be8168fa08a688e89613758517ecba2c74e462d2ba8894d596cb012",
+    "bytes": 4024
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -461,13 +461,13 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "09719b1e3322a02b87d008f7a4f21cab3a0f36d7655e056b7e1242564cc9117d",
-    "bytes": 5549
+    "sha256": "b341984eef49cb9b1bccbe3e24fd181f830c3994e9f311faefabbb1497822199",
+    "bytes": 5693
   },
   {
     "path": "README.md",
-    "sha256": "b063843d66a091e067dcf11f59f26cf74fd180b0f16d29fdc851a00539fdf74a",
-    "bytes": 5426
+    "sha256": "899fbce888bda22b3cfef026cb2cfd54f17da9a506341b6f128959f24bfa97ef",
+    "bytes": 5538
   },
   {
     "path": "SECURITY.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "cef49b3296b1ba72cbe1b51117233e679d9d909caab220125a003ac36fb14ebf",
-    "bytes": 8771
+    "sha256": "910ec9cc78fc67891689ac93f4a59cfef74d66c23a9eec40d3387ba656b06c43",
+    "bytes": 9127
   },
   {
     "path": "tasks/phase-01-bootstrap.md",
@@ -571,12 +571,17 @@
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
-    "sha256": "0ab75ca67254dbb03a351ad4d477e96c1ad69a65140604aa1b1c8a6bd8d3c387",
-    "bytes": 1963
+    "sha256": "af4ccbd49566f925276c5466c498323f5aeeab9a093c4815f03efacb1551f179",
+    "bytes": 2450
   },
   {
     "path": "tests/README.md",
     "sha256": "ac0ee59d3ec6c76aea4bc3db1a5a8c349eacbfa55c462875e129bed5361782e5",
     "bytes": 1759
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "sha256": "ed7a1c401464f6cd9deff1f5ba8499cfa0b14d69b5483d77c30bb393b6665aa1",
+    "bytes": 533
   }
 ]

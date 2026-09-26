@@ -5402,6 +5402,13 @@ build it with `python scripts/release_package.py`. The H09 GPU-overlay review an
 combined large-mesh P95/peak-memory measurement remain unverified, so this is a
 functional candidate and carries no performance-certified production claim.
 
+## Historical status
+
+This report records the 0.5.35 candidate tested on 2026-09-25. It does not
+describe the current 0.5.36 package, and no generated archive is kept in the
+repository's `dist/` directory. Rebuild and validate a candidate from the
+current checkout; see the 2026-09-26 package report for the latest result.
+
 ---
 
 <!-- source: docs/testing/2026-09-25-init-edit-mode.md -->
@@ -5522,8 +5529,10 @@ The design-era `LICENSE.md` placeholder has been replaced with the complete GNU
 GPL version 3 text, matching `GPL-3.0-or-later` in `blender_manifest.toml`. The
 text is the unmodified GPLv3 supplied in Blender's license bundle; the file also
 links to the authoritative [GNU license page](https://www.gnu.org/licenses/gpl).
-The repository still does not identify a named copyright holder or provide a
-third-party notices inventory, so this does not certify public release readiness.
+The archive now includes `THIRD_PARTY_NOTICES.md`, which records that NumPy is
+optional, not bundled, and has a pure-Python solver fallback. The repository
+still does not identify a named copyright holder, so this does not certify
+public release readiness.
 
 ---
 
@@ -5772,8 +5781,9 @@ nhất.
   [C02 audit baseline](2026-09-26-c02-audit-baseline.json).
 - Overall release runner hiện `INCOMPLETE`: H08 GPU overlay review và P95/peak
   memory measurement chưa được thực hiện. GPL-3.0-or-later text now matches the
-  extension manifest; contributor copyright attribution and dependency notices
-  still need review before public release.
+  extension manifest; the archive includes a third-party dependency inventory.
+  Contributor copyright attribution still needs maintainer review before public
+  release.
 - Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
   hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.
 

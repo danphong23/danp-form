@@ -18,3 +18,10 @@ The generated archive and its commit/hash sidecar are delivered under `dist/`;
 build it with `python scripts/release_package.py`. The H09 GPU-overlay review and
 combined large-mesh P95/peak-memory measurement remain unverified, so this is a
 functional candidate and carries no performance-certified production claim.
+
+## Historical status
+
+This report records the 0.5.35 candidate tested on 2026-09-25. It does not
+describe the current 0.5.36 package, and no generated archive is kept in the
+repository's `dist/` directory. Rebuild and validate a candidate from the
+current checkout; see the 2026-09-26 package report for the latest result.

@@ -13,10 +13,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT_FILES = (
     "README.md", "README_VI.md", "CHANGELOG.md", "LICENSE.md",
+    "THIRD_PARTY_NOTICES.md",
     "blender_manifest.toml",
 )
 FORBIDDEN_PARTS = {".git", "__pycache__", "tests", "test", ".pytest_cache"}
-EXCLUDED_DOCS = {"docs/testing/2026-09-25-h10-package-candidate.md"}
+EXCLUDED_DOCS = {
+    "docs/testing/2026-09-25-h10-package-candidate.md",
+}
 
 
 def package_entries() -> dict[str, Path]:
@@ -46,7 +49,10 @@ def validate(archive: Path) -> tuple[list[str], str]:
         if any(any(part in FORBIDDEN_PARTS for part in Path(name).parts)
                or name.endswith((".pyc", ".pyo")) for name in names):
             raise ValueError("Package contains a test/cache/build artifact")
-        required = {"__init__.py", "blender_manifest.toml", "LICENSE.md", "README.md", "README_VI.md"}
+        required = {
+            "__init__.py", "blender_manifest.toml", "LICENSE.md", "README.md",
+            "README_VI.md", "THIRD_PARTY_NOTICES.md",
+        }
         missing = sorted(required - set(names))
         if missing:
             raise ValueError("Missing package files: " + ", ".join(missing))

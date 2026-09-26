@@ -90,4 +90,5 @@ rules. Optional extensions cannot redefine core behavior.
 ## License
 
 DANP Form is distributed under [GPL-3.0-or-later](LICENSE.md), matching the
-extension manifest.
+extension manifest. See [third-party notices](THIRD_PARTY_NOTICES.md) for the
+optional NumPy acceleration and dependency inventory.

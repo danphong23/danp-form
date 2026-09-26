@@ -29,3 +29,11 @@ import, register, and unregister smoke test. See the
 **0.5.36 follow-up:** Source Edit Mode Init now builds a direct Controller child
 without leaving partial state on failure. The sidebar and English messages were
 reviewed with the [Edit Mode Init report](../../docs/testing/2026-09-25-init-edit-mode.md).
+
+**2026-09-26 package follow-up:** `THIRD_PARTY_NOTICES.md` is included at the
+extension root. The release runner passes 9/9 static and 11/11 Blender
+background suites. The current 0.5.36 archive passed isolated Blender 5.2.1
+extract/import/register/unregister smoke; see
+`docs/testing/2026-09-26-h10-package-candidate.json` for checksum and report.
+H08 GPU, representative performance, C02 UI regression, and copyright-holder
+attribution remain open; this is not release certification.

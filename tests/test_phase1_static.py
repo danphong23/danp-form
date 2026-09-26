@@ -25,6 +25,15 @@ def test_distribution_license_matches_manifest() -> None:
     assert "No production code is included" not in license_text
 
 
+def test_third_party_notice_is_packaged() -> None:
+    from scripts.release_package import PACKAGE_ROOT_FILES
+
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    assert "THIRD_PARTY_NOTICES.md" in PACKAGE_ROOT_FILES
+    assert "NumPy is not included" in notices
+    assert "pure-Python fallback" in notices
+
+
 def test_phase1_contract_symbols() -> None:
     source = package_source()
     for symbol in (
