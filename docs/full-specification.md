@@ -5594,11 +5594,19 @@ gates. This does not block the selection Phase 1 automated gates above.
 
 # DANP Form — Review tổng quát và làm sạch ngày 2026-09-26
 
-**Kết luận: chưa đủ điều kiện đóng gói phát hành.** Các gate cũ vẫn pass trong
+**Kết luận tại baseline review:** chưa đủ điều kiện đóng gói phát hành. Các gate cũ vẫn pass trong
 phạm vi của chúng, nhưng audit bổ sung tái hiện lỗi về transaction ownership,
 target validation, atomicity và trạng thái tương tác. Đây là kết luận mới trên
 baseline `f8dbcaac9d62bb7755d7722103aa2b332d8ed3d4`, phiên bản 0.5.36;
 không ghi đè bằng chứng kiểm thử lịch sử.
+
+**Trạng thái cập nhật 2026-09-26:** C01 hoàn tất; R05–R07 đã sửa và audit
+C02 đạt 12/12 trên Blender background. Release runner đạt 9/9 static và 11/11
+background suites. Add-on vẫn chưa được chứng nhận phát hành: Blender UI
+visibility Undo/Redo/save-reopen, GPU overlay review, P95/peak-memory đo trên
+fixture đại diện và copyright-holder attribution còn mở. Xem
+[C02 release report](2026-09-26-release-gates-c02-license.json) và
+[cleanup tasks](../../tasks/addon-cleanup-review.md).
 
 ## Phạm vi và phương pháp
 
@@ -5628,9 +5636,9 @@ không ghi đè bằng chứng kiểm thử lịch sử.
 | R02 | P1 | `transform_session.begin` trước đây tái sử dụng transaction của agent. Native bridge hiện từ chối bằng `OPERATION_BUSY`; regression xác nhận owner và preview giữ nguyên. | FIXED; timer-race matrix pending |
 | R03 | P1 | `targets_json` trước đây nhận target cho Source vertex ngoài controller mapping và di chuyển ~0,300000006. Workflow hiện kiểm mapping đã chụp trước solve/writeback. | FIXED; malformed payload matrix pending |
 | R04 | P1 | Structural control operations hiện snapshot/rollback definitions, masks, revision và proxy; Reset và Repair còn khôi phục Source ID layers/ownership. Fault injection hiện bao phủ Create/Sync/Hide/eye/Reveal/Delete/Reset/Repair. | FIXED; verify all gates on latest commit |
-| R05 | P2 | Native Hide Unselected làm ẩn 2 controller vertices trong khi trạng thái definition vẫn On. DANP Reveal trả FINISHED nhưng cả 2 vẫn ẩn. | OPEN |
-| R06 | P2 | H với 4 đỉnh thuộc A/B đang chọn chỉ xử lý A active; 2 đỉnh của B vẫn effective. | OPEN |
-| R07 | P2 | Chọn B rồi click mắt ẩn A: selection của B bị thay bằng rỗng dù B không bị ẩn. | OPEN |
+| R05 | P2 | Native Hide Unselected làm ẩn 2 controller vertices trong khi trạng thái definition vẫn On. DANP Reveal trả FINISHED nhưng cả 2 vẫn ẩn. | FIXED at `4c1f6f4`; C02 audit PASS |
+| R06 | P2 | H với 4 đỉnh thuộc A/B đang chọn chỉ xử lý A active; 2 đỉnh của B vẫn effective. | FIXED at `4c1f6f4`; C02 audit PASS |
+| R07 | P2 | Chọn B rồi click mắt ẩn A: selection của B bị thay bằng rỗng dù B không bị ẩn. | FIXED at `4c1f6f4`; C02 audit PASS |
 | R08 | P2 | Reader selection ngoài Edit Mode trả `set()` thay vì cặp vertex/edge sets. | FIXED, PASS |
 | R09 | P2 | WORLD transform trước đây chấp nhận matrix singular qua `inverted_safe`; hiện dùng phép nghịch đảo có kiểm lỗi và kiểm tra giá trị hữu hạn. Static regression từ chối matrix singular. | FIXED; Blender Matrix edge cases pending |
 | R10 | P2 | `bind()` chép dunder từ facade sang module: `dan_form.operators.__name__` và spec name đều thành `dan_form`. Metadata cho reload bị thay sai. | FIXED, PASS |

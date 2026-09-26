@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "b08c57e93bcdc3cef02f70a0ce64997b3349bb7e3d87c0b29bc299f092bc9968",
-    "bytes": 354896
+    "sha256": "a30df3fde506f821e36fd81d2ab94dc8e66aa3dea35e0f5abc1f477bb09495fb",
+    "bytes": 355544
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -361,8 +361,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
-    "sha256": "563688c7d97a77c807615eaf5690d85024bc8b7190e49bc2b5f60ac9a18050c7",
-    "bytes": 16542
+    "sha256": "da92c7c564adb45ae2826259fae53253917fc45ae111bb3e45027b4802ac9929",
+    "bytes": 17190
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
