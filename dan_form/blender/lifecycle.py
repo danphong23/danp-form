@@ -21,6 +21,26 @@ from .workflows import update_revision
 NATIVE_POLL_INTERVAL = 0.01
 
 
+def _cancel_runtime_timers() -> None:
+    """Unregister every timer owned by the current DANP runtime."""
+    callbacks = list(runtime.NATIVE_TRANSFORM_TIMERS.values())
+    runtime.NATIVE_TRANSFORM_TIMERS.clear()
+    undo_callback = runtime.NATIVE_UNDO_TIMER_CALLBACK
+    runtime.NATIVE_UNDO_TIMER_CALLBACK = None
+    for callback in (*callbacks, undo_callback):
+        if callback is None:
+            continue
+        try:
+            if bpy.app.timers.is_registered(callback):
+                bpy.app.timers.unregister(callback)
+        except (ReferenceError, RuntimeError, ValueError):
+            continue
+
+
+def _forget_native_timer(source_ptr: int) -> None:
+    runtime.NATIVE_TRANSFORM_TIMERS.pop(source_ptr, None)
+
+
 def bind(api) -> None:
     for name in dir(api):
         if name.startswith("__"):
@@ -373,12 +393,12 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
             profile=getattr(scene, "dan_form_proportional_profile", "LINEAR"),
             radius=float(getattr(scene, "dan_form_proportional_radius", 0.0)),
         )
-        if not session.get("timer_registered"):
-            session["timer_registered"] = True
-            bpy.app.timers.register(
-                lambda source_ptr=key: _native_transform_timer(source_ptr),
-                first_interval=0.0,
-            )
+        callback = runtime.NATIVE_TRANSFORM_TIMERS.get(key)
+        if callback is None or not bpy.app.timers.is_registered(callback):
+            callback = lambda source_ptr=key: _native_transform_timer(source_ptr)
+            runtime.NATIVE_TRANSFORM_TIMERS[key] = callback
+            bpy.app.timers.register(callback, first_interval=0.0)
+        session["timer_registered"] = True
     except (ValueError, RuntimeError, KeyError):
         owner_session = session
         owner_tx = owner_session.get("transaction") if owner_session else None
@@ -389,11 +409,13 @@ def _observe_native_controller_transform(source, controller, previous_snapshot=N
                 if deps.transactions.get(key) is owner_tx:
                     deps.transactions.pop(key, None)
         runtime.NATIVE_TRANSFORM_SESSIONS.pop(key, None)
+        _forget_native_timer(key)
 
 
 def _native_transform_timer(source_ptr):
     session = runtime.NATIVE_TRANSFORM_SESSIONS.get(source_ptr)
     if session is None:
+        _forget_native_timer(source_ptr)
         return None
     source = next((obj for obj in bpy.data.objects if obj.as_pointer() == source_ptr), None)
     controller = next((obj for obj in bpy.data.objects if obj.as_pointer() == session["controller"]), None)
@@ -413,6 +435,7 @@ def _native_transform_timer(source_ptr):
             except (ValueError, RuntimeError):
                 _DANP_TRANSACTIONS.pop(source_ptr, None)
         runtime.NATIVE_TRANSFORM_SESSIONS.pop(source_ptr, None)
+        _forget_native_timer(source_ptr)
         return None
     try:
         current = _transform_session.controller_positions(controller)
@@ -423,6 +446,7 @@ def _native_transform_timer(source_ptr):
         if _controller_selection_changed(controller, transaction):
             _transform_session.finalize_active(source, controller, _workflow_dependencies())
             bpy.context.scene.dan_form_status = "Native Controller transform committed"
+            _forget_native_timer(source_ptr)
             return None
         # A cancelled modal transform restores the proxy to its immutable
         # rest pose.  Handle this before the native-operator probe so a
@@ -433,6 +457,7 @@ def _native_transform_timer(source_ptr):
                     current, session.get("controller_rest", {}))):
             _transform_session.cancel(source, controller, _workflow_dependencies())
             bpy.context.scene.dan_form_status = "Native Controller transform cancelled"
+            _forget_native_timer(source_ptr)
             return None
         if _transform_session.native_transform_active(bpy.context):
             # The timer only samples Blender's explicit modal state.  It does
@@ -459,6 +484,7 @@ def _native_transform_timer(source_ptr):
             runtime.NATIVE_TRANSFORM_SESSIONS.pop(source_ptr, None)
         if bpy.context.scene is not None:
             bpy.context.scene.dan_form_status = _friendly_error(exc)
+    _forget_native_timer(source_ptr)
     return None
 
 
@@ -484,10 +510,9 @@ def _refresh_runtime(_unused=None, direction=None) -> None:
     if direction in {"UNDO", "REDO"} and runtime.NATIVE_UNDO_RECORDS and not runtime.NATIVE_UNDO_TIMER:
         runtime.NATIVE_UNDO_TIMER = True
         runtime.NATIVE_UNDO_DIRECTION = direction
-        bpy.app.timers.register(
-            lambda pending_direction=direction: _restore_native_undo_records(pending_direction),
-            first_interval=0.05,
-        )
+        callback = lambda pending_direction=direction: _restore_native_undo_records(pending_direction)
+        runtime.NATIVE_UNDO_TIMER_CALLBACK = callback
+        bpy.app.timers.register(callback, first_interval=0.05)
 
 
 @persistent
@@ -648,7 +673,8 @@ def _restore_native_undo_records(direction: str):
                 continue
     finally:
         runtime.NATIVE_UNDO_TIMER = False
+        runtime.NATIVE_UNDO_TIMER_CALLBACK = None
         runtime.NATIVE_UNDO_DIRECTION = None
 
 
-__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision", "_cleanup_orphaned_owned_objects", "_remember_binding", "_forget_binding", "_reconcile_duplicate_bindings", "_refresh_binding_registry"]
+__all__ = ["bind", "_depsgraph_update_post", "_refresh_runtime", "_undo_post", "_redo_post", "_load_post", "_update_revision", "_cleanup_orphaned_owned_objects", "_remember_binding", "_forget_binding", "_reconcile_duplicate_bindings", "_refresh_binding_registry", "_cancel_runtime_timers"]

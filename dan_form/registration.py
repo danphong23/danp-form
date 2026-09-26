@@ -120,6 +120,9 @@ def register(api) -> None:
 
 def unregister(api) -> None:
     api._runtime.PICK_SESSION += 1
+    # Timer callbacks retain references to Blender objects and transaction
+    # state. Stop them before teardown clears the state they may inspect.
+    api._cancel_runtime_timers()
     api._PICK_PREVIEW.clear()
     api._unregister_control_keymaps()
     api._unregister_topology_keymaps()
@@ -166,6 +169,8 @@ def unregister(api) -> None:
     api._runtime.MODIFIER_SIGNATURES.clear()
     api._runtime.BINDING_OWNERS.clear()
     api._runtime.NATIVE_UNDO_TIMER = False
+    api._runtime.NATIVE_TRANSFORM_TIMERS.clear()
+    api._runtime.NATIVE_UNDO_TIMER_CALLBACK = None
     api._runtime.NATIVE_UNDO_DIRECTION = None
     for prop in (
         "dan_form_overlay_width", "dan_form_overlay_xray", "dan_form_overlay_hidden",

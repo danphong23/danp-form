@@ -41,6 +41,12 @@ def run():
                   f"cycle {cycle + 1}: each persistent handler registered once")
             check(overlay.OVERLAY_HANDLE is not None,
                   f"cycle {cycle + 1}: overlay handler registered")
+            transform_timer = lambda: 60.0
+            undo_timer = lambda: 60.0
+            bpy.app.timers.register(transform_timer, first_interval=60.0)
+            bpy.app.timers.register(undo_timer, first_interval=60.0)
+            addon._runtime.NATIVE_TRANSFORM_TIMERS[cycle + 1] = transform_timer
+            addon._runtime.NATIVE_UNDO_TIMER_CALLBACK = undo_timer
             addon._MAPPING_CACHE[cycle] = "sentinel"
             addon._PATCH_CACHE[cycle] = "sentinel"
             addon._undo_post(None)
@@ -51,6 +57,11 @@ def run():
                   f"cycle {cycle + 1}: unregister removes persistent handlers")
             check(overlay.OVERLAY_HANDLE is None,
                   f"cycle {cycle + 1}: unregister removes overlay handler")
+            check(not bpy.app.timers.is_registered(transform_timer)
+                  and not bpy.app.timers.is_registered(undo_timer)
+                  and not addon._runtime.NATIVE_TRANSFORM_TIMERS
+                  and addon._runtime.NATIVE_UNDO_TIMER_CALLBACK is None,
+                  f"cycle {cycle + 1}: unregister cancels owned timers and clears handles")
         addon.register()
         check(all(sum(item is callback for item in handlers) == 1
                   for handlers, callback in handler_specs),

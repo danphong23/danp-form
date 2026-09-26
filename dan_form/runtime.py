@@ -31,8 +31,10 @@ DANP_TRANSACTIONS = {}
 # single immutable transaction rest.  This is intentionally runtime-only;
 # control identity and topology stay in Source custom data.
 NATIVE_TRANSFORM_SESSIONS = {}
+NATIVE_TRANSFORM_TIMERS = {}
 NATIVE_UNDO_RECORDS = {}
 NATIVE_UNDO_TIMER = False
+NATIVE_UNDO_TIMER_CALLBACK = None
 NATIVE_UNDO_DIRECTION = None
 TOPOLOGY_STATES = {}
 MODIFIER_SIGNATURES = {}
