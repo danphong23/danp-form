@@ -1096,7 +1096,7 @@ test item; record the actual Blender version rather than claim untested compatib
 
 ```text
 Source: select vertices/edges → Make Control
-Proxy: select a point / vertex strip / edge-span / loop → G/R/S
+Proxy: select controller points/edges in Blender or a control from the list → G/R/S
 Transform: proportional → confirm/cancel
 Release contour: DANP Form Hide Selected → other edits → Reveal
 ```
@@ -3350,6 +3350,12 @@ unsaved so the user can review the added definitions before saving.
 
 **Status: Accepted — explicit user request, 2026-09-18.**
 
+**Implementation note (2026-09-26):** The standalone viewport span/hover picker
+described below was prototype code that was never registered in 0.5.36. Its
+implementation and preview cache were removed during cleanup. Treat that picker
+paragraph as a historical design proposal, not a current interaction contract;
+reintroducing it requires a separate UX decision and current Blender UI tests.
+
 ## Decision
 
 Hide/Show Controls above the list now applies canonical DANP Form Hide/Reveal to
@@ -3371,13 +3377,11 @@ explicit node Hide, preserving intersecting enabled edges. Vertex selection has
 node intent, releasing all incident edges under ADR-008. An overlapping logical
 group observes the same canonical masks; it cannot override them.
 
-Ctrl+Alt+Click selects a maximal visible span from the picked edge, stopping at
-vertices with degree other than two in the effective network. Shift adds a span.
-An uninterrupted closed loop selects completely. Logical names/membership do not
-introduce artificial junctions. Menu/F3 can use a single selected/active edge;
-MCP can supply the canonical Source edge ID. Selection never changes definitions,
-canonical masks or Source geometry. Projected near edges can overlap, so selection
-must remain visually reviewable; agents likewise must inspect mapping and topology.
+The planned viewport picker selects a maximal visible span from the picked edge,
+stopping at vertices with degree other than two in the effective network. The
+behavior is not shipped. Selection from the list and Blender mesh selection are
+the supported routes; any future viewport picker must preserve the rule that
+selection never changes definitions, canonical masks or Source geometry.
 
 ## Scope
 
@@ -3699,8 +3703,14 @@ runtime caches and transaction buffers are disposable.
   `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
   invalidation. The root facade only passes itself as the compatibility API
   object.
-- `operators.py` owns Blender action operators and picking helpers. Its
-  `bind()` hook injects facade adapters only after package import.
+- `operators.py` is the compatibility facade and keymap-registration adapter.
+  Its `bind()` hook supplies the merged workflow adapters after package import;
+  it re-exports action classes for registration and compatibility.
+- `operator_actions/` groups registered operators by responsibility: structural
+  edits, selection, visibility, deformation, Shape Keys and navigation. Each
+  module receives workflow adapters through `bind()` and owns no persistent
+  state. Unregistered viewport-picker prototypes and their hover cache were
+  removed; historical experiments remain under `tests/history/`.
 - `ui/panel.py` owns the PropertyGroup, UIList, menus and sidebar layout. It
   receives compatibility adapters through `bind()` and is re-exported by
   `operators.py` so registration and existing private facade callers retain
@@ -5453,10 +5463,10 @@ repository before deletion. Git metadata was preserved.
 - Generated `docs/full-specification.md`, `docs-manifest.json`, and
   `MANIFEST_SHA256.txt`: referenced by documentation tools, intentionally retained.
 - Legacy picker fixtures moved to `tests/history/` with explicit warnings.
-  Their legacy segment operator was not registered in 0.5.36 and its dead
-  implementation has now been removed; the active picker still supports
-  segment selection. The historical report links were updated; current release
-  discovery is unchanged.
+  Their viewport picker classes were not registered in 0.5.36. The dead
+  implementations, screen-picking helpers and transient overlay preview state
+  have now been removed. The historical report links were updated; current
+  release discovery is unchanged.
 - Sidebar, UIList, PropertyGroup and menu classes now live in `ui/panel.py`;
   `operators.py` re-exports their existing symbols and registration remains
   unchanged.
@@ -5773,14 +5783,14 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 
 ## Remaining C01 scope
 
-C01 still needs deeper native timer/exception race coverage and extraction of
-the remaining operator domains. Timer shutdown on disable, the dead legacy
-operator removal and the first UI module boundary are covered. This checkpoint
+C01 still needs native timer registration/exception injection coverage. Timer
+shutdown on disable, stale timer cancellation on Undo/Redo/load, legacy picker
+cleanup, the panel boundary and operator-domain extraction are covered. This checkpoint
 does not mark C01/C02 complete or the add-on ready for release.
 
 ## Timer lifecycle follow-up
 
-**Revision:** `48302fb` (`refactor(danp-form): extract sidebar UI module`)
+**Revision:** `c190c88` (`refactor(danp-form): split operators and remove dead picker`)
 
 - Runtime stores native transform and Undo/Redo timer callback identities so
   they can be explicitly cancelled when the add-on unregisters.
@@ -5788,17 +5798,21 @@ does not mark C01/C02 complete or the add-on ready for release.
   load cancels both transform and pending Undo/Redo callbacks.
 - The native transform callback removes its per-Source handle on every normal
   terminal path. Registration/unregistration clears retained references.
-- The unregistered legacy segment operator class was removed after confirming
-  the active picker still owns segment selection. Sidebar/list/menu classes now
-  live under `ui/panel.py` and are re-exported with unchanged registration IDs.
+- Unregistered legacy viewport picker classes/helpers and their transient
+  preview cache were removed. Registered action classes are split into six
+  responsibility modules. Sidebar/list/menu classes live under `ui/panel.py`;
+  existing registration symbols and IDs remain stable.
 - `live_runtime_boundaries.py`: 26 assertions pass, including stale transform
   timer cancellation on Undo, stable UI-module binding, cancellation of both
-  timer kinds in two enable/disable cycles, and late registration rollback.
-- Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass.
+  timer kinds in two enable/disable cycles, domain binding and late registration
+  rollback.
+- Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass
+  at revision `c190c88`.
   Overall remains `INCOMPLETE`: GPU-backed H08 overlay review and P95/peak
-  memory measurements are still not run. See the [runner report](2026-09-26-release-gates-lifecycle.json).
+  memory measurements are still not run. See the [runner report](2026-09-26-release-gates-c01-cleanup.json).
 - The runner used generated factory-startup fixtures in separate processes;
   it did not touch the user's open Blender model.
 
-Timer shutdown is covered; deeper concurrent timer/exception injection and
-further operator-domain extraction remain C01 work.
+Timer shutdown, session invalidation, module identity and all current operation
+regressions pass. Timer registration failure and callback exception injection
+remain open in C01.

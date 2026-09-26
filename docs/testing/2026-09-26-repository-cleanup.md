@@ -25,10 +25,10 @@ repository before deletion. Git metadata was preserved.
 - Generated `docs/full-specification.md`, `docs-manifest.json`, and
   `MANIFEST_SHA256.txt`: referenced by documentation tools, intentionally retained.
 - Legacy picker fixtures moved to `tests/history/` with explicit warnings.
-  Their legacy segment operator was not registered in 0.5.36 and its dead
-  implementation has now been removed; the active picker still supports
-  segment selection. The historical report links were updated; current release
-  discovery is unchanged.
+  Their viewport picker classes were not registered in 0.5.36. The dead
+  implementations, screen-picking helpers and transient overlay preview state
+  have now been removed. The historical report links were updated; current
+  release discovery is unchanged.
 - Sidebar, UIList, PropertyGroup and menu classes now live in `ui/panel.py`;
   `operators.py` re-exports their existing symbols and registration remains
   unchanged.

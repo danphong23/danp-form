@@ -2,6 +2,12 @@
 
 **Status: Accepted — explicit user request, 2026-09-18.**
 
+**Implementation note (2026-09-26):** The standalone viewport span/hover picker
+described below was prototype code that was never registered in 0.5.36. Its
+implementation and preview cache were removed during cleanup. Treat that picker
+paragraph as a historical design proposal, not a current interaction contract;
+reintroducing it requires a separate UX decision and current Blender UI tests.
+
 ## Decision
 
 Hide/Show Controls above the list now applies canonical DANP Form Hide/Reveal to
@@ -23,13 +29,11 @@ explicit node Hide, preserving intersecting enabled edges. Vertex selection has
 node intent, releasing all incident edges under ADR-008. An overlapping logical
 group observes the same canonical masks; it cannot override them.
 
-Ctrl+Alt+Click selects a maximal visible span from the picked edge, stopping at
-vertices with degree other than two in the effective network. Shift adds a span.
-An uninterrupted closed loop selects completely. Logical names/membership do not
-introduce artificial junctions. Menu/F3 can use a single selected/active edge;
-MCP can supply the canonical Source edge ID. Selection never changes definitions,
-canonical masks or Source geometry. Projected near edges can overlap, so selection
-must remain visually reviewable; agents likewise must inspect mapping and topology.
+The planned viewport picker selects a maximal visible span from the picked edge,
+stopping at vertices with degree other than two in the effective network. The
+behavior is not shipped. Selection from the list and Blender mesh selection are
+the supported routes; any future viewport picker must preserve the rule that
+selection never changes definitions, canonical masks or Source geometry.
 
 ## Scope
 

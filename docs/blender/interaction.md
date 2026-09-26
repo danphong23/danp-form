@@ -4,7 +4,7 @@
 
 ```text
 Source: select vertices/edges → Make Control
-Proxy: select a point / vertex strip / edge-span / loop → G/R/S
+Proxy: select controller points/edges in Blender or a control from the list → G/R/S
 Transform: proportional → confirm/cancel
 Release contour: DANP Form Hide Selected → other edits → Reveal
 ```

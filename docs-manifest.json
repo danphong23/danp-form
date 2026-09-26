@@ -46,8 +46,8 @@
   },
   {
     "path": "docs/architecture/module-boundaries.md",
-    "sha256": "748119443ece60f8c71bbbc34648aeb960c3cbfbbff1f68b3d3dc05c5a9ad85d",
-    "bytes": 4143
+    "sha256": "24b6302e9dcbe0836759b96a582a07b5b1019fb56fa58cc63c3208070cbe5128",
+    "bytes": 4603
   },
   {
     "path": "docs/architecture/multi-template.md",
@@ -66,8 +66,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "d6a7f3d4af8d2baa52fb276eafa5b2c3aa17d61acddf3a9cf09e967ff8a21fc7",
-    "bytes": 11279
+    "sha256": "5f1ba64f53c3890819726a2e7b0492397f3f0b88fecddb132adc6e103a3fb9ff",
+    "bytes": 11298
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -161,8 +161,8 @@
   },
   {
     "path": "docs/decisions/ADR-010-bulk-visibility-and-segment-selection.md",
-    "sha256": "8942c084f83c6f563230c5f29d580ac4df1cdbede76050d01dce9101bf5a9af7",
-    "bytes": 2274
+    "sha256": "9610843b66db601c5c29a8f35d4236c0a9c65afdb6ed3ac2cd4cfb032de0aa53",
+    "bytes": 2488
   },
   {
     "path": "docs/decisions/ADR-011-transform-field-ownership.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "698457baa0b75c098147a94f641fd9ba1026cc02105b02a3d556416ee0895b8b",
-    "bytes": 348881
+    "sha256": "e40d402ab406ca870f39d76a8dab44111bf80a4b540573b3e8f3f5b3df87398e",
+    "bytes": 349746
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -356,8 +356,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-c01-operation-safety.md",
-    "sha256": "a69a513f61d7b3b255c5ea375975052914ab4bdca76c41ab53bdead5e6754d39",
-    "bytes": 4954
+    "sha256": "c8d9a5d568264d000ff31272f295438b24a23a879ca5ffa4272e61dd644b3f38",
+    "bytes": 5118
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
@@ -366,8 +366,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
-    "sha256": "d45b4ea07048fd30d1ea94ccc6842974870325dd7f49eedce1bccc3d7817da2a",
-    "bytes": 3391
+    "sha256": "d5267651c8653eda8034868065d9f4a262aafd0bcdaf1215c712bca96386ec9a",
+    "bytes": 3399
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "85a8b76183b0fefd8407a41973595c055ae3be343a66b8ae4d16a371c6985749",
-    "bytes": 7223
+    "sha256": "23041f81aa5dc38addfd6798e64fedb75474521f0f18a5719b9daf02dcb22025",
+    "bytes": 7375
   },
   {
     "path": "tasks/phase-01-bootstrap.md",
@@ -491,8 +491,8 @@
   },
   {
     "path": "tasks/phase-02-edit-readability.md",
-    "sha256": "450cdb5d7cdaa9ca69a1089f8a8e42df74cec664846c0870943e44bc06a19c20",
-    "bytes": 5442
+    "sha256": "309826b63cd90c087b689c0a6f99e6efe9afe920fee3fcc06d49a101cf73ff98",
+    "bytes": 5784
   },
   {
     "path": "tasks/phase-02-native-list-ux.md",

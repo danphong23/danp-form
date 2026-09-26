@@ -54,14 +54,14 @@
 
 ## Remaining C01 scope
 
-C01 still needs deeper native timer/exception race coverage and extraction of
-the remaining operator domains. Timer shutdown on disable, the dead legacy
-operator removal and the first UI module boundary are covered. This checkpoint
+C01 still needs native timer registration/exception injection coverage. Timer
+shutdown on disable, stale timer cancellation on Undo/Redo/load, legacy picker
+cleanup, the panel boundary and operator-domain extraction are covered. This checkpoint
 does not mark C01/C02 complete or the add-on ready for release.
 
 ## Timer lifecycle follow-up
 
-**Revision:** `48302fb` (`refactor(danp-form): extract sidebar UI module`)
+**Revision:** `c190c88` (`refactor(danp-form): split operators and remove dead picker`)
 
 - Runtime stores native transform and Undo/Redo timer callback identities so
   they can be explicitly cancelled when the add-on unregisters.
@@ -69,17 +69,21 @@ does not mark C01/C02 complete or the add-on ready for release.
   load cancels both transform and pending Undo/Redo callbacks.
 - The native transform callback removes its per-Source handle on every normal
   terminal path. Registration/unregistration clears retained references.
-- The unregistered legacy segment operator class was removed after confirming
-  the active picker still owns segment selection. Sidebar/list/menu classes now
-  live under `ui/panel.py` and are re-exported with unchanged registration IDs.
+- Unregistered legacy viewport picker classes/helpers and their transient
+  preview cache were removed. Registered action classes are split into six
+  responsibility modules. Sidebar/list/menu classes live under `ui/panel.py`;
+  existing registration symbols and IDs remain stable.
 - `live_runtime_boundaries.py`: 26 assertions pass, including stale transform
   timer cancellation on Undo, stable UI-module binding, cancellation of both
-  timer kinds in two enable/disable cycles, and late registration rollback.
-- Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass.
+  timer kinds in two enable/disable cycles, domain binding and late registration
+  rollback.
+- Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass
+  at revision `c190c88`.
   Overall remains `INCOMPLETE`: GPU-backed H08 overlay review and P95/peak
-  memory measurements are still not run. See the [runner report](2026-09-26-release-gates-lifecycle.json).
+  memory measurements are still not run. See the [runner report](2026-09-26-release-gates-c01-cleanup.json).
 - The runner used generated factory-startup fixtures in separate processes;
   it did not touch the user's open Blender model.
 
-Timer shutdown is covered; deeper concurrent timer/exception injection and
-further operator-domain extraction remain C01 work.
+Timer shutdown, session invalidation, module identity and all current operation
+regressions pass. Timer registration failure and callback exception injection
+remain open in C01.

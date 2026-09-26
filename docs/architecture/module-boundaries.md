@@ -36,8 +36,14 @@ runtime caches and transaction buffers are disposable.
   `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
   invalidation. The root facade only passes itself as the compatibility API
   object.
-- `operators.py` owns Blender action operators and picking helpers. Its
-  `bind()` hook injects facade adapters only after package import.
+- `operators.py` is the compatibility facade and keymap-registration adapter.
+  Its `bind()` hook supplies the merged workflow adapters after package import;
+  it re-exports action classes for registration and compatibility.
+- `operator_actions/` groups registered operators by responsibility: structural
+  edits, selection, visibility, deformation, Shape Keys and navigation. Each
+  module receives workflow adapters through `bind()` and owns no persistent
+  state. Unregistered viewport-picker prototypes and their hover cache were
+  removed; historical experiments remain under `tests/history/`.
 - `ui/panel.py` owns the PropertyGroup, UIList, menus and sidebar layout. It
   receives compatibility adapters through `bind()` and is re-exported by
   `operators.py` so registration and existing private facade callers retain

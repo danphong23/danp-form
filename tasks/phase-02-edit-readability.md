@@ -1,6 +1,10 @@
 # Phase 2 cuối — Control Edit dễ nhìn
 
-**Trạng thái: đang triển khai trong goal chốt Phase 2.**
+**Lưu trữ:** this records the 0.2.x implementation and test claims. It is not a
+current 0.5.36 behavior inventory. The viewport picker prototypes described in
+older phase notes were not registered in 0.5.36 and have been removed; see the
+current [interaction contract](../docs/blender/interaction.md) and
+[ADR-010 implementation note](../docs/decisions/ADR-010-bulk-visibility-and-segment-selection.md).
 
 ## Vấn đề và kết quả cần đạt
 
