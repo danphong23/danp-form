@@ -37,6 +37,7 @@ def test_phase2_contract_symbols() -> None:
         "dan_form_proxy_eid",
         "DANFORM_OT_create_control",
         "DANFORM_OT_hide_selected",
+        "DANFORM_OT_hide_unselected",
         "DANFORM_OT_reveal",
         "_depsgraph_update_post",
         "STALE_MAPPING",

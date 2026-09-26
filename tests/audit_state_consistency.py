@@ -85,15 +85,36 @@ def run():
         source, controller, controls = fixture()
         av, ae = addon._control_effective(source, controls[0])
         addon._select_proxy_ids(controller, av, ae)
+        canonical_before = source[addon.CONTROLS_KEY]
         bpy.ops.mesh.hide(unselected=True)
-        bm = bmesh.from_edit_mesh(controller.data)
-        native_hidden = sum(v.hide for v in bm.verts)
-        b_state = addon._control_state(source, controls[1])[0]
+        native_hidden = sum(v.hide for v in bmesh.from_edit_mesh(controller.data).verts)
+        eye_before_reveal = addon._control_state(source, controls[1])[0]
         reveal = invoke(bpy.ops.dan_form.reveal)
-        after = sum(v.hide for v in bmesh.from_edit_mesh(controller.data).verts)
-        record("visibility_native_hide_reveal", native_hidden > 0 and b_state == "On" and after > 0,
-               hidden_before_reveal=native_hidden, definition_eye=b_state,
-               hidden_after_reveal=after, reveal=reveal)
+        hidden_after_reveal = sum(v.hide for v in bmesh.from_edit_mesh(controller.data).verts)
+        record("native_hide_reveal_reconciliation", not (
+                   native_hidden > 0 and eye_before_reveal == "On"
+                   and hidden_after_reveal == 0
+                   and source[addon.CONTROLS_KEY] == canonical_before
+                   and reveal.get("result") == ["FINISHED"]),
+               hidden_before_reveal=native_hidden,
+               eye_before_reveal=eye_before_reveal,
+               hidden_after_reveal=hidden_after_reveal,
+               reveal=reveal)
+
+        source, controller, controls = fixture()
+        av, ae = addon._control_effective(source, controls[0])
+        addon._select_proxy_ids(controller, av, ae)
+        action = invoke(bpy.ops.dan_form.hide_unselected)
+        remaining_a, _ = addon._control_effective(source, addon._control(source, controls[0]["control_uuid"]))
+        remaining_b, _ = addon._control_effective(source, addon._control(source, controls[1]["control_uuid"]))
+        record("shift_h_keeps_selected_control", not (
+                   action.get("result") == ["FINISHED"]
+                   and remaining_a == av and not remaining_b),
+               action=action, selected_control_handles=len(av),
+               remaining_a=len(remaining_a), remaining_b=len(remaining_b),
+               raw_selection=[sorted(items) for items in addon._proxy_selection_snapshot(controller)],
+               hidden_vertices=sorted(addon._hidden(source, addon.HIDDEN_VIDS_KEY)),
+               definitions=addon._controls(source))
 
         source, controller, controls = fixture()
         av, ae = addon._control_effective(source, controls[0])

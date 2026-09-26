@@ -133,3 +133,15 @@ def test_danp_classes_are_registered_or_not_defined() -> None:
             if isinstance(node, ast.ClassDef) and node.name.startswith("DANFORM_")
         )
     assert declared == registered
+
+
+def test_visibility_shortcuts_and_native_hide_recovery_share_contract() -> None:
+    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    visibility = (ROOT / "dan_form" / "operator_actions" / "visibility.py").read_text(encoding="utf-8")
+    assert '("dan_form.hide_selected", "H", {})' in operators
+    assert '("dan_form.hide_unselected", "H", {"shift": True})' in operators
+    assert '("dan_form.reveal_controller", "H", {"alt": True})' in operators
+    assert 'bl_idname = "dan_form.hide_unselected"' in visibility
+    assert "_mutate_masks(source, vertex_ids, edge_ids, reveal=False)" in visibility
+    assert "native_hidden = proxy_state is not None" in visibility
+    assert "if changed_state or native_hidden" in visibility

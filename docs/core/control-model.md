@@ -35,7 +35,10 @@ move, because proportional and other enabled constraints still apply.
 
 No control parenting, nested patch ownership or separate deactivate feature is needed.
 Object/collection hiding only changes display; it is not DANP Form Hide Control.
-Proxy H/Alt-H may be bound to DANP Form commands when the tool owns the context.
+On the Controller in Edit Mode, H hides selected handles, Shift-H hides
+unselected handles, and Alt-H reveals canonical DANP visibility. Blender's
+separate F3/native Hide operator changes transient proxy display flags only;
+Alt-H restores the canonical Controller display.
 
 ## Canonical masks and shared endpoints
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import bmesh
 import bpy
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -128,6 +129,78 @@ def run():
         expected_union = (addon._control_effective(source, controls[0])[0]
                           | addon._control_effective(source, controls[2])[0])
         check(proxy_vertices == expected_union, "Controller Shift-add preserves previous proxy vertices")
+
+        # H acts on the selected persistent IDs across every definition, even
+        # when the active list row names only one of several selected controls.
+        addon._select_proxy_ids(controller, first_ids | second_ids, set())
+        check(bpy.ops.dan_form.hide_selected() == {"FINISHED"},
+              "H hides multi-control selection with one Source-wide operation")
+        check(not addon._effective_proxy_elements(source)[0],
+              "multi-control H releases every selected control vertex")
+        check(bpy.ops.dan_form.reveal() == {"FINISHED"},
+              "Alt-H Show restores canonical masks")
+
+        # Clicking A's eye must retain the independent live mesh selection of B.
+        addon._select_proxy_ids(controller, second_ids, set())
+        check(bpy.ops.dan_form.set_control_visibility(
+                  control_uuid=uuids[0], reveal=False) == {"FINISHED"},
+              "eye hides only its definition")
+        selected_after_eye, _ = addon._selected_source_elements(controller)
+        check(selected_after_eye == second_ids,
+              "eye rebuild preserves unrelated selected control handles")
+        check(bpy.ops.dan_form.set_control_visibility(
+                  control_uuid=uuids[0], reveal=True) == {"FINISHED"},
+              "eye restores its definition")
+
+        # Shift-H is DANP visibility, not Blender's transient BMesh hide flag.
+        addon._select_proxy_ids(controller, first_ids, set())
+        check(bpy.ops.dan_form.hide_unselected() == {"FINISHED"},
+              "Shift-H keeps selected controls and masks the rest")
+        updated_controls = addon._controls(source)
+        kept_a, _ = addon._control_effective(source, updated_controls[0])
+        hidden_b, _ = addon._control_effective(source, updated_controls[1])
+        check(kept_a == first_ids and not hidden_b,
+              "Shift-H preserves selection and hides unselected membership")
+        check(bpy.ops.dan_form.reveal_controller() == {"FINISHED"},
+              "Alt-H reveals the Shift-H result")
+
+        # Edge mode keeps the selected span as a span, without treating its
+        # endpoint vertex flags as an extra node selection.
+        bpy.context.tool_settings.mesh_select_mode = (False, True, False)
+        first_edges = set(controls[0]["edge_ids"])
+        addon._select_proxy_ids(controller, set(), first_edges)
+        check(bpy.ops.dan_form.hide_unselected() == {"FINISHED"},
+              "Shift-H also uses selected spans in Edge mode")
+        remaining_edges = set(addon._effective_proxy_elements(source)[1])
+        check(remaining_edges == first_edges,
+              "Edge-mode Shift-H leaves exactly the selected span visible")
+        check(bpy.ops.dan_form.reveal_controller() == {"FINISHED"},
+              "Alt-H restores Edge-mode visibility")
+
+        # With an empty selection, Shift-H follows Blender's established
+        # hide-unselected meaning and hides the complete control network.
+        addon._select_proxy_ids(controller, set(), set())
+        check(bpy.ops.dan_form.hide_unselected() == {"FINISHED"},
+              "Shift-H accepts an empty selection as Hide All")
+        check(not addon._effective_proxy_elements(source)[0],
+              "empty-selection Shift-H hides all effective vertices")
+        check(bpy.ops.dan_form.reveal_controller() == {"FINISHED"},
+              "Alt-H restores empty-selection Hide All")
+
+        # Even when Blender's native Hide is invoked through F3, Alt-H must
+        # restore the display without inventing canonical masks.
+        bpy.context.tool_settings.mesh_select_mode = (True, False, False)
+        addon._select_proxy_ids(controller, first_ids, set())
+        canonical_before_native_hide = source[addon.CONTROLS_KEY]
+        bpy.ops.mesh.hide(unselected=True)
+        check(any(vertex.hide for vertex in bmesh.from_edit_mesh(controller.data).verts),
+              "native F3 Hide produces transient hidden Controller flags")
+        check(bpy.ops.dan_form.reveal() == {"FINISHED"},
+              "Alt-H accepts a native hidden Controller as a reveal request")
+        check(not any(vertex.hide for vertex in bmesh.from_edit_mesh(controller.data).verts)
+              and source[addon.CONTROLS_KEY] == canonical_before_native_hide,
+              "Alt-H clears native flags without changing canonical eye/mask state")
+
         return {"status": "PASS", "checks": checks, "blender_version": bpy.app.version_string}
     finally:
         if bpy.context.view_layer.objects.active and bpy.context.view_layer.objects.active.mode == "EDIT":

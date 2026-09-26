@@ -23,8 +23,13 @@ options. They do not change masks, cuts or constraints. Hide All keeps the curre
 object/mode so Show All works even on an empty controller in Edit Mode. Edit Control
 is disabled on Source when no effective handle remains, until controls are revealed.
 
-Controller H hides selected canonical geometry; Alt-H reveals all from current
-Source positions. Edge selection has edge intent: its selected endpoints are not
+Controller H hides selected canonical geometry; Shift-H keeps the selected
+handles and canonically hides the rest; Alt-H reveals all from current Source
+positions. These shortcuts share the same Source-backed visibility rules as the
+list eye and bulk actions. Blender's separate F3/native Hide operator changes
+transient proxy display flags only; Alt-H restores the canonical Controller
+display. Edge selection
+has edge intent: its selected endpoints are not
 explicit node Hide, preserving intersecting enabled edges. Vertex selection has
 node intent, releasing all incident edges under ADR-008. An overlapping logical
 group observes the same canonical masks; it cannot override them.

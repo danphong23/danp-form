@@ -58,6 +58,7 @@ from .operator_actions.structure import (
 from .operator_actions.visibility import (
     DANFORM_OT_set_control_visibility,
     DANFORM_OT_hide_selected,
+    DANFORM_OT_hide_unselected,
     DANFORM_OT_reveal,
     DANFORM_OT_reveal_controller,
     DANFORM_OT_toggle_viewport_controls,
@@ -375,6 +376,7 @@ def _register_control_keymaps():
     km = config.keymaps.new(name="Mesh", space_type="EMPTY")
     for operator, key, modifiers in (
         ("dan_form.hide_selected", "H", {}),
+        ("dan_form.hide_unselected", "H", {"shift": True}),
         ("dan_form.reveal_controller", "H", {"alt": True}),
     ):
         item = km.keymap_items.new(operator, key, "PRESS", head=True, **modifiers)
@@ -401,6 +403,7 @@ CLASSES = (
     DANFORM_OT_set_control_visibility,
     DANFORM_OT_delete_control,
     DANFORM_OT_hide_selected,
+    DANFORM_OT_hide_unselected,
     DANFORM_OT_reveal,
     DANFORM_OT_remove_controller,
     DANFORM_OT_remove,
@@ -448,6 +451,7 @@ __all__ = [
     "DANFORM_OT_set_control_visibility",
     "DANFORM_OT_delete_control",
     "DANFORM_OT_hide_selected",
+    "DANFORM_OT_hide_unselected",
     "DANFORM_OT_reveal",
     "DANFORM_OT_remove_controller",
     "DANFORM_OT_remove",
