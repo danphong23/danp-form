@@ -34,6 +34,14 @@ def test_third_party_notice_is_packaged() -> None:
     assert "pure-Python fallback" in notices
 
 
+def test_destructive_selection_fixture_refuses_live_ui() -> None:
+    fixture = (ROOT / "tests" / "live_control_multiselect.py").read_text(encoding="utf-8")
+    guard = fixture.index("if not bpy.app.background:")
+    registration = fixture.index("addon.register()")
+    fixture_creation = fixture.index('bpy.data.meshes.new("Selection Fixture Mesh")')
+    assert guard < registration < fixture_creation
+
+
 def test_phase1_contract_symbols() -> None:
     source = package_source()
     for symbol in (

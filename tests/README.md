@@ -13,6 +13,12 @@ The other root `live_*.py` files are supplemental fixtures. Read each fixture's
 mode, environment and restoration requirements before running it. They are
 not all invoked by the release runner and are not automatically release evidence.
 
+`live_control_multiselect.py` is a historical filename used by the release
+runner, but it creates and removes objects without restoring the user's active
+object, selection or mode. It now refuses to run unless Blender is in background
+mode; use only through the disposable fixture runner, never through MCP in the
+open user scene.
+
 ## State consistency audit
 
 `audit_state_consistency.py` is a readiness audit for the

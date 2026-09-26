@@ -1,4 +1,7 @@
-"""Blender regression for sidebar multi-select and derived row selection state."""
+"""Background-only disposable-fixture regression for selection/visibility.
+
+This test creates and removes scene objects. It must not run in a user's UI scene.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +25,11 @@ def _select_only(obj):
 
 
 def run():
+    if not bpy.app.background:
+        raise RuntimeError(
+            "This fixture creates and removes scene objects; run it only in "
+            "a disposable Blender background process."
+        )
     addon.register()
     checks = []
 
