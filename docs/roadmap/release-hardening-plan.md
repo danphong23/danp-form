@@ -1,5 +1,11 @@
 # DANP Form — Lộ trình hoàn thiện trước phát hành
 
+**Cập nhật 2026-09-26: readiness hiện tại bị chặn bởi audit mới.** Các trạng thái
+PASS phía dưới là bằng chứng lịch sử theo phạm vi từng báo cáo; chúng chưa bao
+phủ các lỗi ownership, targets, atomicity và visibility vừa tái hiện. Xem
+[comprehensive review](../testing/2026-09-26-comprehensive-addon-review.md) và
+[cleanup tasks](../../tasks/addon-cleanup-review.md) trước phát hành hoặc thêm UX.
+
 **Trạng thái: H01–H08 đã pass trong phạm vi ghi ở từng báo cáo; người dùng nghiệm thu H02 trên Blender
 0.5.34 và xác nhận các gate giao diện H04/H07 hoạt động ổn; H01–H08 đã hoàn tất
 cho mục tiêu chức năng. H09 operational suites đã pass, còn GPU/performance

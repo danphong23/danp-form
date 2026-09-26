@@ -84,10 +84,6 @@ def deform_begin(source: bpy.types.Object, controller: bpy.types.Object, deps) -
         "p0": current,
         "selected": selected, "selection": set(selected), "scope": scope,
         "closed": False, "preview": None,
-        "control_groups": {
-            str(control.get("control_uuid")): set(deps.control_effective(source, control)[0])
-            for control in deps.controls(source)
-        },
     }
     deps.transactions[source_ptr] = tx
     return tx
@@ -210,7 +206,6 @@ def deform_update(source: bpy.types.Object, controller: bpy.types.Object, deps,
         stationary,
         profile,
         float(radius),
-        control_groups=tx.get("control_groups"),
         selection_intent=intent,
         all_controls_selected=bool(effective_vertices) and effective_vertices.issubset(intent),
     )

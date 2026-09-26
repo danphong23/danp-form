@@ -1,5 +1,10 @@
 # DANP Form
 
+Current readiness: the [2026-09-26 review](docs/testing/2026-09-26-comprehensive-addon-review.md)
+found open safety and interaction defects beyond the existing passing suites.
+Follow the [cleanup tasks](tasks/addon-cleanup-review.md) before release or new
+Inspect/preview UX. Historical acceptance is not certification of this checkout.
+
 DANP Form is a Blender add-on design for reshaping an existing template mesh through a sparse network of source-backed control lines.
 
 The product idea is intentionally small:

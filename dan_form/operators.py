@@ -26,6 +26,8 @@ _UI_SELECTION_STATES: dict[str, str] = {}
 # Helper names used by operator methods are bound to the facade at register time.
 def bind(api) -> None:
     for name in dir(api):
+        if name.startswith("__"):
+            continue
         if name.startswith("_") or name.startswith("DANFORM_"):
             globals()[name] = getattr(api, name)
 

@@ -1,5 +1,8 @@
 # Task phát triển DANP Form
 
+Ưu tiên hiện tại là [cleanup sau comprehensive review](addon-cleanup-review.md).
+Các lỗi mới có bằng chứng phải được sửa trước phát hành và trước Inspect/hover.
+
 Lộ trình baseline ban đầu có đúng 5 phase, theo [kế hoạch](../docs/roadmap/implementation-plan.md).
 Hoàn thành gate của phase hiện tại trước khi chuyển phase tiếp theo. Đợt hoàn thiện
 trước phát hành gồm [H01–H10](../docs/roadmap/release-hardening-plan.md), mỗi

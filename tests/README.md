@@ -13,6 +13,16 @@ The other root `live_*.py` files are supplemental fixtures. Read each fixture's
 mode, environment and restoration requirements before running it. They are
 not all invoked by the release runner and are not automatically release evidence.
 
+## State consistency audit
+
+`audit_state_consistency.py` is a readiness audit for the
+[2026-09-26 review](../docs/testing/2026-09-26-comprehensive-addon-review.md).
+Run it only with a disposable `--factory-startup --background` Blender process.
+It refuses a UI process or a scene with a saved filepath. The JSON observations
+report known defects; exit code 0 means collection completed, not a PASS gate.
+The injected rebuild traceback is expected evidence of missing rollback.
+Convert repaired probes into normal regression gates before release acceptance.
+
 ## Historical fixtures
 
 `history/live_pick_ux.py` and `history/live_control_segments.py` depend on the

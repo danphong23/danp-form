@@ -1,5 +1,11 @@
 # Phase 2 — Sidebar gọn theo danh sách Blender
 
+**Ưu tiên cập nhật 2026-09-26:** review mới xác định lỗi safety và tính nhất quán
+visibility/selection. Thực hiện [cleanup tasks](../../tasks/addon-cleanup-review.md)
+và đối chiếu [bằng chứng](../testing/2026-09-26-comprehensive-addon-review.md)
+trước khi mở rộng viewport picker/Inspect; trạng thái triển khai lịch sử bên dưới
+không thay gate cho những lỗi mới.
+
 ## Selection UX bổ sung — Phase 1
 
 Đợt 1 bổ sung chọn nhiều control từ danh sách và trạng thái chọn suy ra trực

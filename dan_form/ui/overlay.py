@@ -10,6 +10,8 @@ from ..constants import *
 
 def bind(api) -> None:
     for name in dir(api):
+        if name.startswith("__"):
+            continue
         if name in {"_register_overlay", "_unregister_overlay"}:
             continue
         if name.startswith("_") or name.startswith("DANFORM_") or name in {"OVERLAY_HANDLE"}:

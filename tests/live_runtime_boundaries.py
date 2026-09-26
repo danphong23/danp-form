@@ -30,6 +30,12 @@ def run():
     try:
         for cycle in range(2):
             addon.register()
+            for module in (addon._operators, addon._lifecycle, overlay):
+                check(sys.modules.get(module.__name__) is module
+                      and module.__spec__.name == module.__name__,
+                      f"cycle {cycle + 1}: binding preserves {module.__spec__.name} module identity")
+            check(addon._selected_source_elements(None) == (set(), set()),
+                  f"cycle {cycle + 1}: unsupported selection context returns an empty pair")
             check(all(sum(item is callback for item in handlers) == 1
                       for handlers, callback in handler_specs),
                   f"cycle {cycle + 1}: each persistent handler registered once")

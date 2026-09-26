@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "aa4916edc701bf37f510242170c183f5b9661986f291668b3914fd82afa15488",
-    "bytes": 328547
+    "sha256": "3f208b37e6b5ed7b50599f6de19b08bf654b39176209a344e48cecfccf1529a5",
+    "bytes": 342483
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -271,8 +271,8 @@
   },
   {
     "path": "docs/roadmap/phase-02-native-list-ux.md",
-    "sha256": "8fab50bc35ef1c02b246a999d1667e2d8cb5976e2282963db424a74772811b90",
-    "bytes": 13211
+    "sha256": "0650cf7825b6ceaa474aea8860f66bca8e65e66c84232a2ba5a8489940cde82a",
+    "bytes": 13635
   },
   {
     "path": "docs/roadmap/phase-02-ux-upgrade.md",
@@ -281,8 +281,8 @@
   },
   {
     "path": "docs/roadmap/release-hardening-plan.md",
-    "sha256": "308d959cb528ecbb030e48d14e091b388282d256eab3e03bd8b758a5df43daa5",
-    "bytes": 6773
+    "sha256": "56767e8b7965b2735fbb3d7302edcd82b4820d661f908aa943f3b199b1d2c991",
+    "bytes": 7231
   },
   {
     "path": "docs/testing/2026-09-25-all-control-scale-audit.md",
@@ -353,6 +353,11 @@
     "path": "docs/testing/2026-09-25-release-hardening-baseline.md",
     "sha256": "00b3d73ec7739410aadb1f3b496da2f456e32f3c01ecd0861df8ea388c93570f",
     "bytes": 2112
+  },
+  {
+    "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
+    "sha256": "c8a31bc241dd1bdaff9faabbee9cd80fae73b14d896dd43c58bd9c6235b5200c",
+    "bytes": 12976
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
@@ -451,18 +456,23 @@
   },
   {
     "path": "README_VI.md",
-    "sha256": "9c9498db1acb88233be4e4a41e1897ebe4197e4d13fd5d712af28248e0bb17cc",
-    "bytes": 4804
+    "sha256": "431d4f347916854738e1ad86c183223a5130f88172b3a679e021965aba18b843",
+    "bytes": 5187
   },
   {
     "path": "README.md",
-    "sha256": "edc4d425cb79e66249ebe70e5a36b25f9e26195626c29834add9bf2c549ce494",
-    "bytes": 4729
+    "sha256": "6e04f88aaea2d9b9541b3cd4a61b0cd451bed112abbf028c132456d26e10cd01",
+    "bytes": 5066
   },
   {
     "path": "SECURITY.md",
     "sha256": "bc75f11b852f27351aad43a0151cb68e129daffa38735292eb6a2f32474a1f6b",
     "bytes": 338
+  },
+  {
+    "path": "tasks/addon-cleanup-review.md",
+    "sha256": "687c65c166ab2b01158c373c8c45af3eadc0929a56d3d28051cd18138a55b2f1",
+    "bytes": 5665
   },
   {
     "path": "tasks/phase-01-bootstrap.md",
@@ -506,8 +516,8 @@
   },
   {
     "path": "tasks/README.md",
-    "sha256": "320b4658948c8294c82d90fc8bbed97cf5854c27872552dbbe8594fc56a2ab08",
-    "bytes": 2629
+    "sha256": "2e61174b29b49de87c48f195378c2464d5b214c5b9470cc76d7d58735dfdc6da",
+    "bytes": 2824
   },
   {
     "path": "tasks/release-hardening/h01-target-contract.md",
@@ -561,7 +571,7 @@
   },
   {
     "path": "tests/README.md",
-    "sha256": "147034c119b8206bf36e78225a9061c35cb026e342ed6271c5744553caf45024",
-    "bytes": 1201
+    "sha256": "ac0ee59d3ec6c76aea4bc3db1a5a8c349eacbfa55c462875e129bed5361782e5",
+    "bytes": 1759
   }
 ]

@@ -1,5 +1,10 @@
 # DANP Form
 
+Trạng thái hiện tại: [review ngày 2026-09-26](docs/testing/2026-09-26-comprehensive-addon-review.md)
+đã phát hiện lỗi safety và tương tác ngoài phạm vi các bộ test đang pass. Thực
+hiện [cleanup tasks](tasks/addon-cleanup-review.md) trước phát hành hoặc thêm
+Inspect/preview. Nghiệm thu lịch sử không chứng nhận checkout hiện tại.
+
 DANP Form là add-on Blender giúp người dùng hoặc AI chỉnh một model template bằng mạng đường control thưa nằm trên topology thật của Source Mesh.
 
 ```text

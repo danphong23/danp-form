@@ -23,6 +23,8 @@ NATIVE_POLL_INTERVAL = 0.01
 
 def bind(api) -> None:
     for name in dir(api):
+        if name.startswith("__"):
+            continue
         if name.startswith("_"):
             globals()[name] = getattr(api, name)
 

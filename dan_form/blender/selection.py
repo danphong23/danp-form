@@ -17,7 +17,7 @@ def selected_source_elements(obj: bpy.types.Object) -> tuple[set[int], set[int]]
     result, unlike the operation-oriented selection readers below.
     """
     if obj is None or obj.mode != "EDIT" or bpy.context.view_layer.objects.active != obj:
-        return set()
+        return set(), set()
     bm = bmesh.from_edit_mesh(obj.data)
     if obj.get(CONTROLLER_KEY) is not None:
         vertex_layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
