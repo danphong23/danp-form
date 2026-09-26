@@ -28,6 +28,7 @@ def test_extracted_modules_exist() -> None:
         "registration.py",
         "operators.py",
         "ui/overlay.py",
+        "ui/panel.py",
     ):
         assert (ROOT / "dan_form" / relative).is_file()
 
@@ -69,3 +70,19 @@ def test_mutable_ui_state_uses_shared_runtime() -> None:
     assert "runtime.UI_SYNC_GUARD" in operators
     assert "runtime.PICK_SESSION" in operators
     assert "api._runtime.PICK_SESSION += 1" in registration
+
+
+def test_unregistered_segment_operator_implementation_is_removed() -> None:
+    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    assert "DANFORM_OT_select_segment" not in operators
+    assert 'bl_idname = "dan_form.select_segment"' not in operators
+    assert '("SEGMENT", "Segment"' in operators
+
+
+def test_sidebar_classes_have_a_ui_module_boundary() -> None:
+    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    panel = (ROOT / "dan_form" / "ui" / "panel.py").read_text(encoding="utf-8")
+    assert "class DANFORM_PT_sidebar" not in operators
+    assert "class DANFORM_PT_sidebar" in panel
+    assert "from .ui.panel import" in operators
+    assert "_panel.bind(api)" in operators

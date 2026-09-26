@@ -30,7 +30,8 @@ def run():
     try:
         for cycle in range(2):
             addon.register()
-            for module in (addon._operators, addon._lifecycle, overlay):
+            from dan_form.ui import panel
+            for module in (addon._operators, addon._lifecycle, overlay, panel):
                 check(sys.modules.get(module.__name__) is module
                       and module.__spec__.name == module.__name__,
                       f"cycle {cycle + 1}: binding preserves {module.__spec__.name} module identity")
@@ -39,6 +40,8 @@ def run():
             check(all(sum(item is callback for item in handlers) == 1
                       for handlers, callback in handler_specs),
                   f"cycle {cycle + 1}: each persistent handler registered once")
+            check(addon.DANFORM_PT_sidebar.__module__ == "dan_form.ui.panel",
+                  f"cycle {cycle + 1}: sidebar class belongs to the UI module")
             check(overlay.OVERLAY_HANDLE is not None,
                   f"cycle {cycle + 1}: overlay handler registered")
             transform_timer = lambda: 60.0
