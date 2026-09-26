@@ -119,11 +119,9 @@ def register(api) -> None:
 
 
 def unregister(api) -> None:
-    api._runtime.PICK_SESSION += 1
     # Timer callbacks retain references to Blender objects and transaction
     # state. Stop them before teardown clears the state they may inspect.
     api._cancel_runtime_timers()
-    api._PICK_PREVIEW.clear()
     api._unregister_control_keymaps()
     api._unregister_topology_keymaps()
     api._unregister_overlay()

@@ -31,7 +31,6 @@ def rebuild_proxy(source: bpy.types.Object, controller: bpy.types.Object, deps) 
     try:
         runtime.OVERLAY_CACHE.clear()
         runtime.PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
-        runtime.PICK_PREVIEW.clear()
         rebuild_proxy_impl(source, controller, deps)
         runtime.PROXY_SNAPSHOTS.pop(controller.as_pointer(), None)
         guard_proxy_topology(source, controller, deps)

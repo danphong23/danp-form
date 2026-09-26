@@ -500,7 +500,6 @@ def _native_transform_timer(source_ptr):
 
 @persistent
 def _refresh_runtime(_unused=None, direction=None) -> None:
-    runtime.PICK_SESSION += 1
     _cancel_native_transform_timers()
     runtime.NATIVE_TRANSFORM_SESSIONS.clear()
     runtime.TOPOLOGY_STATES.clear()
@@ -546,7 +545,6 @@ def _load_post(_unused=None) -> None:
     _refresh_binding_registry(clear=True)
     runtime.SHAPE_EVAL_SIGNATURES.clear()
     _refresh_runtime(_unused)
-    _PICK_PREVIEW.clear()
     _MAPPING_CACHE.clear()
     _UI_SIGNATURES.clear()
     _PROXY_SNAPSHOTS.clear()

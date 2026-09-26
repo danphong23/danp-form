@@ -17,7 +17,7 @@ def test_controller_resolution_uses_direct_parentage_and_unique_binding() -> Non
 
 def test_copy_lifecycle_rekeys_full_pair_and_clears_mesh_only_duplicate() -> None:
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
-    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operator_actions" / "structure.py").read_text(encoding="utf-8")
     assert "def _reconcile_duplicate_bindings" in lifecycle
     assert "duplicate_source[SOURCE_UUID_KEY] = fresh_uuid" in lifecycle
     assert "_clear_duplicate_source_state(duplicate_source)" in lifecycle

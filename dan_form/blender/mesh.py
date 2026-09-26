@@ -308,7 +308,6 @@ def _repair_source_topology(source: bpy.types.Object) -> dict:
     runtime.PATCH_OVERLAY_CACHE.pop(source.as_pointer(), None)
     runtime.FACE_CACHE.pop(source.as_pointer(), None)
     runtime.OVERLAY_CACHE.clear()
-    runtime.PICK_PREVIEW.clear()
     return report
 
 

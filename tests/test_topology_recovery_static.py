@@ -16,7 +16,7 @@ def test_topology_changes_pause_instead_of_writing_stale_mapping():
 
 
 def test_reset_is_registered_and_undoable():
-    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operator_actions" / "structure.py").read_text(encoding="utf-8")
     assert 'class DANFORM_OT_reset' in operators
     assert 'bl_idname = "dan_form.reset"' in operators
     assert 'class DANFORM_OT_reset_source' in operators
@@ -29,7 +29,7 @@ def test_reset_is_registered_and_undoable():
 def test_cleanup_marks_stale_ownership_without_deleting_objects():
     context = (ROOT / "dan_form" / "blender" / "context.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
-    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operator_actions" / "structure.py").read_text(encoding="utf-8")
     assert "orphaned_owned_objects" in context
     assert "FACE_SOURCE_UUID_KEY" in context
     assert "_cleanup_orphaned_owned_objects" in lifecycle
@@ -51,7 +51,7 @@ def test_modifier_contract_mentions_base_mapping_and_evaluated_display():
 
 def test_explicit_topology_preview_and_repair_fail_closed():
     mesh = (ROOT / "dan_form" / "blender" / "mesh.py").read_text(encoding="utf-8")
-    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operator_actions" / "structure.py").read_text(encoding="utf-8")
     adr = (ROOT / "docs" / "decisions" / "ADR-018-topology-recovery.md").read_text(encoding="utf-8")
     assert "TOPOLOGY_SNAPSHOT_KEY" in mesh
     assert "def _topology_repair_analysis" in mesh

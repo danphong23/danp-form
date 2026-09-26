@@ -13,11 +13,12 @@ _UI_SELECTION_STATES: dict[str, str] = {}
 
 def bind(api) -> None:
     """Bind compatibility adapters used by the UI classes."""
-    for name in dir(api):
-        if name.startswith("__"):
-            continue
+    bindings = api.items() if isinstance(api, dict) else (
+        (name, getattr(api, name)) for name in dir(api)
+    )
+    for name, value in bindings:
         if name.startswith("_") or name.startswith("DANFORM_"):
-            globals()[name] = getattr(api, name)
+            globals()[name] = value
 
 
 def _ui_item_name_update(item, context: bpy.types.Context) -> None:

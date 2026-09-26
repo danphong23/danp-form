@@ -105,15 +105,16 @@ def run():
 
         failed_source = make_source("DANP Failed Init Source")
         bpy.ops.object.mode_set(mode="EDIT")
-        original_rebuild = operators._rebuild_proxy
-        operators._rebuild_proxy = lambda _source, _controller: (_ for _ in ()).throw(ValueError("INJECTED_FAILURE"))
+        structure_operators = operators._structure_operators
+        original_rebuild = structure_operators._rebuild_proxy
+        structure_operators._rebuild_proxy = lambda _source, _controller: (_ for _ in ()).throw(ValueError("INJECTED_FAILURE"))
         try:
             try:
                 failed_result = bpy.ops.dan_form.initialize()
             except RuntimeError:
                 failed_result = {"CANCELLED"}
         finally:
-            operators._rebuild_proxy = original_rebuild
+            structure_operators._rebuild_proxy = original_rebuild
         check(failed_result == {"CANCELLED"}, "failed Init is reported as cancelled")
         check(failed_source.mode == "EDIT", "failed Init restores Source Edit Mode")
         check(not failed_source.get(addon.SOURCE_UUID_KEY)

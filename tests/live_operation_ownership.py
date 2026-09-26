@@ -30,19 +30,25 @@ def run():
             "revision": source.get(addon.NETWORK_REVISION_KEY),
             "proxy": addon._transform_session.controller_positions(controller),
         }
-        rebuild = addon._operators._rebuild_proxy
+        owner_modules = (
+            addon._operators._structure_operators,
+            addon._operators._visibility_operators,
+        )
+        rebuilds = [module._rebuild_proxy for module in owner_modules]
 
         def injected_failure(*_args):
             raise ValueError("INJECTED_PROXY_REBUILD_FAILURE")
 
-        addon._operators._rebuild_proxy = injected_failure
+        for module in owner_modules:
+            module._rebuild_proxy = injected_failure
         try:
             try:
                 result = action()
             except RuntimeError as exc:
                 result = {"CANCELLED"} if "INJECTED_PROXY_REBUILD_FAILURE" in str(exc) else set()
         finally:
-            addon._operators._rebuild_proxy = rebuild
+            for module, rebuild in zip(owner_modules, rebuilds):
+                module._rebuild_proxy = rebuild
         after = addon._transform_session.controller_positions(controller)
         check(result == {"CANCELLED"}
               and source.get(addon.CONTROLS_KEY) == before["controls"]

@@ -66,6 +66,7 @@ from .blender.proxy import rebuild_proxy as _proxy_rebuild
 from .blender.proxy import sync_proxy as _proxy_sync
 from .blender.selection import _controller_selected_source_ids as _controller_selected_source_ids
 from .blender.selection import _proxy_selection as _proxy_selection
+from .blender.selection import proxy_selection_snapshot as _proxy_selection_snapshot
 from .blender.selection import _select_proxy_ids as _select_proxy_ids
 from .blender.selection import _select_source_ids as _select_source_ids
 from .blender.selection import _source_positions as _source_positions
@@ -133,7 +134,6 @@ _PATCH_OVERLAY_CACHE = _runtime.PATCH_OVERLAY_CACHE
 _FACE_CACHE = _runtime.FACE_CACHE
 _OVERLAY_CACHE = _runtime.OVERLAY_CACHE
 _XRAY_SHOW_IN_FRONT = _runtime.XRAY_SHOW_IN_FRONT
-_PICK_PREVIEW = _runtime.PICK_PREVIEW
 _DANP_TRANSACTIONS = _runtime.DANP_TRANSACTIONS
 _NATIVE_TRANSFORM_SESSIONS = _runtime.NATIVE_TRANSFORM_SESSIONS
 _NATIVE_UNDO_RECORDS = _runtime.NATIVE_UNDO_RECORDS

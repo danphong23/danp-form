@@ -93,12 +93,13 @@ def run():
         for name in (addon.VID_ATTR, addon.EID_ATTR)
     }
     repair_proxy = addon._transform_session.controller_positions(controller)
-    repair_rebuild = addon._operators._rebuild_proxy
+    structure_operators = addon._operators._structure_operators
+    repair_rebuild = structure_operators._rebuild_proxy
 
     def injected_repair_failure(*_args):
         raise ValueError("INJECTED_PROXY_REBUILD_FAILURE")
 
-    addon._operators._rebuild_proxy = injected_repair_failure
+    structure_operators._rebuild_proxy = injected_repair_failure
     try:
         try:
             failed_repair = bpy.ops.dan_form.repair_topology()
@@ -106,7 +107,7 @@ def run():
             failed_repair = ({"CANCELLED"}
                              if "INJECTED_PROXY_REBUILD_FAILURE" in str(exc) else set())
     finally:
-        addon._operators._rebuild_proxy = repair_rebuild
+        structure_operators._rebuild_proxy = repair_rebuild
     restored_proxy = addon._transform_session.controller_positions(controller)
     check(failed_repair == {"CANCELLED"}
           and all(source.get(key) == value for key, value in repair_props.items())

@@ -120,6 +120,21 @@ def _proxy_selection(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
     return selected_vids, selected_eids
 
 
+def proxy_selection_snapshot(controller: bpy.types.Object) -> tuple[set[int], set[int]]:
+    """Capture exact proxy selection flags without select-mode filtering."""
+    if controller.mode != "EDIT" or bpy.context.view_layer.objects.active != controller:
+        raise ValueError("CONTROLLER_EDIT_MODE_REQUIRED")
+    bm = bmesh.from_edit_mesh(controller.data)
+    vid_layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
+    eid_layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+    if vid_layer is None or eid_layer is None:
+        raise ValueError("PROXY_MAPPING_MISSING")
+    return (
+        {int(vertex[vid_layer]) for vertex in bm.verts if vertex.select},
+        {int(edge[eid_layer]) for edge in bm.edges if edge.select},
+    )
+
+
 def _source_positions(source: bpy.types.Object, shape_key=None) -> dict[int, Vector]:
     """Return the current Source coordinates keyed by persistent vertex ID."""
     vids, _ = _source_id_maps(source)

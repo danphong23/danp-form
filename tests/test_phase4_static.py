@@ -31,7 +31,8 @@ def test_phase4_operator_and_ui_are_registered():
 
 
 def test_native_grs_uses_blender_edit_transform_without_legacy_macros():
-    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    operators = "\n".join(path.read_text(encoding="utf-8")
+                           for path in (ROOT / "dan_form").rglob("*.py"))
     session = (ROOT / "dan_form" / "blender" / "transform_session.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "dan_form" / "blender" / "lifecycle.py").read_text(encoding="utf-8")
     assert 'bl_idname = "dan_form.native_begin"' not in operators
@@ -95,7 +96,7 @@ def test_operation_freezes_proxy_and_modifier_generations():
 
 
 def test_topology_lock_uses_the_native_modal_boundary():
-    operators = (ROOT / "dan_form" / "operators.py").read_text(encoding="utf-8")
+    operators = (ROOT / "dan_form" / "operator_actions" / "deformation.py").read_text(encoding="utf-8")
     assert "native_transform_active(context)" in operators
     assert "context.window_manager.operators" not in operators
 

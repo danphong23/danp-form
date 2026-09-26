@@ -23,8 +23,6 @@ PATCH_OVERLAY_CACHE = {}
 FACE_CACHE = {}
 OVERLAY_CACHE = {}
 XRAY_SHOW_IN_FRONT = {}
-PICK_PREVIEW = {}
-PICK_SESSION = 0
 DANP_TRANSACTIONS = {}
 # Live native Blender G/R/S sessions.  The controller remains the source of
 # the interactive target positions while the Source preview is updated from a

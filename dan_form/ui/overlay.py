@@ -400,14 +400,6 @@ def _draw_control_overlay() -> None:
                 else:
                     gpu.state.point_size_set(float(size))
                 batch.draw(shader)
-            preview = _PICK_PREVIEW
-            if (preview.get("controller") == controller.as_pointer()
-                    and preview.get("area") == context.area.as_pointer()
-                    and preview.get("batch") is not None):
-                shader.bind()
-                shader.uniform_float("color", (1.0, 0.2, 0.8, 1.0))
-                gpu.state.line_width_set(3.0)
-                preview["batch"].draw(shader)
         finally:
             # Do not leak custom line/depth state into another draw callback.
             gpu.state.depth_test_set(previous_depth)
