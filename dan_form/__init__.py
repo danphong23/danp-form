@@ -71,6 +71,7 @@ from .blender.selection import _select_source_ids as _select_source_ids
 from .blender.selection import _source_positions as _source_positions
 from .blender.selection import _source_selection as _source_selection
 from .blender.selection import selected_source_vertex_ids as _selected_source_vertex_ids
+from .blender.selection import selected_source_elements as _selected_source_elements
 from .blender.workflows import WorkflowDeps as _WorkflowDeps
 from .blender.workflows import deform_begin as _workflow_deform_begin
 from .blender.workflows import deform_cancel as _workflow_deform_cancel

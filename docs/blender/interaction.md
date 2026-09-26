@@ -48,9 +48,10 @@ With X-Ray off, the overlay uses the normal depth test and is occluded by the op
 mesh. X-Ray explicitly disables that test when the user needs to inspect controls
 through the model.
 Controller Edit keeps Blender's native selection tools for direct mesh picking.
-The control list also selects saved memberships: clicking a row's selection
-marker replaces the mesh selection, and Shift-clicking that marker adds its
-membership. The clicked row becomes the single active row for shared actions
+The control list also selects saved memberships: clicking a row name replaces
+the mesh selection, and Shift-clicking anywhere on the row name adds its
+membership. Shift-clicking a fully selected row removes that membership; clicking
+the only selected row again clears selection. The clicked row becomes the single active row for shared actions
 such as Rename, Sync, Reorder and Delete. Each row derives a full, partial or
 empty selection marker from selected persistent vertex IDs; overlapping controls
 can therefore show selected together. Hidden controls have no effective
@@ -63,13 +64,14 @@ display; idle redraw only draws existing buffers. Topology/ID caches contain no
 long-lived BMesh handles or coordinate buffers. Colored point markers represent
 explicit point handles, including a point definition sharing an edge vertex;
 ordinary edge endpoints use the colored line and Blender's native Edit selection.
-The sidebar uses a Blender-native list: inline names, eye state and a selection
-marker with Shift-add, shared +/− and
+The sidebar uses a Blender-native list: selectable row names with state markers,
+an eye state and a rename button, shared +/− and
 up/down controls, and Sync below it only in Source Edit Mode. Clicking a row immediately highlights
-its effective control geometry. In Source/controller Edit Mode, clicking the row's
-selection marker replaces mesh selection; Shift-click adds that definition's
-vertices to the current selection. In Object Mode it keeps object/mode. Selecting
-a hidden definition never reveals its canonical masks. Row selection is transient
+its effective control geometry. In Source/controller Edit Mode, clicking the row
+name replaces mesh selection; Shift-click adds or removes that definition's
+vertices in the current selection. Clicking the only selected membership again
+clears it. The rename button opens the rename dialog. In Object Mode the selection
+action enters Edit Mode. Selecting a hidden definition never reveals its canonical masks. Row selection is transient
 and is not an Undo step; it does not change definitions or mesh geometry.
 
 Edit Control activates the model's controller, enters its Edit Mode and selects the

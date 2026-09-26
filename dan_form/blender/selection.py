@@ -10,8 +10,8 @@ from ..constants import *
 from .mesh import _resolve_shape_key, _source_edge_vids, _source_id_maps, _source_vertices, _validate_source_topology
 
 
-def selected_source_vertex_ids(obj: bpy.types.Object) -> set[int]:
-    """Read selected mesh vertices/endpoints as persistent Source IDs.
+def selected_source_elements(obj: bpy.types.Object) -> tuple[set[int], set[int]]:
+    """Read selected mesh vertices/endpoints and edges as persistent IDs.
 
     This is a read-only UI projection helper.  Empty selection is a valid
     result, unlike the operation-oriented selection readers below.
@@ -20,22 +20,33 @@ def selected_source_vertex_ids(obj: bpy.types.Object) -> set[int]:
         return set()
     bm = bmesh.from_edit_mesh(obj.data)
     if obj.get(CONTROLLER_KEY) is not None:
-        layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
-        if layer is None:
-            return set()
-        result = {int(vertex[layer]) for vertex in bm.verts if vertex.select and not vertex.hide}
+        vertex_layer = bm.verts.layers.int.get(PROXY_VID_ATTR)
+        edge_layer = bm.edges.layers.int.get(PROXY_EID_ATTR)
+        if vertex_layer is None or edge_layer is None:
+            return set(), set()
+        result = {int(vertex[vertex_layer]) for vertex in bm.verts if vertex.select and not vertex.hide}
+        selected_edges = set()
         for edge in bm.edges:
             if edge.select and not edge.hide:
-                result.update(int(vertex[layer]) for vertex in edge.verts if not vertex.hide)
-        return result
-    layer = bm.verts.layers.int.get(VID_ATTR)
-    if layer is None:
-        return set()
-    result = {int(vertex[layer]) for vertex in bm.verts if vertex.select and not vertex.hide}
+                selected_edges.add(int(edge[edge_layer]))
+                result.update(int(vertex[vertex_layer]) for vertex in edge.verts if not vertex.hide)
+        return result, selected_edges
+    vertex_layer = bm.verts.layers.int.get(VID_ATTR)
+    edge_layer = bm.edges.layers.int.get(EID_ATTR)
+    if vertex_layer is None or edge_layer is None:
+        return set(), set()
+    result = {int(vertex[vertex_layer]) for vertex in bm.verts if vertex.select and not vertex.hide}
+    selected_edges = set()
     for edge in bm.edges:
         if edge.select and not edge.hide:
-            result.update(int(vertex[layer]) for vertex in edge.verts if not vertex.hide)
-    return result
+            selected_edges.add(int(edge[edge_layer]))
+            result.update(int(vertex[vertex_layer]) for vertex in edge.verts if not vertex.hide)
+    return result, selected_edges
+
+
+def selected_source_vertex_ids(obj: bpy.types.Object) -> set[int]:
+    """Return selected Source IDs, including endpoints of selected edges."""
+    return selected_source_elements(obj)[0]
 
 
 def _source_selection(source: bpy.types.Object) -> tuple[set[int], set[int]]:

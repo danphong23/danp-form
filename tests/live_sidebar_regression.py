@@ -124,8 +124,10 @@ def run():
         context.tool_settings.mesh_select_mode = (True, False, False)
         scene.dan_form_control_index = 0
         expected_vertices, expected_edges = addon._control_effective(source, controls[0])
+        check(bpy.ops.dan_form.select_control(control_uuid=controls[0]['control_uuid']) == {'FINISHED'},
+              'row name selection button selects the active proxy definition')
         selected_vertices, selected_edges = addon._proxy_selection(controller)
-        check(selected_vertices == expected_vertices and selected_edges == expected_edges, 'row click auto-selects proxy IDs')
+        check(selected_vertices == expected_vertices and selected_edges == expected_edges, 'row action selects proxy IDs')
         check(bpy.ops.dan_form.focus_source() == {'FINISHED'}, 'Back to Model navigation')
         check(context.view_layer.objects.active == source and source.mode == 'OBJECT', 'Back restores model Object Mode')
         check(addon._overlay_mode(context) == 'source', 'Back to Model restores Source overlay')
@@ -135,8 +137,10 @@ def run():
 
         bpy.ops.object.mode_set(mode='EDIT')
         scene.dan_form_control_index = target_index
+        check(bpy.ops.dan_form.select_control(control_uuid=controls[target_index]['control_uuid']) == {'FINISHED'},
+              'row name selection button selects the active Source definition')
         source_vertices, source_edges = addon._source_selection(source)
-        check(source_vertices == set(controls[target_index]['vertex_ids']) and source_edges == set(controls[target_index]['edge_ids']), 'row click auto-selects Source IDs')
+        check(source_vertices == set(controls[target_index]['vertex_ids']) and source_edges == set(controls[target_index]['edge_ids']), 'row action selects Source IDs')
         bpy.ops.dan_form.focus_controller()
         bpy.ops.dan_form.focus_source()
         check(source.mode == 'EDIT', 'Back restores previous model Edit Mode')

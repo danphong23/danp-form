@@ -5,7 +5,9 @@
 Đợt 1 bổ sung chọn nhiều control từ danh sách và trạng thái chọn suy ra trực
 tiếp từ selection Edit Mode bằng persistent vertex IDs. Mỗi dòng có một nút
 selection độc lập: click thay selection, Shift-click thêm membership; dòng được
-nhấn trở thành active cho các thao tác chung. Marker phân biệt đủ/một phần/rỗng,
+nhấn trở thành active cho các thao tác chung. Bấm lại control đang chọn sẽ bỏ
+chọn; Shift-bấm control đã chọn sẽ loại membership của nó khỏi vùng chọn.
+Marker phân biệt đủ/một phần/rỗng,
 cho phép nhiều control chồng lấp cùng hiện selected. Source Edit dùng membership
 đã lưu; Controller Edit dùng effective membership sau Hide. Trạng thái chỉ là
 projection UI và thao tác chọn không tạo bước Undo hình học.

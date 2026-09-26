@@ -66,6 +66,15 @@ def run():
         check(selected == first_ids | second_ids, "add selection retains earlier vertices")
         check(bpy.context.scene.dan_form_selected_control == uuids[1],
               "row action makes clicked control active for shared row actions")
+        check(bpy.ops.dan_form.select_control(control_uuid=uuids[1], add_to_selection=True) == {"FINISHED"},
+              "Shift-clicking an already selected control toggles its membership off")
+        selected, _edges = addon._source_selection(source)
+        check(selected == first_ids, "Shift-deselect preserves the other control membership")
+        addon._select_source_ids(source, first_ids, set())
+        check(bpy.ops.dan_form.select_control(control_uuid=uuids[0]) == {"FINISHED"},
+              "clicking the only selected control toggles it off")
+        check(addon._selected_source_vertex_ids(source) == set(),
+              "repeat-click leaves mesh selection empty")
 
         addon._select_source_ids(source, {next(iter(overlap_ids))}, set())
         states = addon._control_selection_states(source, source)
@@ -104,7 +113,9 @@ def run():
               "fully hidden effective membership is not vacuously selected")
         check(controller_states[uuids[0]] == "FULL",
               "controller selection state resolves persistent proxy IDs to Source membership")
+        addon._select_proxy_ids(controller, set(), set())
         bpy.ops.object.mode_set(mode="OBJECT")
+        bpy.context.tool_settings.mesh_select_mode = (True, False, False)
         check(bpy.ops.dan_form.select_control(control_uuid=uuids[0]) == {"FINISHED"}
               and controller.mode == "EDIT",
               "selecting from Controller Object Mode enters Controller Edit")

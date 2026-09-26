@@ -63,6 +63,8 @@ def _friendly_error(exc: Exception) -> str:
         return "The mesh or Controller shares data. Make it single-user before editing."
     if code == "SOURCE_NOT_EDITABLE":
         return "Select a local, single-user mesh to initialize DANP Form."
+    if code == "CONTROL_HAS_NO_EFFECTIVE_MEMBERSHIP":
+        return "This control has no visible handles to select. Reveal it first."
     if code == "EVALUATED_SOURCE_ID_MAPPING_UNAVAILABLE":
         return "Evaluated Source vertices could not be matched to the mesh. Check the modifier stack and retry."
     if code == "CONTROLLER_BINDING_INCOMPLETE":
@@ -460,15 +462,8 @@ def _ui_control_index_update(scene, context: bpy.types.Context) -> None:
             return
     scene.dan_form_selected_control = control["control_uuid"]
     _ACTIVE_CONTROL_UUIDS[items[index].source_uuid] = control["control_uuid"]
-    active = context.view_layer.objects.active
-    try:
-        if active == source and source.mode == "EDIT":
-            _select_source_ids(source, set(control.get("vertex_ids", [])), set(control.get("edge_ids", [])))
-        elif active == controller and controller.mode == "EDIT":
-            vertex_ids, edge_ids = _control_effective(source, control)
-            _select_proxy_ids(controller, vertex_ids, edge_ids)
-    except (ValueError, RuntimeError):
-        pass
+    # Index changes establish the active definition only.  Mesh selection is
+    # handled by the row's Select Control button, whose invoke receives Shift.
     _tag_viewport_redraw(context)
 
 
@@ -505,12 +500,18 @@ class DANFORM_UL_controls(bpy.types.UIList):
         }.get(selection_state, "CHECKBOX_DEHLT")
         select = row.operator(
             "dan_form.select_control",
-            text="",
+            text=item.control_name,
             icon=marker_icon,
             emboss=False,
         )
         select.control_uuid = item.control_uuid
-        row.prop(item, "control_name", text="", emboss=False)
+        rename = row.operator(
+            "dan_form.rename_control",
+            text="",
+            icon="GREASEPENCIL",
+            emboss=False,
+        )
+        rename.control_uuid = item.control_uuid
         if item.state == "Partial":
             row.label(text="~")
 
@@ -746,7 +747,7 @@ class DANFORM_OT_rename_control(bpy.types.Operator):
 class DANFORM_OT_select_control(bpy.types.Operator):
     bl_idname = "dan_form.select_control"
     bl_label = "Select Control"
-    bl_description = "Select this control; Shift-click to add it to the current mesh selection"
+    bl_description = "Select this control; Shift-click to add or remove it; click it again to deselect"
     # Selection and active-row changes are transient UI state, like Blender's
     # native selection tools, and must not consume a geometry Undo step.
     bl_options = {"REGISTER"}
@@ -788,24 +789,65 @@ class DANFORM_OT_select_control(bpy.types.Operator):
             edge_ids = {int(value) for value in control.get("edge_ids", [])}
             scene.dan_form_selected_control = self.control_uuid
             if active == source and source.mode == "EDIT":
-                _select_source_ids(source, vertex_ids, edge_ids, self.add_to_selection)
+                target_vertices, target_edges = vertex_ids, edge_ids
+                active_mesh = source
             elif active == controller and controller.mode == "OBJECT":
                 _select_only(context, controller)
                 bpy.ops.object.mode_set(mode="EDIT")
-                effective_vertices, effective_edges = _control_effective(source, control)
-                _select_proxy_ids(controller, effective_vertices, effective_edges, self.add_to_selection)
+                target_vertices, target_edges = _control_effective(source, control)
+                active_mesh = controller
             elif active == controller and controller.mode == "EDIT":
-                effective_vertices, effective_edges = _control_effective(source, control)
-                _select_proxy_ids(controller, effective_vertices, effective_edges, self.add_to_selection)
+                target_vertices, target_edges = _control_effective(source, control)
+                active_mesh = controller
             elif active == source and source.mode == "OBJECT":
                 _select_only(context, source)
                 bpy.ops.object.mode_set(mode="EDIT")
-                _select_source_ids(source, vertex_ids, edge_ids, self.add_to_selection)
+                target_vertices, target_edges = vertex_ids, edge_ids
+                active_mesh = source
             else:
                 raise ValueError("EDIT_SOURCE_OR_CONTROLLER_REQUIRED")
+            if not target_vertices and not target_edges:
+                raise ValueError("CONTROL_HAS_NO_EFFECTIVE_MEMBERSHIP")
+            selected_vertices, selected_edges = _selected_source_elements(active_mesh)
+            if self.add_to_selection:
+                if target_vertices <= selected_vertices:
+                    # Shift-click toggles a fully selected membership off.
+                    remaining_vertices = selected_vertices - target_vertices
+                    edge_vids = _source_edge_vids(source)
+                    remaining_edges = {
+                        edge_id for edge_id in selected_edges - target_edges
+                        if not set(edge_vids.get(edge_id, ())) & target_vertices
+                    }
+                    if active_mesh == source:
+                        _select_source_ids(source, remaining_vertices, remaining_edges)
+                    else:
+                        _select_proxy_ids(controller, remaining_vertices, remaining_edges)
+                    was_deselected = True
+                else:
+                    if active_mesh == source:
+                        _select_source_ids(source, target_vertices, target_edges, add=True)
+                    else:
+                        _select_proxy_ids(controller, target_vertices, target_edges, add=True)
+                    was_deselected = False
+            elif (selected_vertices == target_vertices and selected_edges == target_edges):
+                # Clicking the only selected membership again clears it.
+                if active_mesh == source:
+                    _select_source_ids(source, set(), set())
+                else:
+                    _select_proxy_ids(controller, set(), set())
+                was_deselected = True
+            else:
+                if active_mesh == source:
+                    _select_source_ids(source, target_vertices, target_edges)
+                else:
+                    _select_proxy_ids(controller, target_vertices, target_edges)
+                was_deselected = False
             context.scene.dan_form_status = (
-                f"Added {control.get('name', 'Control')} to selection"
-                if self.add_to_selection else f"Selected {control.get('name', 'Control')}"
+                f"Deselected {control.get('name', 'Control')}"
+                if was_deselected else (
+                    f"Added {control.get('name', 'Control')} to selection"
+                    if self.add_to_selection else f"Selected {control.get('name', 'Control')}"
+                )
             )
             _tag_viewport_redraw(context)
             return {"FINISHED"}
