@@ -28,7 +28,10 @@ Tiến độ checkpoint 2026-09-26:
 - [x] R11 unregister: preview đang mở được hủy về Operation Rest và dọn registry.
 - [x] Registration failure giữa lúc đăng ký class rollback class/property/handler/
   overlay/keymap đã tạo một phần.
-- [ ] Timer race/exception matrix; historical operator removal; module split.
+- [x] Unregister timer handles for native transform and Undo/Redo; repeated
+  enable/disable regression confirms callbacks cancel and runtime handles clear.
+- [ ] Deeper timer race/exception matrix; historical operator removal; module
+  split.
 
 Bằng chứng và giới hạn hiện tại ở
 [checkpoint C01](../docs/testing/2026-09-26-c01-operation-safety.md).
@@ -47,7 +50,8 @@ Triển khai tuần tự; commit các phạm vi sửa có thể kiểm chứng �
    bước của Create/Delete/Sync/Hide/Reset; no-op giữ revision.
 4. **Lifecycle cleanup (R11).** Chốt finish/cancel khi disable/reload; dọn
    transaction, timers và stale RNA references sau khi kết thúc hợp lệ.
-   Thêm register failure rollback và repeated enable/disable tests.
+   Register failure rollback, repeated enable/disable và timer cancellation khi
+   unregister đã có regression; bổ sung matrix race/exception trước khi chốt.
 5. **Mã lịch sử và module boundaries.** Bỏ picker classes/helpers không đăng ký
    sau dependency review; giữ historical fixtures/report. Tách operator theo
    selection/visibility, structure/lifecycle, target UX và panel. Dependencies

@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "76eefe51794f502ee19617bba521862a76b7704e4a8a92ab5f072878a5b5186b",
-    "bytes": 346405
+    "sha256": "3b7458bd490ba40ab70b14c6c23cc1ffb190a31e0e90c840ee3421d3df77e481",
+    "bytes": 347866
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -356,8 +356,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-c01-operation-safety.md",
-    "sha256": "5a4c1eb5a0c48bb79e0f2a7d96dfca0a39de1239f70a7aee0a3d4fb35c8727e0",
-    "bytes": 3026
+    "sha256": "3cc86401bdb8411439fbc5b44f5f757cfd64176e75aee5167c1fcd4b1a4d1e15",
+    "bytes": 4487
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "4c8b2b4f6e6d6825b3a741cbce4374edbdfaf74e6737bb6ac53e542f3a705716",
-    "bytes": 6681
+    "sha256": "661619ee9307b0cdf330e467b5980b3627a2002fb29a91947c989711062c718a",
+    "bytes": 6946
   },
   {
     "path": "tasks/phase-01-bootstrap.md",

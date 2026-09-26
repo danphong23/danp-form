@@ -5732,6 +5732,9 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 - Repair restores topology metadata, paused state, identity layers and proxy if
   the rebuild fails after ID repair.
 - Unregister cancels an open preview to Operation Rest and clears runtime state.
+- Unregister cancels retained native transform and Undo/Redo timer callbacks
+  before clearing their backing runtime state; repeated enable/disable tests
+  verify callback handles and scheduled timers are removed.
 - Registration failure rolls back classes, properties, handlers, overlay and
   keymaps registered earlier in the same attempt.
 - Added `live_operation_ownership.py` to the release runner and a singular-matrix
@@ -5749,7 +5752,9 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 - Topology recovery suite passed with additional injected Repair rebuild failure;
   ID layers, metadata, paused state and proxy were restored before a real repair.
 - Runtime boundary suite passed with an injected registration failure after two
-  class registrations; no partial class/property/overlay state remained.
+  class registrations; no partial class/property/overlay state remained. It also
+  passed a late failure after keymap registration and verifies timer cancellation
+  in two enable/disable cycles.
 - Consistency audit: 8 PASS, 3 FAIL. Remaining defects concern native
   Hide/Reveal reconciliation, multi-control Hide, and eye actions clearing
   unrelated selection. They are queued for C02.
@@ -5758,6 +5763,26 @@ thiện package/docs. Inspect/hover và batch UX mới chỉ triển khai sau kh
 
 ## Remaining C01 scope
 
-C01 still needs native timer/exception race coverage, timer shutdown on disable,
-review/removal of historical operators, and module-boundary cleanup. This
-checkpoint does not mark C01/C02 complete or the add-on ready for release.
+C01 still needs deeper native timer/exception race coverage, review/removal of
+historical operators, and module-boundary cleanup. Timer shutdown on disable is
+now covered. This checkpoint does not mark C01/C02 complete or the add-on ready
+for release.
+
+## Timer lifecycle follow-up
+
+**Revision:** `089cde9` (`fix(danp-form): cancel owned timers on unregister`)
+
+- Runtime stores native transform and Undo/Redo timer callback identities so
+  they can be explicitly cancelled when the add-on unregisters.
+- The native transform callback removes its per-Source handle on every normal
+  terminal path. Registration/unregistration clears retained references.
+- `live_runtime_boundaries.py`: 24 assertions pass, including cancellation of
+  both timer kinds in two enable/disable cycles and late registration rollback.
+- Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass.
+  Overall remains `INCOMPLETE`: GPU-backed H08 overlay review and P95/peak
+  memory measurements are still not run. See the [runner report](2026-09-26-release-gates-lifecycle.json).
+- The runner used generated factory-startup fixtures in separate processes;
+  it did not touch the user's open Blender model.
+
+Timer shutdown is covered; deeper concurrent timer/exception injection, legacy
+operator removal, and further operator module extraction remain C01 work.
