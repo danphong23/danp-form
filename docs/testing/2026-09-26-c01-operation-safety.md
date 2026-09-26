@@ -61,14 +61,17 @@ for release.
 
 ## Timer lifecycle follow-up
 
-**Revision:** `089cde9` (`fix(danp-form): cancel owned timers on unregister`)
+**Revision:** `74cb568` (`fix(danp-form): cancel stale transform timers on undo`)
 
 - Runtime stores native transform and Undo/Redo timer callback identities so
   they can be explicitly cancelled when the add-on unregisters.
+- Undo/Redo invalidates transform timers before clearing their sessions; file
+  load cancels both transform and pending Undo/Redo callbacks.
 - The native transform callback removes its per-Source handle on every normal
   terminal path. Registration/unregistration clears retained references.
-- `live_runtime_boundaries.py`: 24 assertions pass, including cancellation of
-  both timer kinds in two enable/disable cycles and late registration rollback.
+- `live_runtime_boundaries.py`: 26 assertions pass, including stale transform
+  timer cancellation on Undo, cancellation of both timer kinds in two
+  enable/disable cycles, and late registration rollback.
 - Release runner: 9/9 static and 11/11 Blender 5.2.1 LTS background suites pass.
   Overall remains `INCOMPLETE`: GPU-backed H08 overlay review and P95/peak
   memory measurements are still not run. See the [runner report](2026-09-26-release-gates-lifecycle.json).

@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "3b7458bd490ba40ab70b14c6c23cc1ffb190a31e0e90c840ee3421d3df77e481",
-    "bytes": 347866
+    "sha256": "dd82f8c0bb38a891e13aea49c8128b23ac12727051c770d79c964cde44f71add",
+    "bytes": 348058
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -356,8 +356,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-c01-operation-safety.md",
-    "sha256": "3cc86401bdb8411439fbc5b44f5f757cfd64176e75aee5167c1fcd4b1a4d1e15",
-    "bytes": 4487
+    "sha256": "a9e094e122ce88d2b7dd1729654595f2d64209b77d8a14273bd5d93c99118385",
+    "bytes": 4679
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
