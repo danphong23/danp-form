@@ -80,6 +80,20 @@ Gate C01:
 Phụ thuộc C01 cho các đường ghi. Có thể rà docs/keymaps trước, nhưng không nghiệm
 thu C02 khi safety gate còn FAIL.
 
+### Implementation checkpoint — 2026-09-26
+
+- [x] H áp dụng Source ID từ toàn selection qua mọi definition, không phụ thuộc
+  row đang active; UI list được đồng bộ ngay sau Hide/Reveal.
+- [x] Shift-H có operator DANP canonical cho Vertex/Edge mode, gồm empty
+  selection; Alt-H phục hồi cả native hidden flags còn lại từ F3/native Hide.
+- [x] Bấm mắt rebuild mà không thay selection mesh ngoài phạm vi.
+- [x] Audit C02 hiện 12/12 PASS và release runner 9/9 static, 11/11 background
+  tại commit `4c1f6f4`; report ở `docs/testing/2026-09-26-c02-visibility-regressions.json`
+  và `docs/testing/2026-09-26-release-gates-c02-visibility.json`.
+- [ ] Chưa nghiệm thu keymap dispatch bằng chuột/bàn phím UI, Undo/Redo của chuỗi
+  visibility trên UI thật, save/reopen, H/Shift-H/Alt-H với toàn bộ context và
+  overlap cases. Giữ các gate C02 bên dưới mở đến khi có bằng chứng.
+
 1. **ADR visibility.** Đối chiếu schema 3 per-definition state với tài liệu masks
    chung; chốt intent cho H/Shift-H/Alt-H, mắt và overlap. Migration bảo toàn dữ
    liệu, không đoán hoặc downgrade từ tên. Cập nhật normative docs cùng quyết định.

@@ -1,0 +1,165 @@
+{
+  "status": "PASS",
+  "blender_version": "5.2.1 LTS",
+  "observations": [
+    {
+      "id": "bind_preserves_module_metadata",
+      "status": "PASS",
+      "expected_name": "dan_form.operators",
+      "actual_name": "dan_form.operators",
+      "actual_spec_name": "dan_form.operators"
+    },
+    {
+      "id": "native_hide_reveal_reconciliation",
+      "status": "PASS",
+      "hidden_before_reveal": 2,
+      "eye_before_reveal": "On",
+      "hidden_after_reveal": 0,
+      "reveal": {
+        "result": [
+          "FINISHED"
+        ]
+      }
+    },
+    {
+      "id": "shift_h_keeps_selected_control",
+      "status": "PASS",
+      "action": {
+        "result": [
+          "FINISHED"
+        ]
+      },
+      "selected_control_handles": 2,
+      "remaining_a": 2,
+      "remaining_b": 0,
+      "raw_selection": [
+        [
+          1,
+          2
+        ],
+        [
+          1
+        ]
+      ],
+      "hidden_vertices": [],
+      "definitions": [
+        {
+          "control_uuid": "6a88566b89ec4bd5baef6cfc092b2509",
+          "edge_ids": [
+            1
+          ],
+          "enabled": true,
+          "hidden_edge_ids": [],
+          "hidden_vertex_ids": [],
+          "name": "A",
+          "vertex_ids": [
+            1,
+            2
+          ]
+        },
+        {
+          "control_uuid": "023346cff26d4346b37c5aa3b9e3d044",
+          "edge_ids": [
+            6
+          ],
+          "enabled": true,
+          "hidden_edge_ids": [
+            6
+          ],
+          "hidden_vertex_ids": [
+            5,
+            6
+          ],
+          "name": "B",
+          "vertex_ids": [
+            5,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hide_multiple_controls",
+      "status": "PASS",
+      "action": {
+        "result": [
+          "FINISHED"
+        ]
+      },
+      "selected_vertices_before": 4,
+      "remaining_b_vertices": 0
+    },
+    {
+      "id": "eye_preserves_unrelated_selection",
+      "status": "PASS",
+      "action": {
+        "result": [
+          "FINISHED"
+        ]
+      },
+      "selected_before": [
+        5,
+        6
+      ],
+      "selected_after": [
+        5,
+        6
+      ]
+    },
+    {
+      "id": "empty_selection_return_contract",
+      "status": "PASS",
+      "returned_type": "tuple",
+      "returned_value": "(set(), set())"
+    },
+    {
+      "id": "busy_caller_preserves_owner",
+      "status": "PASS",
+      "second_caller": {
+        "error": "Error: A transform is in progress. Confirm or cancel it before continuing.\n"
+      },
+      "original_transaction_exists": true,
+      "source_preview_loss": 0.0
+    },
+    {
+      "id": "native_transaction_owner",
+      "status": "PASS",
+      "agent_operation_id": "e35752666b5f48eb999381d5c53153be",
+      "native_rejected": true,
+      "native_reused_agent_transaction": false
+    },
+    {
+      "id": "reject_unmapped_target",
+      "status": "PASS",
+      "action": {
+        "error": "Error: A target is not represented by this Controller. Sync or rebuild the Controller before editing.\n"
+      },
+      "vertex_id": 3,
+      "controller_contains_target": false,
+      "displacement": 0.0
+    },
+    {
+      "id": "delete_failure_atomicity",
+      "status": "PASS",
+      "action": {
+        "error": "Error: DANP Form could not complete this action (AUDIT_INJECTED_REBUILD_FAILURE).\n"
+      },
+      "definitions_before": 2,
+      "definitions_after": 2
+    },
+    {
+      "id": "reject_singular_world_frame",
+      "status": "PASS",
+      "action": {
+        "accepted": false,
+        "error": "WORLD_SPACE_MATRIX_SINGULAR"
+      }
+    },
+    {
+      "id": "unregister_clears_transactions",
+      "status": "PASS",
+      "transactions_after_unregister": 0
+    }
+  ],
+  "scope": "disposable background process; no user blend file loaded or saved"
+}

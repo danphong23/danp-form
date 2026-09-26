@@ -203,7 +203,10 @@ move, because proportional and other enabled constraints still apply.
 
 No control parenting, nested patch ownership or separate deactivate feature is needed.
 Object/collection hiding only changes display; it is not DANP Form Hide Control.
-Proxy H/Alt-H may be bound to DANP Form commands when the tool owns the context.
+On the Controller in Edit Mode, H hides selected handles, Shift-H hides
+unselected handles, and Alt-H reveals canonical DANP visibility. Blender's
+separate F3/native Hide operator changes transient proxy display flags only;
+Alt-H restores the canonical Controller display.
 
 ## Canonical masks and shared endpoints
 
@@ -3371,8 +3374,13 @@ options. They do not change masks, cuts or constraints. Hide All keeps the curre
 object/mode so Show All works even on an empty controller in Edit Mode. Edit Control
 is disabled on Source when no effective handle remains, until controls are revealed.
 
-Controller H hides selected canonical geometry; Alt-H reveals all from current
-Source positions. Edge selection has edge intent: its selected endpoints are not
+Controller H hides selected canonical geometry; Shift-H keeps the selected
+handles and canonically hides the rest; Alt-H reveals all from current Source
+positions. These shortcuts share the same Source-backed visibility rules as the
+list eye and bulk actions. Blender's separate F3/native Hide operator changes
+transient proxy display flags only; Alt-H restores the canonical Controller
+display. Edge selection
+has edge intent: its selected endpoints are not
 explicit node Hide, preserving intersecting enabled edges. Vertex selection has
 node intent, releasing all incident edges under ADR-008. An overlapping logical
 group observes the same canonical masks; it cannot override them.
@@ -5748,6 +5756,21 @@ nhất.
   coi là sẵn sàng đóng gói/phát hành công khai.
 - Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
   hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.
+
+### C02 interaction cleanup checkpoint
+
+At `4c1f6f4`, multi-control Hide resolves the whole selected Source-ID set,
+Shift-H routes to a DANP canonical visibility operator for Vertex/Edge/empty
+selection, eye clicks preserve unrelated Controller selection, and Alt-H
+rebuilds the Controller if native F3 Hide flags remain even when no canonical
+mask changed. The updated consistency audit passes 12/12 probes and the release
+runner passes 9/9 static plus 11/11 background suites. The runner remains
+`INCOMPLETE` because GPU overlay review and representative P95/peak-memory
+measurement are outstanding. Actual keymap invocation, Undo/Redo, and save/reopen
+for this change still need Blender UI evidence.
+
+See the [C02 regression report](2026-09-26-c02-visibility-regressions.json)
+and [release runner report](2026-09-26-release-gates-c02-visibility.json).
 
 ---
 

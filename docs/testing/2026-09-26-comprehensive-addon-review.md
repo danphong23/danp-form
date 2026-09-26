@@ -190,3 +190,18 @@ nhất.
   coi là sẵn sàng đóng gói/phát hành công khai.
 - Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
   hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.
+
+### C02 interaction cleanup checkpoint
+
+At `4c1f6f4`, multi-control Hide resolves the whole selected Source-ID set,
+Shift-H routes to a DANP canonical visibility operator for Vertex/Edge/empty
+selection, eye clicks preserve unrelated Controller selection, and Alt-H
+rebuilds the Controller if native F3 Hide flags remain even when no canonical
+mask changed. The updated consistency audit passes 12/12 probes and the release
+runner passes 9/9 static plus 11/11 background suites. The runner remains
+`INCOMPLETE` because GPU overlay review and representative P95/peak-memory
+measurement are outstanding. Actual keymap invocation, Undo/Redo, and save/reopen
+for this change still need Blender UI evidence.
+
+See the [C02 regression report](2026-09-26-c02-visibility-regressions.json)
+and [release runner report](2026-09-26-release-gates-c02-visibility.json).

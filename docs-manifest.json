@@ -76,8 +76,8 @@
   },
   {
     "path": "docs/core/control-model.md",
-    "sha256": "4f32b1b6ec5cfcca41fe35515c5618efa34c84cc8fb3048971aae68f5e105ece",
-    "bytes": 5491
+    "sha256": "a4db44f11fa320cbb65f30a439fdfc909b6b444c591a1742cf469d6db86e627e",
+    "bytes": 5682
   },
   {
     "path": "docs/core/interpolation-baseline.md",
@@ -161,8 +161,8 @@
   },
   {
     "path": "docs/decisions/ADR-010-bulk-visibility-and-segment-selection.md",
-    "sha256": "9610843b66db601c5c29a8f35d4236c0a9c65afdb6ed3ac2cd4cfb032de0aa53",
-    "bytes": 2488
+    "sha256": "b2721a36a07b1067ef3667971365fd677d6106d56e9ec4643c0b24574075e0c3",
+    "bytes": 2787
   },
   {
     "path": "docs/decisions/ADR-011-transform-field-ownership.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "57ceee0661f26243d0299e8267bd4d98e9ebdfbf1720547f2a19a79bb6ab0184",
-    "bytes": 351887
+    "sha256": "07e73ce48e10bca92f235e2296b988662364532d9756edb750af061c97b33961",
+    "bytes": 353233
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -361,8 +361,8 @@
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
-    "sha256": "3b8640fd2c74073112dcdc9270698937f7cce64d1ba2241e2e9bb104380f54d1",
-    "bytes": 15583
+    "sha256": "cb9d01f091f8620a703618e0ad5592afa1803fd6b35d9b3841cce8c34dda18dd",
+    "bytes": 16439
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "174a4caafbc44300530668d6db68c723536f3cf1d754896b2a4b1c51387aaa37",
-    "bytes": 7609
+    "sha256": "9309ab7abc556d899530f364a010b471aa623a06a0f7080fa3a90e7a7a7b8a84",
+    "bytes": 8574
   },
   {
     "path": "tasks/phase-01-bootstrap.md",
