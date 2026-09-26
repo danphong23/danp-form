@@ -1,5 +1,9 @@
 # Kế hoạch nâng cấp DANP Form: Source là hình học duy nhất
 
+> Historical plan dated 2026-09-23. Retained for design context, not the current
+> task queue. Use the [release-hardening roadmap](release-hardening-plan.md) and
+> its dated reports for subsequent implementation and verification status.
+
 **Trạng thái:** Đang hoàn thiện semantics selection-intent và moved-target, 2026-09-23. Người dùng đã xác nhận kiến trúc Source-backed, overlap-safe control và quy tắc giữ lại vùng selection khi một số điểm không đổi trong Scale.
 
 ### Tiến độ giai đoạn 1–4

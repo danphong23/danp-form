@@ -2145,6 +2145,24 @@ per-definition ownership. These clarifications preserve the agreed two-loop/line
 
 # Documentation Map
 
+## Current reference and historical evidence
+
+- Current behavior: `product/`, `core/`, accepted `decisions/`, and the
+  architecture/Blender/agent contracts.
+- Release work: [H01–H10](roadmap/release-hardening-plan.md), its task files
+  and dated reports. The latest code follow-up is the
+  [0.5.36 Init report](testing/2026-09-25-init-edit-mode.md).
+- Historical plans: the earlier Phase 2 UX plans and
+  [2026-09-23 architecture plan](roadmap/clean-architecture-upgrade.md).
+  They explain prior choices and are not the current task queue.
+- Historical evidence: dated audits and Phase 2–4 reports. Preserve their
+  original results; do not treat them as a test run of the current commit.
+- Repository maintenance: [cleanup inventory](testing/2026-09-26-repository-cleanup.md)
+  and [test inventory](../tests/README.md).
+
+`full-specification.md` and the two root hash manifests are generated references,
+not independent editable copies. They are intentionally retained.
+
 ## Document classes
 
 - **Normative** — required product behavior. Implementation must follow it.
@@ -3229,7 +3247,7 @@ checks, including native topology edits/recovery and full removal. The existing
 50-definition character then passed all 34
 [sidebar regression](../../tests/live_sidebar_regression.py) checks, with Source
 definitions/masks/coordinates and controller pose/selection restored. Another 34
-[segment/visibility checks](../../tests/live_control_segments.py) passed on removable
+[segment/visibility checks](../../tests/history/live_control_segments.py) passed on removable
 crossing-lines and closed-loop fixtures. Final total: 145 checks, covering span stops,
 additive selection, edge/node Hide intent, partial eyes, selective reveal, live
 Controller Edit hide/reveal highlight updates, scoped keys
@@ -3336,6 +3354,10 @@ mesh deformation/proportional remains phase 4.
 <!-- source: docs/testing/phase-02-pick-ux-audit.md -->
 
 # Phase 2 — Pick / visibility UX audit (0.2.5)
+
+> Historical evidence for 0.2.5. The custom picker is not registered in 0.5.36.
+> Its fixtures are retained under `tests/history/` and are excluded from the
+> current release gates. Results below describe that historical revision.
 
 ## Assessment
 
@@ -3630,10 +3652,12 @@ runtime caches and transaction buffers are disposable.
   Source writeback. It receives mesh/proxy/UI-independent callbacks through
   `WorkflowDeps`.
   The H02 target adapter specified by
-  [ADR-017](../decisions/ADR-017-deformation-target-contract.md) will centralize
-  base/Basis/Shape Key coordinate
-  access for this path, proxy synchronization and Undo. Until that refactor is
-  verified, explicit-key reads/writes in Source Edit Mode are a known gap.
+  [ADR-017](../decisions/ADR-017-deformation-target-contract.md) defines the
+  base/Basis/Shape Key coordinate contract. H02 implemented explicit target
+  resolution in `blender/mesh.py`, reads in `blender/selection.py`, writes here,
+  and historical target restoration in `blender/lifecycle.py`. See the
+  [H02 report](../testing/2026-09-25-h02-target-io-undo.md) for verified scope;
+  report evidence does not automatically certify every later revision.
 - `registration.py` owns Blender class/property/handler/keymap registration;
   `blender/lifecycle.py` owns depsgraph/load/undo/redo callbacks and runtime
   invalidation. The root facade only passes itself as the compatibility API
@@ -3802,6 +3826,10 @@ target, stationary-boundary, scope, cancel and parity gates before release.
 <!-- source: docs/roadmap/clean-architecture-upgrade.md -->
 
 # Kế hoạch nâng cấp DANP Form: Source là hình học duy nhất
+
+> Historical plan dated 2026-09-23. Retained for design context, not the current
+> task queue. Use the [release-hardening roadmap](release-hardening-plan.md) and
+> its dated reports for subsequent implementation and verification status.
 
 **Trạng thái:** Đang hoàn thiện semantics selection-intent và moved-target, 2026-09-23. Người dùng đã xác nhận kiến trúc Source-backed, overlap-safe control và quy tắc giữ lại vùng selection khi một số điểm không đổi trong Scale.
 
@@ -5345,3 +5373,64 @@ The sidebar then saw partial Source metadata without a valid child Controller.
 This verifies Blender operators and sidebar draw logic in isolated Blender
 processes. A mouse-driven sidebar click in the user's live Blender session was
 not performed for this fix.
+
+---
+
+<!-- source: docs/testing/2026-09-26-repository-cleanup.md -->
+
+# Repository inventory and cleanup — 2026-09-26
+
+Reviewed source baseline: `f934069` / add-on 0.5.36. This maintenance change
+does not modify runtime behavior, models, or the installed Blender extension.
+
+## Removed generated artifacts
+
+- Tracked root `dan-form-extension.zip`: stale 0.5.34 archive, 26 entries,
+  no `LICENSE.md`. Removed from the working tree; still recoverable in Git.
+- Ignored `dist/`: 0.5.35 and 0.5.36 archives, two checksum sidecars, and
+  `installed_backup_0.5.34_before_0.5.36`. These are generated build/installation
+  artifacts, not model data or source. Build a fresh archive after release cleanup.
+- Python caches: 106 `.pyc` files, totaling 1,792,712 bytes, across source,
+  scripts, tests and the old installation backup.
+
+All recursive cleanup targets were resolved and checked to remain inside this
+repository before deletion. Git metadata was preserved.
+
+## Retained and clarified
+
+- All runtime modules: `core/harmonic.py`, graph and proportional helpers
+  are imported by the current solver; their presence is not unused-file evidence.
+- Current regression suites, ADRs, contracts, roadmaps and dated verification
+  reports. A historical report is evidence, not junk and not a current test result.
+- Generated `docs/full-specification.md`, `docs-manifest.json`, and
+  `MANIFEST_SHA256.txt`: referenced by documentation tools, intentionally retained.
+- Legacy picker fixtures moved to `tests/history/` with explicit warnings.
+  Their operators/properties are no longer registered in 0.5.36. The historical
+  report links were updated; current release discovery is unchanged.
+- Historical architecture/UX status is distinguished from current H01–H10
+  references. The obsolete H02 "known gap" text in module boundaries now points
+  to the implemented adapters and their actual report.
+
+## Prevention
+
+- One release builder: `scripts/release_package.py` (Python 3.11+), output in
+  ignored `dist/`. The PowerShell script delegates to it for compatibility.
+- Runtime packaging selects Python modules explicitly, excluding accidental
+  extra files in the source package. Documentation/tasks remain included.
+- Ignore the legacy root archive and tool caches. Documentation hash generation
+  and validation exclude build/cache/Git directories so generated backups cannot
+  become part of the authoritative document inventory.
+
+## Remaining release preparation
+
+`LICENSE.md` is still a design-era placeholder, while the manifest declares
+`GPL-3.0-or-later`. It requires replacement with the actual distribution license
+and appropriate copyright/dependency notices before public packaging. This is
+a release-content task, not a reason to delete the file during cleanup.
+
+No add-on runtime or Blender UX regression was rerun for this inventory.
+Documentation validation passed: 84 consolidated modules, 112 documents,
+relative links and both hash manifests consistent. No identical standalone
+Markdown files were found in the docs/tasks/test inventory; the consolidated
+specification is an intentional generated copy.
+No new release archive was built and no GitHub publication was performed.

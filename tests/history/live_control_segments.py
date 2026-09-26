@@ -1,4 +1,8 @@
-"""Run through MCP in the open Blender; owned fixtures and restored UI only."""
+"""Historical span-picker fixture; do not run against the current add-on.
+
+The select_segment operator is no longer registered. Retained for historical
+report references and excluded from run_release_gates.py.
+"""
 import json
 import sys
 from types import SimpleNamespace

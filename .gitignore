@@ -1,3 +1,7 @@
 __pycache__/
 *.py[cod]
 dist/
+/dan-form-extension.zip
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

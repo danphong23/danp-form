@@ -81,7 +81,7 @@ checks, including native topology edits/recovery and full removal. The existing
 50-definition character then passed all 34
 [sidebar regression](../../tests/live_sidebar_regression.py) checks, with Source
 definitions/masks/coordinates and controller pose/selection restored. Another 34
-[segment/visibility checks](../../tests/live_control_segments.py) passed on removable
+[segment/visibility checks](../../tests/history/live_control_segments.py) passed on removable
 crossing-lines and closed-loop fixtures. Final total: 145 checks, covering span stops,
 additive selection, edge/node Hide intent, partial eyes, selective reveal, live
 Controller Edit hide/reveal highlight updates, scoped keys

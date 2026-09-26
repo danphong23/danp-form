@@ -22,7 +22,9 @@ EXCLUDED_DOCS = {"docs/testing/2026-09-25-h10-package-candidate.md"}
 def package_entries() -> dict[str, Path]:
     entries = {name: ROOT / name for name in PACKAGE_ROOT_FILES}
     for path in (ROOT / "dan_form").rglob("*"):
-        if not path.is_file() or "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+        # Runtime currently consists only of Python modules. Add future assets
+        # explicitly rather than shipping arbitrary files dropped into source.
+        if not path.is_file() or "__pycache__" in path.parts or path.suffix != ".py":
             continue
         entries[path.relative_to(ROOT / "dan_form").as_posix()] = path
     for folder in ("docs", "tasks"):

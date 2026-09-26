@@ -1,5 +1,23 @@
 # Documentation Map
 
+## Current reference and historical evidence
+
+- Current behavior: `product/`, `core/`, accepted `decisions/`, and the
+  architecture/Blender/agent contracts.
+- Release work: [H01–H10](roadmap/release-hardening-plan.md), its task files
+  and dated reports. The latest code follow-up is the
+  [0.5.36 Init report](testing/2026-09-25-init-edit-mode.md).
+- Historical plans: the earlier Phase 2 UX plans and
+  [2026-09-23 architecture plan](roadmap/clean-architecture-upgrade.md).
+  They explain prior choices and are not the current task queue.
+- Historical evidence: dated audits and Phase 2–4 reports. Preserve their
+  original results; do not treat them as a test run of the current commit.
+- Repository maintenance: [cleanup inventory](testing/2026-09-26-repository-cleanup.md)
+  and [test inventory](../tests/README.md).
+
+`full-specification.md` and the two root hash manifests are generated references,
+not independent editable copies. They are intentionally retained.
+
 ## Document classes
 
 - **Normative** — required product behavior. Implementation must follow it.

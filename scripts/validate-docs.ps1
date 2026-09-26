@@ -16,7 +16,9 @@ foreach ($section in $sections) {
 foreach ($relativePath in $modulePaths) { if ($relativePath -notin $includedPaths) { $issues.Add("Unconsolidated module: $relativePath") } }
 if (@($includedPaths | Select-Object -Unique).Count -ne $includedPaths.Count) { $issues.Add('Duplicate consolidated sources') }
 
-$markdownFiles = @(Get-ChildItem -LiteralPath $docRoot -Recurse -File -Filter '*.md')
+$markdownFiles = @(Get-ChildItem -LiteralPath $docRoot -Recurse -File -Filter '*.md' | Where-Object {
+    [System.IO.Path]::GetRelativePath($docRoot, $_.FullName).Replace('\','/') -notmatch '(^|/)(\.git|dist|__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache)(/|$)'
+})
 foreach ($docFile in $markdownFiles) {
     # Consolidated modules retain their source-relative links; validate those in original modules.
     if ($docFile.FullName -eq (Join-Path $docRoot 'docs/full-specification.md')) { continue }

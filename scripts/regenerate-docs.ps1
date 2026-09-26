@@ -17,7 +17,9 @@ foreach ($relativePath in $sourcePaths) {
     $specParts += "---`n`n<!-- source: $relativePath -->`n`n" + [System.IO.File]::ReadAllText((Join-Path $docRoot $relativePath)).Trim()
 }
 [System.IO.File]::WriteAllText($specPath, ($specParts -join "`n`n") + "`n", $utf8)
-$entries = @(Get-ChildItem -LiteralPath $docRoot -Recurse -File -Filter '*.md' | Sort-Object FullName | ForEach-Object {
+$entries = @(Get-ChildItem -LiteralPath $docRoot -Recurse -File -Filter '*.md' | Where-Object {
+    [System.IO.Path]::GetRelativePath($docRoot, $_.FullName).Replace('\','/') -notmatch '(^|/)(\.git|dist|__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache)(/|$)'
+} | Sort-Object FullName | ForEach-Object {
     [ordered]@{ path = [System.IO.Path]::GetRelativePath($docRoot, $_.FullName).Replace('\','/'); sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); bytes = $_.Length }
 })
 [System.IO.File]::WriteAllText((Join-Path $docRoot 'docs-manifest.json'), (ConvertTo-Json -InputObject $entries -Depth 4) + "`n", $utf8)

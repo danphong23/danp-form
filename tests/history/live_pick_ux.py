@@ -1,4 +1,9 @@
-"""Behavior regressions for native Blender input and DANP hover picking.
+"""Historical 0.2.5 fixture; do not run against the current add-on.
+
+The custom picker and its Scene properties are no longer registered. Retained
+only to explain the historical reports; excluded from run_release_gates.py.
+
+Behavior regressions for native Blender input and DANP hover picking.
 
 Run only in the already-open Blender, from Object Mode. All mutations use an
 owned fixture; selection, view, display options and user context are restored.

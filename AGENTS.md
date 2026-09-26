@@ -59,5 +59,8 @@ Control creation, membership Sync and definition removal belong to Source;
 controller Edit Mode only adjusts existing mapped geometry. Native topology
 edits on the proxy must be rejected without changing Source.
 
-Build an installable ZIP with `scripts/package-extension.ps1`; the extension package
+Build an installable ZIP with `python scripts/release_package.py` (Python 3.11+).
+`scripts/package-extension.ps1` delegates to that same builder for compatibility.
+Release output belongs in ignored `dist/`, never in the repository root.
+The extension package
 has `__init__.py` at its root even though the repository source lives in `dan_form/`.

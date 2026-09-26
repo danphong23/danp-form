@@ -1,5 +1,9 @@
 # Phase 2 — Pick / visibility UX audit (0.2.5)
 
+> Historical evidence for 0.2.5. The custom picker is not registered in 0.5.36.
+> Its fixtures are retained under `tests/history/` and are excluded from the
+> current release gates. Results below describe that historical revision.
+
 ## Assessment
 
 The previous UX was not reliable enough to close Phase 2 interaction review.
