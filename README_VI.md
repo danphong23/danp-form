@@ -1,9 +1,10 @@
 # DANP Form
 
-Trạng thái hiện tại: [review ngày 2026-09-26](docs/testing/2026-09-26-comprehensive-addon-review.md)
-đã phát hiện lỗi safety và tương tác ngoài phạm vi các bộ test đang pass. Thực
-hiện [cleanup tasks](tasks/addon-cleanup-review.md) trước phát hành hoặc thêm
-Inspect/preview. Nghiệm thu lịch sử không chứng nhận checkout hiện tại.
+Trạng thái hiện tại: gate safety C01 đã hoàn tất; sửa visibility/selection C02
+đã qua kiểm thử static và Blender background. Kiểm thử phím tắt/Undo-Redo trên
+Blender UI, overlay GPU và hiệu năng đại diện vẫn còn mở. Xem
+[review 2026-09-26](docs/testing/2026-09-26-comprehensive-addon-review.md) và
+[lộ trình cleanup](tasks/addon-cleanup-review.md).
 
 DANP Form là add-on Blender giúp người dùng hoặc AI chỉnh một model template bằng mạng đường control thưa nằm trên topology thật của Source Mesh.
 
@@ -38,8 +39,11 @@ Edit Mode; add-on sẽ trở lại Edit Mode sau khi tạo Controller con. Nếu
 lại Controller rời, chọn object đó và dùng **Unbind DANP, Keep Mesh** trước khi
 Rebuild Controller trên Source.
 
-Controller Edit: Ctrl+Alt+Click chọn đoạn giữa giao điểm; Shift để chọn thêm.
-H ẩn phần chọn, Alt-H hiện tất cả; Hide/Show Controls đồng bộ toàn bộ con mắt.
+Controller Edit dùng selection vertex/edge và G/R/S gốc của Blender. Chọn control
+trong danh sách; Shift-click để cộng/trừ selection.
+H ẩn control đang chọn, Shift-H chỉ giữ phần chọn, Alt-H hiện lại theo trạng
+thái DANP. Nút mắt và Hide/Show Controls dùng cùng mask. Lệnh Hide gốc trong
+F3 chỉ ẩn tạm proxy; Alt-H dựng lại Controller theo trạng thái DANP.
 
 Source vẫn có thể chỉnh topology bằng Edit Mode hoặc Apply Modifier. Khi topology
 thay đổi, DANP tạm dừng để không ghi theo ID cũ. Dùng Undo để quay lại mapping
@@ -74,3 +78,8 @@ rộng sau lộ trình này. Controller con là quan hệ object Blender; không
 đường control. Bật/tắt hiển thị patch chỉ đổi UX.
 
 Đọc theo thứ tự: `docs/product/product-definition.md` → `docs/core/invariants.md` → `docs/core/control-model.md` → `docs/core/patch-model.md` → `docs/core/selection-and-targets.md` → `docs/core/interpolation-baseline.md` → `docs/testing/prototype-plan.md`.
+
+## License
+
+DANP Form được phân phối theo [GPL-3.0-or-later](LICENSE.md), khớp với
+manifest của Blender extension.

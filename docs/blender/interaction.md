@@ -154,9 +154,14 @@ Show Patches, including any per-patch color toggle, controls overlay display onl
 It never toggles patch deformation or removes Source faces from solve input.
 
 Own transforms through a DANP Form operation for immutable rest, cancel and one undo.
-Intercept proxy hide/reveal (for example H/Alt-H) only in DANP Form context; update
+Intercept proxy hide/reveal (H/Shift-H/Alt-H) only in DANP Form Controller context; update
 Source masks, effective network, display and patch cache together. Object/collection
 visibility remains display-only. A hide command cannot merely toggle proxy hide flags.
+
+DANP binds H, Shift-H and Alt-H on the Controller so common keyboard visibility
+actions write canonical masks. Blender's separate F3/native Hide operator is
+outside that key binding; it changes transient proxy display flags. Alt-H rebuilds
+the Controller from the canonical mask state and clears those transient flags.
 
 Use labels/tooltips explaining Hide releases shape constraints and cuts; Reveal adopts
 the current mesh contour. No separate activate/deactivate or parent/child control UI.

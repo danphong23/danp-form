@@ -186,8 +186,9 @@ nhất.
   nhắm đúng module operator sau khi tách mã và hiện PASS. Xem
   [C02 audit baseline](2026-09-26-c02-audit-baseline.json).
 - Overall release runner hiện `INCOMPLETE`: H08 GPU overlay review và P95/peak
-  memory measurement chưa được thực hiện. Bản quyền còn placeholder; chưa được
-  coi là sẵn sàng đóng gói/phát hành công khai.
+  memory measurement chưa được thực hiện. GPL-3.0-or-later text now matches the
+  extension manifest; contributor copyright attribution and dependency notices
+  still need review before public release.
 - Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
   hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.
 

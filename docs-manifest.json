@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "165205d089efe2592a75a938148befc556f4ecb2f1e29c20d63559827ca4b12d",
-    "bytes": 30036
+    "sha256": "b4ca37dfc41606537bc59bba116a73c242065d31c09e4451fb1e33ba53be33fb",
+    "bytes": 31093
   },
   {
     "path": "CONTRIBUTING.md",
@@ -66,8 +66,8 @@
   },
   {
     "path": "docs/blender/interaction.md",
-    "sha256": "5f1ba64f53c3890819726a2e7b0492397f3f0b88fecddb132adc6e103a3fb9ff",
-    "bytes": 11298
+    "sha256": "3df2a6af1f466ed332cd4e623df1a522aacb4782e40f080e16ab1ce358c07789",
+    "bytes": 11623
   },
   {
     "path": "docs/blender/storage-and-lifecycle.md",
@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "07e73ce48e10bca92f235e2296b988662364532d9756edb750af061c97b33961",
-    "bytes": 353233
+    "sha256": "c42c8954b801b7c7de6ec191514881b612a5b36cfe409bd127833d41c5c83ee4",
+    "bytes": 354426
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -361,13 +361,13 @@
   },
   {
     "path": "docs/testing/2026-09-26-comprehensive-addon-review.md",
-    "sha256": "cb9d01f091f8620a703618e0ad5592afa1803fd6b35d9b3841cce8c34dda18dd",
-    "bytes": 16439
+    "sha256": "052f9bb74c361ab05c3516abf22397e0626c000e747ac6398141dc0f924f4cd6",
+    "bytes": 16494
   },
   {
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
-    "sha256": "d5267651c8653eda8034868065d9f4a262aafd0bcdaf1215c712bca96386ec9a",
-    "bytes": 3399
+    "sha256": "f249ff63ec4f60d661666b287eb312b292f8be6440c0cf12e7e295a266eea69e",
+    "bytes": 3926
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -391,8 +391,8 @@
   },
   {
     "path": "docs/testing/documentation-audit.md",
-    "sha256": "3797724a928f0935e6e5a73d8f294d08e04e988266816268614df97bb25940ab",
-    "bytes": 3965
+    "sha256": "e2a813c3fdcf6d6985c43717dc6e9eb73a3a945051d93fe5bd085f774f7ced10",
+    "bytes": 4251
   },
   {
     "path": "docs/testing/geometry-cases.md",
@@ -456,18 +456,18 @@
   },
   {
     "path": "LICENSE.md",
-    "sha256": "de53550a75fddf84f4bd9e966ef69fb1f2259a4af71c7067a11281d5acad9d57",
-    "bytes": 262
+    "sha256": "30c2121e840cba0f31460f97b50543a3f2387f0b86f1e6a0eb47608f8a79c200",
+    "bytes": 32794
   },
   {
     "path": "README_VI.md",
-    "sha256": "431d4f347916854738e1ad86c183223a5130f88172b3a679e021965aba18b843",
-    "bytes": 5187
+    "sha256": "09719b1e3322a02b87d008f7a4f21cab3a0f36d7655e056b7e1242564cc9117d",
+    "bytes": 5549
   },
   {
     "path": "README.md",
-    "sha256": "6e04f88aaea2d9b9541b3cd4a61b0cd451bed112abbf028c132456d26e10cd01",
-    "bytes": 5066
+    "sha256": "b063843d66a091e067dcf11f59f26cf74fd180b0f16d29fdc851a00539fdf74a",
+    "bytes": 5426
   },
   {
     "path": "SECURITY.md",
@@ -476,8 +476,8 @@
   },
   {
     "path": "tasks/addon-cleanup-review.md",
-    "sha256": "9309ab7abc556d899530f364a010b471aa623a06a0f7080fa3a90e7a7a7b8a84",
-    "bytes": 8574
+    "sha256": "cef49b3296b1ba72cbe1b51117233e679d9d909caab220125a003ac36fb14ebf",
+    "bytes": 8771
   },
   {
     "path": "tasks/phase-01-bootstrap.md",

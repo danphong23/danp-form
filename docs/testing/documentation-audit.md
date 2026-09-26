@@ -2,6 +2,11 @@
 
 **Status: Review of specifications; not evidence of a working add-on**
 
+Historical snapshot as of 2026-09-18. Its final section describes the prototype
+state on that date; the repository now contains a production add-on and later
+implementation/release reports. Do not use the historical implementation-status
+sentences below as current readiness evidence.
+
 Reviewed all modular documentation, root guidance/readmes, ADRs and implementation tasks.
 The accepted modeling idea is unchanged: Source-backed selection drives deformation
 within topology patches using proportional and current patch form; enabled unselected

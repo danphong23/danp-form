@@ -87,6 +87,9 @@ thu C02 khi safety gate còn FAIL.
 - [x] Shift-H có operator DANP canonical cho Vertex/Edge mode, gồm empty
   selection; Alt-H phục hồi cả native hidden flags còn lại từ F3/native Hide.
 - [x] Bấm mắt rebuild mà không thay selection mesh ngoài phạm vi.
+- [x] Replace the design-era license note with the complete GPL-3.0-or-later
+  text matching the extension manifest. Copyright attribution and dependency
+  notices remain part of the release gate.
 - [x] Audit C02 hiện 12/12 PASS và release runner 9/9 static, 11/11 background
   tại commit `4c1f6f4`; report ở `docs/testing/2026-09-26-c02-visibility-regressions.json`
   và `docs/testing/2026-09-26-release-gates-c02-visibility.json`.

@@ -1,9 +1,10 @@
 # DANP Form
 
-Current readiness: the [2026-09-26 review](docs/testing/2026-09-26-comprehensive-addon-review.md)
-found open safety and interaction defects beyond the existing passing suites.
-Follow the [cleanup tasks](tasks/addon-cleanup-review.md) before release or new
-Inspect/preview UX. Historical acceptance is not certification of this checkout.
+Current readiness: C01 safety gates are complete and C02 visibility/selection
+fixes pass static and Blender background suites. Blender UI keymap/Undo-Redo,
+GPU overlay and representative performance gates remain open. See the
+[2026-09-26 review](docs/testing/2026-09-26-comprehensive-addon-review.md) and
+[cleanup tasks](tasks/addon-cleanup-review.md) before release or new Inspect/preview UX.
 
 DANP Form is a Blender add-on design for reshaping an existing template mesh through a sparse network of source-backed control lines.
 
@@ -56,8 +57,10 @@ use **Unbind DANP, Keep Mesh** before rebuilding the Source's Controller.
 Edit Mode uses bulk ID/coordinate reads and cached overlay buffers; see the
 [performance report](docs/testing/phase-02-edit-performance-report.md).
 Controller Edit uses Blender's native vertex/edge selection and G/R/S transforms.
-H/Alt-H hide or reveal selected controls, and bulk Hide/Show synchronizes all
-eyes. The optional thin cyan highlight follows native selection and Hide/Show;
+H hides selected handles, Shift-H hides unselected handles, and Alt-H reveals
+canonical DANP visibility. The list eye and bulk Hide/Show use the same masks.
+Blender's separate F3/native Hide changes transient proxy display flags; Alt-H
+restores the canonical Controller display. The optional thin cyan highlight follows native selection and Hide/Show;
 it has no selection or input ownership. The historical Ctrl+Alt+Click span and
 hover picker described in the [Phase 2 UX audit](docs/testing/phase-02-pick-ux-audit.md)
 are not registered in the current build.
@@ -83,3 +86,8 @@ Product behavior is normative in `docs/product/` and `docs/core/`, except method
 labeled prototype candidates. Normative architecture/lifecycle and ADR documents define
 data and transaction contracts. Candidates are testable and replaceable, not product
 rules. Optional extensions cannot redefine core behavior.
+
+## License
+
+DANP Form is distributed under [GPL-3.0-or-later](LICENSE.md), matching the
+extension manifest.

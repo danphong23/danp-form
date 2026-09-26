@@ -1,5 +1,22 @@
 # Design Changelog
 
+## 2026-09-26 — C01 safety cleanup and C02 visibility consistency
+
+- Isolate Source-wide Hide from the active list row so multi-control selections
+  update every matching definition through canonical masks.
+- Route Shift-H to DANP's canonical Hide Unselected action for Vertex and Edge
+  selection; keep Alt-H Reveal able to restore proxy handles hidden by Blender's
+  native F3 command.
+- Preserve unrelated Controller selection when a list eye rebuilds the proxy;
+  synchronize list state immediately after visibility actions.
+- Split panel and operator domains, remove unused runtime picker paths, and make
+  owned timer cancellation and callback failure rollback explicit.
+- Pass the current release runner's 9/9 static and 11/11 Blender background
+  suites. Blender UI keymap/Undo-Redo, GPU overlay and representative performance
+  gates remain open; this is not a release certification.
+- Replace the design-era license note with the GPL-3.0-or-later text declared in
+  the manifest. Copyright attribution and dependency notices still need review.
+
 ## 2026-09-25 — DANP Form 0.5.36 initializes safely in Source Edit Mode
 
 - Flush the live Edit Mesh before assigning persistent IDs and building the

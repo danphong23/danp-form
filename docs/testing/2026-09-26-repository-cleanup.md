@@ -59,3 +59,12 @@ relative links and both hash manifests consistent. No identical standalone
 Markdown files were found in the docs/tasks/test inventory; the consolidated
 specification is an intentional generated copy.
 No new release archive was built and no GitHub publication was performed.
+
+## Addendum — release-license preparation
+
+The design-era `LICENSE.md` placeholder has been replaced with the complete GNU
+GPL version 3 text, matching `GPL-3.0-or-later` in `blender_manifest.toml`. The
+text is the unmodified GPLv3 supplied in Blender's license bundle; the file also
+links to the authoritative [GNU license page](https://www.gnu.org/licenses/gpl).
+The repository still does not identify a named copyright holder or provide a
+third-party notices inventory, so this does not certify public release readiness.

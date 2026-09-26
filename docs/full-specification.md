@@ -1249,9 +1249,14 @@ Show Patches, including any per-patch color toggle, controls overlay display onl
 It never toggles patch deformation or removes Source faces from solve input.
 
 Own transforms through a DANP Form operation for immutable rest, cancel and one undo.
-Intercept proxy hide/reveal (for example H/Alt-H) only in DANP Form context; update
+Intercept proxy hide/reveal (H/Shift-H/Alt-H) only in DANP Form Controller context; update
 Source masks, effective network, display and patch cache together. Object/collection
 visibility remains display-only. A hide command cannot merely toggle proxy hide flags.
+
+DANP binds H, Shift-H and Alt-H on the Controller so common keyboard visibility
+actions write canonical masks. Blender's separate F3/native Hide operator is
+outside that key binding; it changes transient proxy display flags. Alt-H rebuilds
+the Controller from the canonical mask state and clears those transient flags.
 
 Use labels/tooltips explaining Hide releases shape constraints and cuts; Reveal adopts
 the current mesh contour. No separate activate/deactivate or parent/child control UI.
@@ -2409,6 +2414,11 @@ They may return only as evidence-driven experiments.
 # Documentation Audit — 2026-09-18
 
 **Status: Review of specifications; not evidence of a working add-on**
+
+Historical snapshot as of 2026-09-18. Its final section describes the prototype
+state on that date; the repository now contains a production add-on and later
+implementation/release reports. Do not use the historical implementation-status
+sentences below as current readiness evidence.
 
 Reviewed all modular documentation, root guidance/readmes, ADRs and implementation tasks.
 The accepted modeling idea is unchanged: Source-backed selection drives deformation
@@ -5506,6 +5516,15 @@ Markdown files were found in the docs/tasks/test inventory; the consolidated
 specification is an intentional generated copy.
 No new release archive was built and no GitHub publication was performed.
 
+## Addendum — release-license preparation
+
+The design-era `LICENSE.md` placeholder has been replaced with the complete GNU
+GPL version 3 text, matching `GPL-3.0-or-later` in `blender_manifest.toml`. The
+text is the unmodified GPLv3 supplied in Blender's license bundle; the file also
+links to the authoritative [GNU license page](https://www.gnu.org/licenses/gpl).
+The repository still does not identify a named copyright holder or provide a
+third-party notices inventory, so this does not certify public release readiness.
+
 ---
 
 <!-- source: docs/testing/selection-phase-1-report.md -->
@@ -5752,8 +5771,9 @@ nhất.
   nhắm đúng module operator sau khi tách mã và hiện PASS. Xem
   [C02 audit baseline](2026-09-26-c02-audit-baseline.json).
 - Overall release runner hiện `INCOMPLETE`: H08 GPU overlay review và P95/peak
-  memory measurement chưa được thực hiện. Bản quyền còn placeholder; chưa được
-  coi là sẵn sàng đóng gói/phát hành công khai.
+  memory measurement chưa được thực hiện. GPL-3.0-or-later text now matches the
+  extension manifest; contributor copyright attribution and dependency notices
+  still need review before public release.
 - Các kết quả UI cũ trong review vẫn là bằng chứng lịch sử, không chứng minh
   hành vi Blender UI/MCP đã được kiểm trên revision `5f7fbc2`.
 

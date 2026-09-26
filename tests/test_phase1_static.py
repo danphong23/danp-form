@@ -15,6 +15,16 @@ def test_manifest_and_package_exist() -> None:
     assert (ROOT / "dan_form" / "__init__.py").is_file()
 
 
+def test_distribution_license_matches_manifest() -> None:
+    manifest = (ROOT / "blender_manifest.toml").read_text(encoding="utf-8")
+    license_text = (ROOT / "LICENSE.md").read_text(encoding="utf-8")
+    assert '"SPDX:GPL-3.0-or-later"' in manifest
+    assert "GPL-3.0-or-later" in license_text
+    assert "GNU GENERAL PUBLIC LICENSE" in license_text
+    assert "END OF TERMS AND CONDITIONS" in license_text
+    assert "No production code is included" not in license_text
+
+
 def test_phase1_contract_symbols() -> None:
     source = package_source()
     for symbol in (
