@@ -576,8 +576,8 @@
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
-    "sha256": "7747dc96673cc69e8b09dfb1bf424b44236a285673d520d9f5f666f53f3d7bd0",
-    "bytes": 2974
+    "sha256": "1df05e69a006fa5977b73a307429e93bbe0b8dfbb0f4b0a1f93840868ac35da2",
+    "bytes": 3465
   },
   {
     "path": "tests/README.md",
