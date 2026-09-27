@@ -38,14 +38,11 @@ extract/import/register/unregister smoke; see
 H08 GPU, representative performance, C02 UI regression, and copyright-holder
 attribution remain open; this is not release certification.
 
-**2026-09-27 package follow-up:** a fresh 0.5.36 archive from the current
-verified source also passes package validation and Blender 5.2.1
-extract/import/register/unregister smoke. The archive is retained only under
-the ignored `dist/` output directory; its exact commit, checksum and gate status
-are recorded in the repository-side report
-`docs/testing/2026-09-27-h10-package-candidate.json`.
-The candidate is functional, not release-certified; direct C02/H08/UI performance
-checks and maintainer attribution remain open.
+**Superseded 2026-09-27 candidate:** the earlier 147-member source/docs archive
+passed its historical validator and Blender smoke test, as recorded in
+`docs/testing/2026-09-27-h10-package-candidate.json`. It was removed from `dist/`
+after the package was narrowed to user-facing install files. Use the curated
+candidate below for testing.
 
 **2026-09-27 curated package:** source commit `bae32be` produces a 39-member ZIP
 containing the runtime, manifest/license/notices and purpose-written EN/VI user

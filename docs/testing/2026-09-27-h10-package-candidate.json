@@ -1,6 +1,8 @@
 {
   "status": "PASS_FUNCTIONAL_CANDIDATE",
   "release_certified": false,
+  "artifact_status": "REMOVED_SUPERSEDED",
+  "superseded_by": "2026-09-27-h10-curated-package-candidate.json",
   "metadata": {
     "addon_version": "0.5.36",
     "blender_version": "5.2.1 LTS",
