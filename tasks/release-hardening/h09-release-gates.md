@@ -64,3 +64,13 @@ a failure in the overlay callback and verifies cache clearing, contextual
 traceback capture, and log throttling in Blender background mode. This is not
 native UI, viewport, or actual GPU rendering evidence. The complete report is the
 [`2026-09-27 package-hygiene gate report`](../../docs/testing/2026-09-27-release-gates-package-hygiene.json).
+
+**Final cleanup audit, 2026-09-27:** reran the complete runner on documentation
+revision `b1323d0` with the disposable multi-scene character copy. All 10 static
+and 11 Blender background suites passed. Thirty warmed preview samples measured
+16.74 ms median / 17.28 ms P95; confirm was 1.58 ms and the process peak working
+set was 285.02 MB. The benchmark copy was not saved. The run remains
+`INCOMPLETE`: native UI/GPU performance, the C02 keymap/visibility Undo/Redo and
+save/reopen sequence, actual GPU overlay review, and maintainer attribution are
+still open. See
+[`2026-09-27 cleanup audit`](../../docs/testing/2026-09-27-cleanup-audit.json).

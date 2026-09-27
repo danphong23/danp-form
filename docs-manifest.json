@@ -586,8 +586,8 @@
   },
   {
     "path": "tasks/release-hardening/h09-release-gates.md",
-    "sha256": "333bff7f74a4673e244bab17ef1748eaa796478bb7fd3caa9fa3af1dd3389af9",
-    "bytes": 4540
+    "sha256": "107fa0a374fa3b7342d334c19f9805355c73e04d84d85637948cdfe6e27584fd",
+    "bytes": 5189
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
