@@ -32,7 +32,7 @@ affine preview. The dependency-free implementation remains the fallback and a
 parity regression compares both paths in Blender's bundled Python. A guarded
 background benchmark now accepts only an unsaved copy in the system temp
 directory, reports full preview median/P95, confirm commit and process memory,
-and does not replace GPU/UI acceptance. Eight runs on the representative
+and does not replace GPU/UI acceptance. Nine recorded runs on the representative
 1,698-vertex / 49-definition character copy measured 18.4–35.5 ms P95 after
 four warm-ups; the background guardrail is set at 40 ms. The post-commit runner
 passed 9/9 static suites, 11/11 Blender suites and the representative benchmark.
