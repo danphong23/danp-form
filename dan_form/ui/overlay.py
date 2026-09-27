@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+
 import bmesh
 import bpy
 
 from ..constants import *
+
+_LOGGER = logging.getLogger(__name__)
+_DRAW_ERROR_REPORTED = False
 
 
 def bind(api) -> None:
@@ -350,6 +355,7 @@ def _update_overlay_display(scene: bpy.types.Scene, _context: bpy.types.Context 
 
 def _draw_control_overlay() -> None:
     """Draw cached Source/Object or live Controller Edit control buffers."""
+    global _DRAW_ERROR_REPORTED
     try:
         import gpu
 
@@ -406,11 +412,20 @@ def _draw_control_overlay() -> None:
             gpu.state.line_width_set(previous_width)
             gpu.state.point_size_set(1.0)
             gpu.state.blend_set(previous_blend)
+        _DRAW_ERROR_REPORTED = False
     except Exception:
         # Drawing must never break Blender's viewport.  Drop stale batches so
         # a failed evaluated-mesh read cannot leave an old line floating away
-        # from the Source until an unrelated redraw happens.
+        # from the Source until an unrelated redraw happens. Report once per
+        # consecutive failure streak: viewport draw callbacks can run many
+        # times per second, so logging every frame would flood Blender's console.
         _OVERLAY_CACHE.clear()
+        if not _DRAW_ERROR_REPORTED:
+            _LOGGER.exception(
+                "DANP Form viewport overlay draw failed; cached overlay was cleared. "
+                "The viewport remains usable, but the overlay may be unavailable."
+            )
+            _DRAW_ERROR_REPORTED = True
         return
 
 
