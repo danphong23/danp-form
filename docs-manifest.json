@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "4c1a1026df190dce6f8ba3aeacc865e410f229f3b3e846a9574d603b9654b5af",
-    "bytes": 365775
+    "sha256": "8d0ff8056b6445d97ad1b766cd0556fde4d0175964752ecd504aee164b40c108",
+    "bytes": 366185
   },
   {
     "path": "docs/package/CHANGELOG.md",
@@ -346,8 +346,8 @@
   },
   {
     "path": "docs/testing/2026-09-25-h08-runtime-architecture.md",
-    "sha256": "6814e25d1d4b72f598e236dbb98bbbd547293ba959fcd93f93f08cba1cbe69d4",
-    "bytes": 2372
+    "sha256": "471543d3cd102c5db41066c44592837e2fe43eb4b56b3e700a526b00eb0ac859",
+    "bytes": 2782
   },
   {
     "path": "docs/testing/2026-09-25-h09-release-gates.md",
@@ -586,13 +586,13 @@
   },
   {
     "path": "tasks/release-hardening/h09-release-gates.md",
-    "sha256": "1a85c8b0ac97e3bb88f37064b4266970015c73ed152ce5a407ab990b9b4baeb1",
-    "bytes": 4360
+    "sha256": "333bff7f74a4673e244bab17ef1748eaa796478bb7fd3caa9fa3af1dd3389af9",
+    "bytes": 4540
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
-    "sha256": "0542d7342d27b3656d2db04ee85bde131eb61c81f7f01c90545e718bc6d0842e",
-    "bytes": 3427
+    "sha256": "9615081dc861b8a13d488f2107683ed87afaa25d912d266815bb148446953840",
+    "bytes": 3487
   },
   {
     "path": "tests/README.md",

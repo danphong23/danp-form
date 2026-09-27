@@ -44,10 +44,11 @@ passed its historical validator and Blender smoke test, as recorded in
 after the package was narrowed to user-facing install files. Use the curated
 candidate below for testing.
 
-**2026-09-27 curated package:** source commit `bae32be` produces a 39-member ZIP
+**2026-09-27 curated package:** source commit `2df8bdd` produces a 39-member ZIP
 containing the runtime, manifest/license/notices and purpose-written EN/VI user
 guides only. Developer tasks, test reports, caches and local machine paths are
 excluded. Package validation and isolated Blender 5.2.1 extract/import/register/
 unregister smoke pass. The current runner passes 10/10 static and 11/11
-background suites but remains `INCOMPLETE`; the package is not release-certified.
+background suites, including an injected overlay callback failure regression,
+but remains `INCOMPLETE`; the package is not release-certified.
 See [`2026-09-27-h10-curated-package-candidate.json`](../../docs/testing/2026-09-27-h10-curated-package-candidate.json).

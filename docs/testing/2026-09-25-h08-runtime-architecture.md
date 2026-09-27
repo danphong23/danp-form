@@ -28,6 +28,10 @@
 - Static regression coverage verifies overlay failures clear cached geometry,
   emit diagnostic context, and avoid flooding Blender's console during repeated
   draw failures. A GPU-backed injected-failure check remains open.
+- Blender background fault injection now drives the overlay callback through a
+  failing batch build. It verifies cache clearing, captured traceback context,
+  and one log record across repeated failures. This checks callback containment;
+  it does not exercise an actual GPU draw or viewport rendering.
 - H04 native transform, H05 target workflow, H06 agent API and H07 recovery
   fixtures pass in their phase reports.
 - Existing representative performance evidence is recorded in
@@ -40,5 +44,7 @@
 ## Limits
 
 These are scoped regression baselines, not a full large-mesh release benchmark.
-GPU overlay error injection and peak-memory measurement remain explicit H09
-release gates. No changes were made to the user's open Blender file.
+Actual GPU-backed overlay rendering/visual review and native UI performance
+remain release gates. The separate H09 background report records representative
+preview and process-memory measurements. No changes were made to the user's open
+Blender file.

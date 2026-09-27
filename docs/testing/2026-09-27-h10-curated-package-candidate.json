@@ -4,8 +4,8 @@
   "metadata": {
     "addon_version": "0.5.36",
     "blender_version": "5.2.1 LTS",
-    "source_commit": "bae32beceb1d08461d4f2c7bbeeebf6c60faec29",
-    "archive_path": "dist/DANP_Form_0.5.36-bae32be.zip",
+    "source_commit": "2df8bdd5186c02971d459299c97f4bfd28462f67",
+    "archive_path": "dist/DANP_Form_0.5.36-2df8bdd.zip",
     "archive_member_count": 39,
     "archive_sha256": "d660d87dbfad4f173866d8e4e15417adc9b86aa134e04811e0e92afdf867148e",
     "archive_version_controlled": false
@@ -34,7 +34,7 @@
     "report": "2026-09-27-release-gates-package-hygiene.json",
     "static_suites": "10/10 PASS",
     "blender_background_suites": "11/11 PASS",
-    "background_preview_p95_ms": 19.7357,
+    "background_preview_p95_ms": 28.7296,
     "background_preview_p95_limit_ms": 40.0,
     "overall": "INCOMPLETE",
     "remaining": [
