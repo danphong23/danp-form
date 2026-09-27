@@ -1,0 +1,53 @@
+{
+  "status": "PASS_FUNCTIONAL_CANDIDATE",
+  "release_certified": false,
+  "metadata": {
+    "addon_version": "0.5.36",
+    "blender_version": "5.2.1 LTS",
+    "source_commit": "33f756b2e3d66021ebe0d4fe2de3d41bd900715d",
+    "release_runner_commit": "1c7c3fa4e43e50992ebcd3fc0459fee9e52c2374",
+    "archive_path": "dist/DANP_Form_0.5.36.zip",
+    "archive_member_count": 147,
+    "archive_sha256": "c200e4cfa2ba4a799cdf1f5d272e30a9f78f3c0a0f096b3a3c9ef802ba96eba4",
+    "archive_version_controlled": false
+  },
+  "package_validation": {
+    "status": "PASS",
+    "checks": [
+      "ZIP integrity and unique paths",
+      "required extension root files including license and third-party notices",
+      "matching manifest and bl_info version",
+      "no tests, bytecode, cache directories, or path traversal members"
+    ]
+  },
+  "blender_smoke": {
+    "status": "PASS",
+    "blender_version": "5.2.1 LTS",
+    "checks": [
+      "archive extracts into an isolated temporary extension directory",
+      "extracted package imports",
+      "add-on register succeeds",
+      "add-on unregister succeeds"
+    ],
+    "temporary_extraction_removed": true
+  },
+  "release_gates": {
+    "report": "2026-09-27-release-gates-h09-benchmark.json",
+    "static_suites": "9/9 PASS",
+    "blender_background_suites": "11/11 PASS",
+    "background_preview_p95_ms": 20.5206,
+    "background_preview_p95_limit_ms": 40.0,
+    "overall": "INCOMPLETE",
+    "remaining": [
+      "C02 Blender UI keymap/visibility Undo-Redo/save-reopen regression",
+      "GPU-backed overlay review",
+      "native UI preview P95 and peak-memory measurement",
+      "maintainer copyright-holder attribution before public release"
+    ]
+  },
+  "notes": [
+    "The ZIP was built from the exact recorded source commit and is available in ignored dist/ for installation/testing.",
+    "The benchmark was measured in background Blender; it does not certify viewport or GPU performance.",
+    "This is an installable functional candidate, not a performance-certified or public-release certification."
+  ]
+}
