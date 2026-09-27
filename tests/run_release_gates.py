@@ -226,14 +226,16 @@ def main() -> int:
         },
     }
 
-    for name in BACKGROUND_SUITES:
-        report["blender_background_suites"].append(
-            _blender_fixture(args.blender, ROOT / "tests" / name)
-        )
+    # Run timing before the other Blender suites so their accumulated CPU
+    # load does not turn the release benchmark into a thermal-load test.
     if args.benchmark_project is not None:
         report["performance_background_benchmark"] = _blender_fixture(
             args.blender, ROOT / "tests" / "benchmark_h09_large_preview.py",
             args.benchmark_project,
+        )
+    for name in BACKGROUND_SUITES:
+        report["blender_background_suites"].append(
+            _blender_fixture(args.blender, ROOT / "tests" / name)
         )
     with tempfile.TemporaryDirectory(prefix="danp-h04-safe-copy-") as directory:
         if args.project is not None:

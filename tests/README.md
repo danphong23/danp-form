@@ -29,8 +29,9 @@ file directly in the temp directory whose name starts with `danp_h09_`; it
 requires at least 1,000 Source vertices and 30 definitions. It resets control
 visibility in memory, selects all effective control vertices, measures four
 warm-up and 30 full preview samples plus commit and process memory, then exits
-without saving. Native mouse latency, viewport redraw and GPU overlay remain
-separate UI gates.
+without saving. The release runner executes this timing check before the other
+Blender suites to avoid measuring their accumulated CPU load. Native mouse
+latency, viewport redraw and GPU overlay remain separate UI gates.
 
 The initial Windows background guardrail is a 40 ms P95 for the full preview.
 It was set after eight representative runs recorded 18.4–35.5 ms P95; use the
