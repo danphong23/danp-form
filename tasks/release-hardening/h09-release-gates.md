@@ -46,3 +46,19 @@ reporting. All 10 static suites and all 11 Blender 5.2.1 background suites
 passed. This run did not include the large-mesh benchmark or GPU/UI checks;
 the report remains `INCOMPLETE` and is recorded at
 [`2026-09-27-post-overlay-diagnostics-gates.json`](../../docs/testing/2026-09-27-post-overlay-diagnostics-gates.json).
+
+**Package-hygiene regression, 2026-09-27:** after curated packaging and report
+path redaction, source commit `0d96d73` passed all 10 static suites and 11/11
+Blender 5.2.1 background suites. The runner report is
+[`2026-09-27-release-gates-package-hygiene.json`](../../docs/testing/2026-09-27-release-gates-package-hygiene.json).
+The result remains `INCOMPLETE`; direct UI/GPU/performance gates and maintainer
+attribution are still explicitly unrun.
+
+The same revision was then measured on a disposable multi-scene character copy.
+The benchmark now activates the scene owning the Source/Controller pair before
+selection, so it supports a valid pair outside the file's initially active scene.
+On 1,698 Source vertices, 49 definitions, and 726 effective handles, 30 preview
+samples after four warm-ups measured 17.93 ms median / 19.74 ms P95; confirm
+commit was 1.64 ms, with a 40 ms background P95 guardrail. This is not native UI,
+viewport, or GPU timing. The complete report is the
+[`2026-09-27 package-hygiene gate report`](../../docs/testing/2026-09-27-release-gates-package-hygiene.json).

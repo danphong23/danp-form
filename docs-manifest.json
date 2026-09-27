@@ -6,8 +6,8 @@
   },
   {
     "path": "CHANGELOG.md",
-    "sha256": "42dcd7d03be8001152b11a1f09db4942ee39c57c7126b5d869df95d080b23774",
-    "bytes": 30890
+    "sha256": "c6c263465ab117c58092a934b7bcc13b6177cb6cebc00ecf8d20181748b479ed",
+    "bytes": 31363
   },
   {
     "path": "CONTRIBUTING.md",
@@ -221,23 +221,23 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "bd961612a3377ae9b40313f9aa9eabd5e85a8031fde95bbb38661adcecc9c63a",
-    "bytes": 364854
+    "sha256": "4c1a1026df190dce6f8ba3aeacc865e410f229f3b3e846a9574d603b9654b5af",
+    "bytes": 365775
   },
   {
     "path": "docs/package/CHANGELOG.md",
-    "sha256": "9da122b39eabb11a88d099e038edf5fb4a6a5c408bea4832711ad4d040572c5a",
-    "bytes": 718
+    "sha256": "96c0b3e5ccb98c850958c42e0b440eace2a86442143417224b6d2dfcda0effd1",
+    "bytes": 735
   },
   {
     "path": "docs/package/README_VI.md",
-    "sha256": "309dc5cfcf83c03101f77bc14ced6cdc0fa75df00d7af11a15cb228b979f19a9",
-    "bytes": 1962
+    "sha256": "6a85699fda0325f2a3267b2d356f2332d7e92b45a87ed28b7f7d1498331825cd",
+    "bytes": 2002
   },
   {
     "path": "docs/package/README.md",
-    "sha256": "3681e778b687be2c5f2a2078cc3bb7d26a9d66d5ba40f312699e284e2d032562",
-    "bytes": 1778
+    "sha256": "eedf811d9ca963c54fdced5acf1684a8b1b97d9b6b6cbfcd12c0d95ff7ca5397",
+    "bytes": 1820
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -331,8 +331,8 @@
   },
   {
     "path": "docs/testing/2026-09-25-h05-target-ux.md",
-    "sha256": "403bbc78a3efb9b7f03c66e38544e456452b4fc687c7134cc9adef2874732b00",
-    "bytes": 3852
+    "sha256": "d763c4785e282430ce9b96a67e9e8d0f85d28480ae8a9d5ebde83b437c40b1c5",
+    "bytes": 3925
   },
   {
     "path": "docs/testing/2026-09-25-h06-agent-parity.md",
@@ -386,8 +386,8 @@
   },
   {
     "path": "docs/testing/2026-09-27-h09-large-preview-benchmark.md",
-    "sha256": "5af48360d8c8be03d7a676fa34c7919b794f8331c799ab11ab392f8ef6a9180b",
-    "bytes": 4452
+    "sha256": "7a8e5a72f43d2128abb6117863ee905e063b8d1fb681781d2aa5e1b4c952ee29",
+    "bytes": 4539
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -401,8 +401,8 @@
   },
   {
     "path": "docs/testing/cleanup-2026-09-21.md",
-    "sha256": "26bcde62e0b0c40991298a819f05e3174ca418fdd54258bb24121fceac40ad4e",
-    "bytes": 1983
+    "sha256": "7b83a5cccd810bef8e746bfc5d8708c64ddf5a8c2558b8887cbf9b2baeb47388",
+    "bytes": 1998
   },
   {
     "path": "docs/testing/deformation-target-matrix.md",
@@ -421,23 +421,23 @@
   },
   {
     "path": "docs/testing/phase-02-controller-lifecycle-report.md",
-    "sha256": "c373cab65d88f32972b94b9161bae5d420672f8c79b75a6803c79eb0efb3ea0e",
-    "bytes": 4911
+    "sha256": "4cd507c58f138e6829ec6156234082d436247f980730eb7d3f62ae511c81969e",
+    "bytes": 4994
   },
   {
     "path": "docs/testing/phase-02-edit-performance-report.md",
-    "sha256": "05a973f404c60c8611db5c2de326a37ced8017a1a7a37f8de3169c311d6a7f60",
-    "bytes": 8237
+    "sha256": "87ba9ff3b6d6502f8acefca1a553bb126875c16781667b8168fd09809205fa11",
+    "bytes": 8377
   },
   {
     "path": "docs/testing/phase-02-pick-ux-audit.md",
-    "sha256": "b3b41a07e5cc03139d9f7d559546e698df6de9a5c7a85e121f24656bae770026",
-    "bytes": 6938
+    "sha256": "b4361df9f8dc0ebfe027ae5c13971621da2fad9ec892619eb1eebf120c08eceb",
+    "bytes": 7026
   },
   {
     "path": "docs/testing/phase-02-sidebar-performance-report.md",
-    "sha256": "97498a42b56e7cd1060110ecc96460f44093f5f8a38a40af7551b4ce98801ef3",
-    "bytes": 5685
+    "sha256": "1c3e6aab25ee58acb40d0a5882423b2cc0f9304eaefd7486f2b686eae7050961",
+    "bytes": 5782
   },
   {
     "path": "docs/testing/phase-02-stability-report.md",
@@ -446,18 +446,18 @@
   },
   {
     "path": "docs/testing/phase-02-ux-live-report.md",
-    "sha256": "a71e9c53c0549e72025d4a926acd53f6130a455c6e8f7b9661b978e05df3612b",
-    "bytes": 2502
+    "sha256": "46ec5df69f49bba36739b927a95f2238c399970b1c80cdf302f0e3f96d8d5337",
+    "bytes": 2538
   },
   {
     "path": "docs/testing/phase-03-patch-report.md",
-    "sha256": "4aa4c1dc8f0cb8406993ef22df00f0bdda75918fad3de07c2920603167b59e1c",
-    "bytes": 3325
+    "sha256": "0e49202a791f3be87251a4cb065152e051757d4075563bf96b8aea5380e87d81",
+    "bytes": 3382
   },
   {
     "path": "docs/testing/phase-04-deformation-report.md",
-    "sha256": "08e82d876e24cb84a7b5a4d4be6683da9388bd87b85bec5a25aa2a42cee69ccb",
-    "bytes": 7360
+    "sha256": "7de904a08cf7dccb10ff02d9f1ddcb0eadb7ba48db3887a7cda48e8501785d52",
+    "bytes": 7471
   },
   {
     "path": "docs/testing/previous-design-review.md",
@@ -471,8 +471,8 @@
   },
   {
     "path": "docs/testing/selection-phase-1-report.md",
-    "sha256": "5c52e6938fd67a3e765afd77f9fd29c8f27bb3efaef9bb8d0e6d2d4f5df80e86",
-    "bytes": 2779
+    "sha256": "a45fb8755b3c999ea7b58fe76f454b6715135d8bc275544b6a304fd55055787a",
+    "bytes": 2828
   },
   {
     "path": "LICENSE.md",
@@ -586,13 +586,13 @@
   },
   {
     "path": "tasks/release-hardening/h09-release-gates.md",
-    "sha256": "99a1250390116bc1f64f25bb21a9eb0adf4f33898a82548eae8ad4447ee38875",
-    "bytes": 3268
+    "sha256": "1a85c8b0ac97e3bb88f37064b4266970015c73ed152ce5a407ab990b9b4baeb1",
+    "bytes": 4360
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
-    "sha256": "7747dc96673cc69e8b09dfb1bf424b44236a285673d520d9f5f666f53f3d7bd0",
-    "bytes": 2974
+    "sha256": "d8f7d726f0a2fd876b046044447aa81228cce62b394407dd214f40de5d5cf2c8",
+    "bytes": 3611
   },
   {
     "path": "tests/README.md",

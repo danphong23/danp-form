@@ -46,3 +46,11 @@ are recorded in the repository-side report
 `docs/testing/2026-09-27-h10-package-candidate.json`.
 The candidate is functional, not release-certified; direct C02/H08/UI performance
 checks and maintainer attribution remain open.
+
+**2026-09-27 curated package:** source commit `bae32be` produces a 39-member ZIP
+containing the runtime, manifest/license/notices and purpose-written EN/VI user
+guides only. Developer tasks, test reports, caches and local machine paths are
+excluded. Package validation and isolated Blender 5.2.1 extract/import/register/
+unregister smoke pass. The current runner passes 10/10 static and 11/11
+background suites but remains `INCOMPLETE`; the package is not release-certified.
+See [`2026-09-27-h10-curated-package-candidate.json`](../../docs/testing/2026-09-27-h10-curated-package-candidate.json).
