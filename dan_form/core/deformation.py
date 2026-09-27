@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 
 from .graph import metric_distances
-from .harmonic import solve_displacements
+from .harmonic import np as _np, solve_displacements
 from .proportional import alpha
 
 
@@ -101,6 +101,55 @@ def _frame(points, center):
 
 
 def _transform_from_samples(p0, targets):
+    """Fit an affine transform, using NumPy for large sample sets when present."""
+    if _np is not None and len(targets) >= 3:
+        try:
+            return _transform_from_samples_numpy(p0, targets)
+        except (_np.linalg.LinAlgError, FloatingPointError, ValueError):
+            # Keep the established dependency-free solver as a correctness
+            # fallback for singular or malformed numerical input.
+            pass
+    return _transform_from_samples_python(p0, targets)
+
+
+def _transform_from_samples_numpy(p0, targets):
+    """Vectorized equivalent of the stable regularized affine sample fit."""
+    vertex_ids = sorted(targets)
+    source_values = [_coords(p0[vertex_id]) for vertex_id in vertex_ids]
+    target_values = [_coords(targets[vertex_id]) for vertex_id in vertex_ids]
+    source_array = _np.asarray(source_values, dtype=_np.float64)
+    target_array = _np.asarray(target_values, dtype=_np.float64)
+    source_center = _np.mean(source_array, axis=0)
+    target_center = _np.mean(target_array, axis=0)
+    source_delta = source_array - source_center
+    target_delta = target_array - target_center
+
+    source_frame = _frame(source_values, tuple(source_center))
+    target_frame = _frame(target_values, tuple(target_center))
+    prior = _np.eye(3, dtype=_np.float64)
+    if source_frame is not None and target_frame is not None:
+        source_axes = _np.asarray(source_frame, dtype=_np.float64)
+        target_axes = _np.asarray(target_frame, dtype=_np.float64)
+        source_sum = _np.sum(_np.abs(source_delta @ source_axes.T), axis=0)
+        target_sum = _np.sum(_np.abs(target_delta @ target_axes.T), axis=0)
+        scales = _np.divide(target_sum, source_sum, out=_np.ones(3), where=source_sum > 1e-10)
+        prior = (target_axes.T * scales) @ source_axes
+
+    covariance = source_delta.T @ source_delta
+    cross = target_delta.T @ source_delta
+    regularization = max(1.0, float(_np.trace(covariance))) * 1e-10
+    system = covariance + _np.eye(3, dtype=_np.float64) * regularization
+    affine = _np.linalg.solve(system, (cross + regularization * prior).T).T
+
+    def apply(point):
+        local = _np.asarray(_coords(point), dtype=_np.float64) - source_center
+        return _vec(point, target_center + affine @ local)
+
+    apply._danp_affine = (source_center, target_center, affine)
+    return apply
+
+
+def _transform_from_samples_python(p0, targets):
     """Fit one continuous affine transform from one control's samples.
 
     Blender's non-uniform Scale can contain shear when viewed in a control's
@@ -192,6 +241,37 @@ def _transform_from_samples(p0, targets):
     return apply
 
 
+def _affine_fits_samples(transform, p0, targets, tolerance):
+    """Check every target while vectorizing the common large affine case."""
+    affine = getattr(transform, "_danp_affine", None)
+    if _np is not None and affine is not None:
+        source_center, target_center, matrix = affine
+        vertex_ids = sorted(targets)
+        source = _np.asarray([_coords(p0[vertex_id]) for vertex_id in vertex_ids], dtype=_np.float64)
+        expected = _np.asarray([_coords(targets[vertex_id]) for vertex_id in vertex_ids], dtype=_np.float64)
+        predicted = (source - source_center) @ matrix.T + target_center
+        return bool(_np.all(_np.linalg.norm(predicted - expected, axis=1) <= tolerance))
+    return all(
+        math.dist(tuple(transform(p0[vertex_id])), tuple(target)) <= tolerance
+        for vertex_id, target in targets.items()
+    )
+
+
+def _apply_affine_scope(output, p0, scope, transform):
+    """Apply one affine map to a patch scope without per-point matrix loops."""
+    affine = getattr(transform, "_danp_affine", None)
+    if _np is not None and affine is not None:
+        source_center, target_center, matrix = affine
+        vertex_ids = sorted(scope)
+        source = _np.asarray([_coords(p0[vertex_id]) for vertex_id in vertex_ids], dtype=_np.float64)
+        transformed = (source - source_center) @ matrix.T + target_center
+        for vertex_id, coordinates in zip(vertex_ids, transformed):
+            output[vertex_id] = _vec(p0[vertex_id], coordinates)
+        return
+    for vertex_id in scope:
+        output[vertex_id] = transform(p0[vertex_id])
+
+
 def _affine_sample_tolerance(p0, targets):
     """Allow for Blender's float32 vertex coordinates when testing a fit."""
     magnitude = max(
@@ -251,12 +331,10 @@ def compute_preview(
             return output, 0
         transform = _transform_from_samples(p0, operation_targets)
         tolerance = _affine_sample_tolerance(p0, operation_targets)
-        if transform is not None and all(
-            math.dist(tuple(transform(p0[vertex_id])), tuple(target)) <= tolerance
-            for vertex_id, target in operation_targets.items()
+        if transform is not None and _affine_fits_samples(
+            transform, p0, operation_targets, tolerance
         ):
-            for vertex_id in scope:
-                output[vertex_id] = transform(p0[vertex_id])
+            _apply_affine_scope(output, p0, scope, transform)
             for vertex_id, target in operation_targets.items():
                 output[vertex_id] = target.copy()
             changed = sum(output.get(vertex_id) != p0.get(vertex_id) for vertex_id in scope)
@@ -286,11 +364,8 @@ def compute_preview(
                 # exact.  This is a target-shape check, not a time or
                 # scene-specific heuristic.
                 tolerance = _affine_sample_tolerance(p0, patch_targets)
-                for vertex_id, target in patch_targets.items():
-                    predicted = transform(p0[vertex_id])
-                    if math.dist(tuple(predicted), tuple(target)) > tolerance:
-                        transform = None
-                        break
+                if not _affine_fits_samples(transform, p0, patch_targets, tolerance):
+                    transform = None
 
         if transform is not None:
             distances = metric_distances(edge_vids, patch_vertices, set(patch_targets), p0)

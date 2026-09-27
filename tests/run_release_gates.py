@@ -182,6 +182,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--blender", type=Path, help="Blender executable to use")
     parser.add_argument("--project", type=Path, help="Optional disposable .blend with an initialized Source/Controller pair for H04; otherwise generate one")
+    parser.add_argument("--benchmark-project", type=Path, help="Optional representative disposable project copy in the system temp directory, named danp_h09_*.blend")
     parser.add_argument("--report", type=Path, help="Write the JSON report to this path")
     parser.add_argument("--self-test-fail", action="store_true", help="Verify that a deliberate traceback is classified as FAIL")
     args = parser.parse_args()
@@ -196,6 +197,8 @@ def main() -> int:
         parser.error("--blender must name an existing Blender executable")
     if args.project is not None and not args.project.is_file():
         parser.error("--project must name an existing disposable .blend file")
+    if args.benchmark_project is not None and not args.benchmark_project.is_file():
+        parser.error("--benchmark-project must name an existing disposable .blend file")
 
     report = {
         "status": "RUNNING",
@@ -205,6 +208,7 @@ def main() -> int:
             "platform": platform.platform(),
             "commit": _source_commit(),
             "fixture_project": str(args.project) if args.project else "generated two-control strip",
+            "benchmark_project": str(args.benchmark_project) if args.benchmark_project else None,
         },
         "static_suites": _run_static(),
         "blender_background_suites": [],
@@ -213,13 +217,21 @@ def main() -> int:
             "H05_target_selector_and_new_key": "PASS: direct UI verification recorded in docs/testing/2026-09-25-h05-target-ux.md",
             "H07_repair_undo_redo": "PASS: user accepted; see docs/testing/2026-09-25-h07-topology-recovery.md",
             "H08_overlay_gpu_review": "NOT RUN: requires a GPU-backed Blender UI",
-            "performance_p95_and_peak_memory": "NOT RUN: pending representative UI instrumentation",
+            "performance_p95_and_peak_memory": "NOT RUN: native UI/GPU timing remains separate from the background benchmark",
+        },
+        "performance_background_benchmark": {
+            "status": "NOT RUN: pass --benchmark-project with a disposable danp_h09_*.blend copy",
         },
     }
 
     for name in BACKGROUND_SUITES:
         report["blender_background_suites"].append(
             _blender_fixture(args.blender, ROOT / "tests" / name)
+        )
+    if args.benchmark_project is not None:
+        report["performance_background_benchmark"] = _blender_fixture(
+            args.blender, ROOT / "tests" / "benchmark_h09_large_preview.py",
+            args.benchmark_project,
         )
     with tempfile.TemporaryDirectory(prefix="danp-h04-safe-copy-") as directory:
         if args.project is not None:
@@ -249,6 +261,8 @@ def main() -> int:
             )
 
     checks = report["static_suites"] + report["blender_background_suites"]
+    if args.benchmark_project is not None:
+        checks.append(report["performance_background_benchmark"])
     if any(item["status"] == "FAIL" for item in checks):
         report["status"] = "FAIL"
     elif (not all(item["status"] == "PASS" for item in checks)

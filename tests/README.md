@@ -19,6 +19,25 @@ object, selection or mode. It now refuses to run unless Blender is in background
 mode; use only through the disposable fixture runner, never through MCP in the
 open user scene.
 
+## H09 representative performance fixture
+
+For a full Source-preview measurement, first copy a representative `.blend`
+into the system temporary directory using a filename such as
+`danp_h09_character.blend`. Then pass that copy with `--benchmark-project` to
+`run_release_gates.py`. The benchmark accepts only a background process and a
+file directly in the temp directory whose name starts with `danp_h09_`; it
+requires at least 1,000 Source vertices and 30 definitions. It resets control
+visibility in memory, selects all effective control vertices, measures four
+warm-up and 30 full preview samples plus commit and process memory, then exits
+without saving. Native mouse latency, viewport redraw and GPU overlay remain
+separate UI gates.
+
+The initial Windows background guardrail is a 40 ms P95 for the full preview.
+It was set after seven representative runs recorded 18.4–35.5 ms P95; use the
+same Blender version and comparable hardware when comparing results. The gate
+report retains environment and fixture metadata and remains incomplete while
+the GPU/UI checks are outstanding.
+
 ## State consistency audit
 
 `audit_state_consistency.py` is a readiness audit for the

@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "a30df3fde506f821e36fd81d2ab94dc8e66aa3dea35e0f5abc1f477bb09495fb",
-    "bytes": 355544
+    "sha256": "c145c6bc26b901652e8d00f532ceca6a01359d1848f54a159afbc3950744a2af",
+    "bytes": 359419
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -368,6 +368,11 @@
     "path": "docs/testing/2026-09-26-repository-cleanup.md",
     "sha256": "700605931be8168fa08a688e89613758517ecba2c74e462d2ba8894d596cb012",
     "bytes": 4024
+  },
+  {
+    "path": "docs/testing/2026-09-27-h09-large-preview-benchmark.md",
+    "sha256": "45c597e8cc7060a6d7860f85d7a8279091a337da53f37705a33b14ac0f9a5d45",
+    "bytes": 3796
   },
   {
     "path": "docs/testing/acceptance-gates.md",
@@ -566,8 +571,8 @@
   },
   {
     "path": "tasks/release-hardening/h09-release-gates.md",
-    "sha256": "400c3473bce6b480ffcf0e53d3a0935a53a4e3dfbecc2e33f88e9750ab94951a",
-    "bytes": 1833
+    "sha256": "49235bfb77ffbaf425bbfc95406a4d5af2229f8363187f443d134471c8c362e4",
+    "bytes": 2581
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
@@ -576,8 +581,8 @@
   },
   {
     "path": "tests/README.md",
-    "sha256": "8ad092aa95560124ac1f5c9d6d1bcb05f7cb4f46e0c8a683a1554c5f1dfb3d1f",
-    "bytes": 2091
+    "sha256": "192651d50ad5f3da4fd067e84e9e80652b7b5be39a3c3e2822a31cb0233ea425",
+    "bytes": 3181
   },
   {
     "path": "THIRD_PARTY_NOTICES.md",

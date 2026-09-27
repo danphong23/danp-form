@@ -255,6 +255,48 @@ def test_all_selected_controls_scale_as_one_mesh_across_patch_cuts():
                 assert math.dist(tuple(output[vertex_id]), expected) < 1e-4
 
 
+def test_numpy_affine_path_matches_dependency_free_path():
+    if DEFORMATION._np is None:
+        return
+
+    points = [(x, y, z)
+              for x in range(-2, 3)
+              for y in range(-2, 3)
+              for z in range(-2, 3)]
+    p0 = {
+        index: V(x * 0.7, y * 1.3, z * 0.9)
+        for index, (x, y, z) in enumerate(points)
+    }
+    selected = set(p0)
+    targets = {
+        vertex_id: V(
+            1.1 * point.values[0] - 0.25 * point.values[1] + 0.35 * point.values[2] + 2.0,
+            0.4 * point.values[0] + 0.9 * point.values[1] - 0.15 * point.values[2] - 1.0,
+            -0.2 * point.values[0] + 0.3 * point.values[1] + 1.2 * point.values[2] + 0.5,
+        )
+        for vertex_id, point in p0.items()
+    }
+    numpy_module = DEFORMATION._np
+    accelerated, accelerated_count = DEFORMATION.compute_preview(
+        p0, selected, selected, [], {}, targets, set(), "LINEAR", 0.0,
+        selection_intent=selected, all_controls_selected=True,
+    )
+    try:
+        DEFORMATION._np = None
+        reference, reference_count = DEFORMATION.compute_preview(
+            p0, selected, selected, [], {}, targets, set(), "LINEAR", 0.0,
+            selection_intent=selected, all_controls_selected=True,
+        )
+    finally:
+        DEFORMATION._np = numpy_module
+
+    assert accelerated_count == reference_count == len(p0)
+    assert all(
+        math.dist(tuple(accelerated[vertex_id]), tuple(reference[vertex_id])) < 1e-7
+        for vertex_id in p0
+    )
+
+
 def test_single_planar_control_keeps_axis_scale_continuous_for_free_patch_vertices():
     # Four non-collinear samples define an in-plane non-uniform Scale.  The
     # free center must follow that same affine field; a coherent whole-control
