@@ -33,10 +33,11 @@ without saving. Native mouse latency, viewport redraw and GPU overlay remain
 separate UI gates.
 
 The initial Windows background guardrail is a 40 ms P95 for the full preview.
-It was set after seven representative runs recorded 18.4–35.5 ms P95; use the
+It was set after eight representative runs recorded 18.4–35.5 ms P95; use the
 same Blender version and comparable hardware when comparing results. The gate
-report retains environment and fixture metadata and remains incomplete while
-the GPU/UI checks are outstanding.
+report retains environment and fixture metadata. Release status remains
+incomplete until the C02 UI Undo/Redo/save-reopen gate, H08 GPU review, native UI
+performance measurement and maintainer attribution are complete.
 
 ## State consistency audit
 

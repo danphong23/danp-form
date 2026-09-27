@@ -216,8 +216,10 @@ def main() -> int:
             "H04_modal_mouse_grs": "PASS: user accepted; see docs/testing/2026-09-25-h04-native-transform.md",
             "H05_target_selector_and_new_key": "PASS: direct UI verification recorded in docs/testing/2026-09-25-h05-target-ux.md",
             "H07_repair_undo_redo": "PASS: user accepted; see docs/testing/2026-09-25-h07-topology-recovery.md",
+            "C02_keymap_visibility_undo_redo_save_reopen": "NOT RUN: requires direct Blender UI acceptance on a disposable project copy",
             "H08_overlay_gpu_review": "NOT RUN: requires a GPU-backed Blender UI",
             "performance_p95_and_peak_memory": "NOT RUN: native UI/GPU timing remains separate from the background benchmark",
+            "maintainer_copyright_holder_attribution": "NOT RUN: exact attribution needs maintainer confirmation before public release",
         },
         "performance_background_benchmark": {
             "status": "NOT RUN: pass --benchmark-project with a disposable danp_h09_*.blend copy",
