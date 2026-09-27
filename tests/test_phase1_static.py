@@ -58,6 +58,13 @@ def test_release_report_redacts_local_machine_paths() -> None:
     assert cleaned["project"] == r"<PROJECT_ROOT>\Project\character.blend"
 
 
+def test_large_preview_benchmark_uses_the_source_owning_scene() -> None:
+    benchmark = (ROOT / "tests" / "benchmark_h09_large_preview.py").read_text(encoding="utf-8")
+    assert "scene.objects.get(controller.name) == controller" in benchmark
+    assert "window.scene = source_scene" in benchmark
+    assert "source_scene.view_layers.get(window.view_layer.name) is None" in benchmark
+
+
 def test_destructive_selection_fixture_refuses_live_ui() -> None:
     fixture = (ROOT / "tests" / "live_control_multiselect.py").read_text(encoding="utf-8")
     guard = fixture.index("if not bpy.app.background:")

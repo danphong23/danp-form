@@ -87,6 +87,18 @@ def run() -> dict:
         if (source is None or controller is None or source.type != "MESH"
                 or source.mode != "OBJECT" or controller.mode != "OBJECT"):
             raise RuntimeError("Fixture must contain an initialized Source/Controller pair in Object Mode")
+        source_scene = next((scene for scene in source.users_scene
+                             if scene.objects.get(controller.name) == controller), None)
+        window = bpy.context.window
+        if source_scene is None or window is None:
+            raise RuntimeError("Fixture Source and Controller must share an accessible scene")
+        # Representative projects may keep the character in a non-active scene.
+        # Resolve the pair first, then switch the disposable benchmark window to
+        # its owning scene before hide/selection operators use the active layer.
+        if window.scene != source_scene:
+            window.scene = source_scene
+        if source_scene.view_layers.get(window.view_layer.name) is None:
+            window.view_layer = source_scene.view_layers[0]
         if len(source.data.vertices) < 1000 or len(addon._controls(source)) < 30:
             raise RuntimeError("Fixture must have at least 1,000 Source vertices and 30 control definitions")
 
