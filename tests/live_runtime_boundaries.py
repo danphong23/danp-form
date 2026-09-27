@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 from pathlib import Path
 
 import bpy
@@ -76,6 +77,56 @@ def run():
         check(all(sum(item is callback for item in handlers) == 1
                   for handlers, callback in handler_specs),
               "re-register after repeated cycles leaves one handler per event")
+        original_overlay_mode = overlay._overlay_mode
+        original_context_source = overlay._context_source
+        original_overlay_batches = overlay._overlay_batches
+        previous_error_reported = overlay._DRAW_ERROR_REPORTED
+        overlay._DRAW_ERROR_REPORTED = False
+        overlay._overlay_mode = lambda _context: "source"
+        overlay._context_source = lambda _context: (type("Source", (), {
+            "get": lambda _self, _key: "fixture-source"
+        })(), object())
+
+        def injected_overlay_failure(*_args, **_kwargs):
+            raise RuntimeError("INJECTED_GPU_DRAW_FAILURE")
+
+        overlay._overlay_batches = injected_overlay_failure
+        captured_logs = []
+
+        class CaptureOverlayLog(logging.Handler):
+            def emit(self, record):
+                captured_logs.append(record)
+
+        overlay_logger = logging.getLogger(overlay.__name__)
+        original_log_level = overlay_logger.level
+        original_log_propagate = overlay_logger.propagate
+        capture_handler = CaptureOverlayLog()
+        overlay_logger.setLevel(logging.ERROR)
+        overlay_logger.propagate = False
+        overlay_logger.addHandler(capture_handler)
+        overlay._OVERLAY_CACHE["stale-fixture"] = object()
+        try:
+            overlay._draw_control_overlay()
+            overlay._draw_control_overlay()
+            diagnostic_reported = overlay._DRAW_ERROR_REPORTED
+            stale_cache_cleared = not overlay._OVERLAY_CACHE
+        finally:
+            overlay._OVERLAY_CACHE.pop("stale-fixture", None)
+            overlay_logger.removeHandler(capture_handler)
+            overlay_logger.setLevel(original_log_level)
+            overlay_logger.propagate = original_log_propagate
+            overlay._overlay_mode = original_overlay_mode
+            overlay._context_source = original_context_source
+            overlay._overlay_batches = original_overlay_batches
+            overlay._DRAW_ERROR_REPORTED = previous_error_reported
+        check(stale_cache_cleared and diagnostic_reported,
+              "overlay draw failure clears stale buffers and activates its diagnostic guard")
+        check(len(captured_logs) == 1 and captured_logs[0].exc_info
+              and captured_logs[0].exc_info[0] is RuntimeError
+              and "INJECTED_GPU_DRAW_FAILURE" in logging.Formatter().formatException(
+                  captured_logs[0].exc_info),
+              "overlay GPU failure logs one contextual traceback per failure streak; "
+              f"captured={len(captured_logs)} record(s)")
         addon._load_post(None)
         check(not addon._MAPPING_CACHE and not addon._PATCH_CACHE,
               "load invalidates derived caches")
