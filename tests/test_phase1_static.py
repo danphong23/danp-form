@@ -34,6 +34,30 @@ def test_third_party_notice_is_packaged() -> None:
     assert "pure-Python fallback" in notices
 
 
+def test_distribution_sources_do_not_leak_machine_paths_or_test_asset_names() -> None:
+    from scripts.release_package import _validate_public_content, package_entries
+
+    entries = package_entries()
+    assert {"README.md", "README_VI.md", "CHANGELOG.md"}.issubset(entries)
+    assert not any(member.startswith(("docs/", "tasks/", "tests/")) for member in entries)
+    for member, path in entries.items():
+        _validate_public_content(member, path.read_bytes())
+
+
+def test_release_report_redacts_local_machine_paths() -> None:
+    import runpy
+
+    runner = runpy.run_path(str(ROOT / "tests" / "run_release_gates.py"))
+    sanitize = runner["_sanitize_report_value"]
+    sample = {
+        "temp": r"C:\Users\abc\AppData\Local\Temp\danp\fixture.blend",
+        "project": r"C:\Users\abc\.AI\Code\danp-animation\Project\character.blend",
+    }
+    cleaned = sanitize(sample)
+    assert cleaned["temp"] == r"<TEMP>\danp\fixture.blend"
+    assert cleaned["project"] == r"<PROJECT_ROOT>\Project\character.blend"
+
+
 def test_destructive_selection_fixture_refuses_live_ui() -> None:
     fixture = (ROOT / "tests" / "live_control_multiselect.py").read_text(encoding="utf-8")
     guard = fixture.index("if not bpy.app.background:")

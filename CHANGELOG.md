@@ -243,7 +243,7 @@
 - Revalidated list selection, definition deletion, Hide/Show, Sync, Source /
   Controller navigation, topology protection, native transform preview,
   adjacent-control pinning, commit, cancel and paired Source undo/redo on the
-  open ``girl_chibi_1.blend`` test file.
+  open ``character_test.blend`` test file.
 - Removing a controller or the complete DANP binding now discards its runtime
   transform session, transaction and undo record, preventing stale state from
   accumulating in long Blender sessions.

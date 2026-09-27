@@ -348,7 +348,7 @@
         "checks_count": 21
       },
       "output_tail": [
-        "00:02.547  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h07_topology_recovery.blend\"",
+        "00:02.547  blend            | Read blend: \"<TEMP>\\danp_h07_topology_recovery.blend\"",
         "Info: Topology repair is safe: +3 vertices, +3 edges, -0 vertices, -0 edges; 1 protected faces unchanged",
         "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
         "Info: DANP mapping repaired: +3 vertices, +3 edges; controls and Shape Keys preserved",
@@ -588,7 +588,7 @@
       "exception_in_log": false,
       "elapsed_seconds": 2.739,
       "report": {
-        "file": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-6ygkv2h4\\native_transform_fixture.blend",
+        "file": "<TEMP>\\danp-h04-safe-copy-6ygkv2h4\\native_transform_fixture.blend",
         "dirty_before": false,
         "checks": [
           "native Blender transform finishes",
@@ -633,8 +633,8 @@
         "runtime_clean": true
       },
       "output_tail": [
-        "00:02.156  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-6ygkv2h4\\native_transform_fixture.blend\"",
-        "DANP_RESULT_JSON={\"file\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp-h04-safe-copy-6ygkv2h4\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\", \"timer registration failure rolls back the owned native session\", \"timer callback exception rolls back geometry and clears owned state\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
+        "00:02.156  blend            | Read blend: \"<TEMP>\\danp-h04-safe-copy-6ygkv2h4\\native_transform_fixture.blend\"",
+        "DANP_RESULT_JSON={\"file\": \"<TEMP>\\\\danp-h04-safe-copy-6ygkv2h4\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\", \"timer registration failure rolls back the owned native session\", \"timer callback exception rolls back geometry and clears owned state\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
         "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
         "",
         "Blender quit"

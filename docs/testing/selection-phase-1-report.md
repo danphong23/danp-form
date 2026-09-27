@@ -37,7 +37,7 @@ and confirms selection leaves Source geometry and control definitions unchanged.
 ## Live Blender session and remaining UI check
 
 MCP read-only inspection found
-`Project/2. toon/girl_chibi_1_compare.blend` open with the Controller in Edit Mode;
+`Project/2. toon/character_test_compare.blend` open with the Controller in Edit Mode;
 the file was already dirty. No changes were made or saved in that session.
 The actual Shift-mouse gesture in the live UI was not exercised, to preserve that
 dirty model. The row names and state markers were later loaded from the workspace

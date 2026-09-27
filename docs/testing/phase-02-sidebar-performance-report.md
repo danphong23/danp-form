@@ -5,7 +5,7 @@
 ## Live session
 
 Blender 5.2.1 LTS, existing open file
-`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+`<PROJECT_ROOT>/Project/2. toon/character_test.blend`.
 Active model `girl chibi 1`, four existing definitions, workspace Layout;
 1,698 vertices, 3,392 edges, 1,696 polygons on Source.
 Dirty was true before and after. No scene builder, separate Blender process, save,

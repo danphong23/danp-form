@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-18
 **Blender:** 5.2.1 LTS
-**File:** `C:\Users\abc\.AI\Code\danp-animation\Project\2. toon\girl_chibi_1.blend`
+**File:** `<PROJECT_ROOT>\Project\2. toon\character_test.blend`
 **Workspace:** Layout
 **Initial/final dirty state:** `true` / `true`
 **Saved by test:** No

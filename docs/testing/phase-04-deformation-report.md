@@ -34,7 +34,7 @@ mỗi hướng đều chạy preview rồi Cancel, kiểm tra trạng thái view
 phục tọa độ chính xác, và cuối cùng Hide/Reveal lại vùng control. 15/15 kiểm tra
 đạt; view, active object và mode được phục hồi.
 
-File đang mở: `Project/2. toon/girl_chibi_1.blend`, Blender 5.2.1 LTS,
+File đang mở: `Project/2. toon/character_test.blend`, Blender 5.2.1 LTS,
 MCP kết nối đúng phiên. File đã dirty từ trước; không lưu đè.
 
 - Chọn `Arm.Shoulder.L`: 8 vertex control được chọn, transaction scope 203

@@ -41,6 +41,31 @@ BACKGROUND_SUITES = (
     "live_initialize_modes.py",
 )
 TRACEBACK_MARKERS = ("Traceback (most recent call last)", "AssertionError:", "Error: Python:")
+LOCAL_PROFILE_PATH = re.compile(
+    r"[A-Z]:(?:[\\/])+Users(?:[\\/])+[^\\/]+"
+    r"(?:(?:[\\/])+AppData(?:[\\/])+Local(?:[\\/])+Temp"
+    r"|(?:[\\/])+\.AI(?:[\\/])+Code(?:[\\/])+danp-animation)",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_report_value(value):
+    """Redact machine-specific user paths before reports are saved or printed."""
+    if isinstance(value, str):
+        return LOCAL_PROFILE_PATH.sub(
+            lambda match: "<TEMP>" if "AppData" in match.group(0) else "<PROJECT_ROOT>",
+            value,
+        )
+    if isinstance(value, list):
+        return [_sanitize_report_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_report_value(item) for item in value)
+    if isinstance(value, dict):
+        return {
+            _sanitize_report_value(key): _sanitize_report_value(item)
+            for key, item in value.items()
+        }
+    return value
 
 
 def _run(command: list[str], cwd: Path, timeout: int = 900) -> dict:
@@ -274,6 +299,7 @@ def main() -> int:
         report["status"] = "INCOMPLETE"
     else:
         report["status"] = "PASS"
+    report = _sanitize_report_value(report)
     rendered = json.dumps(report, indent=2, ensure_ascii=False)
     print(rendered)
     if args.report:

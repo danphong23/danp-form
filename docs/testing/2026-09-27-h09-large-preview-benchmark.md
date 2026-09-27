@@ -7,7 +7,7 @@ guardrail. This closes the fresh background measurement gap for this fixture,
 but it does **not** close the native UI/GPU performance or overlay gates.
 
 The benchmark ran Blender 5.2.1 LTS on Windows 11 against an unsaved temporary
-copy of `girl_chibi_1_compare.blend`. The saved Source has 1,698 vertices, 3,392
+copy of `character_test_compare.blend`. The saved Source has 1,698 vertices, 3,392
 edges, 1,696 faces, 49 control definitions and two Shape Keys. The benchmark
 reset visibility only in that temporary copy; 726 effective control vertices
 and 812 edges were selected. The active deformation target was `Key 1`.

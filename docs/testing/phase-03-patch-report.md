@@ -27,7 +27,7 @@ Fixture lưới hai quad có một edge chung đạt 15 kiểm tra:
 - Hide edge cut gộp hai patch, Reveal khôi phục hai patch;
 - Hide boundary edge không làm thay đổi partition nội bộ.
 
-Kiểm tra trên file Blender đang mở `Project/2. toon/girl_chibi_1.blend`:
+Kiểm tra trên file Blender đang mở `Project/2. toon/character_test.blend`:
 
 - Blender 5.2.1 LTS, cùng phiên người dùng, không mở tiến trình Blender phụ;
 - Source `girl chibi 1`: 1696 face, 50 control definition;

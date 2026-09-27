@@ -5,7 +5,7 @@
 ## Live session and cause
 
 Blender 5.2.1 LTS, installed `bl_ext.user_default.dan_form`, Layout, already-open
-`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+`<PROJECT_ROOT>/Project/2. toon/character_test.blend`.
 Preflight active object was `girl chibi 1` in Object Mode with 37 definitions;
 Source has 1,698 vertices, 3,392 edges and 1,696 faces. Cube has 8 vertices,
 12 edges, 6 faces and 6 definitions. Exactly one addon depsgraph handler was present.

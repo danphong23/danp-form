@@ -2796,7 +2796,7 @@ Chi tiết task: [Phase 2 UX upgrade](../../tasks/phase-02-ux-upgrade.md).
 
 **Date:** 2026-09-18
 **Blender:** 5.2.1 LTS
-**File:** `C:\Users\abc\.AI\Code\danp-animation\Project\2. toon\girl_chibi_1.blend`
+**File:** `<PROJECT_ROOT>\Project\2. toon\character_test.blend`
 **Workspace:** Layout
 **Initial/final dirty state:** `true` / `true`
 **Saved by test:** No
@@ -3031,7 +3031,7 @@ Checklist: [Native list UX tasks](../../tasks/phase-02-native-list-ux.md).
 ## Live session
 
 Blender 5.2.1 LTS, existing open file
-`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+`<PROJECT_ROOT>/Project/2. toon/character_test.blend`.
 Active model `girl chibi 1`, four existing definitions, workspace Layout;
 1,698 vertices, 3,392 edges, 1,696 polygons on Source.
 Dirty was true before and after. No scene builder, separate Blender process, save,
@@ -3134,7 +3134,7 @@ undo/redo or save/reopen validation.
 
 Blender 5.2.1 LTS, workspace Layout, installed extension
 `bl_ext.user_default.dan_form` version 0.2.2. Tests used the already-open
-`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+`<PROJECT_ROOT>/Project/2. toon/character_test.blend`.
 Active object before and after was Cube in Object Mode. The existing model
 `girl chibi 1` has four control definitions. Dirty was true before and after.
 No separate Blender process, scene builder, save, reopen or discard was used.
@@ -3221,7 +3221,7 @@ editing contract.
 ## Live session and cause
 
 Blender 5.2.1 LTS, installed `bl_ext.user_default.dan_form`, Layout, already-open
-`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+`<PROJECT_ROOT>/Project/2. toon/character_test.blend`.
 Preflight active object was `girl chibi 1` in Object Mode with 37 definitions;
 Source has 1,698 vertices, 3,392 edges and 1,696 faces. Cube has 8 vertices,
 12 edges, 6 faces and 6 definitions. Exactly one addon depsgraph handler was present.
@@ -3450,7 +3450,7 @@ temporary pick preview. No new deformation rules or phase 3/4 feature is introdu
 ## Verification
 
 Blender 5.2.1 LTS, Windows; the already-open
-`Project/2. toon/girl_chibi_1.blend`, Layout. No separate Blender process and no
+`Project/2. toon/character_test.blend`, Layout. No separate Blender process and no
 scene builder were used. File was dirty before and after; no save occurred.
 
 | Live suite | Checks | Result |
@@ -3534,7 +3534,7 @@ Fixture lưới hai quad có một edge chung đạt 15 kiểm tra:
 - Hide edge cut gộp hai patch, Reveal khôi phục hai patch;
 - Hide boundary edge không làm thay đổi partition nội bộ.
 
-Kiểm tra trên file Blender đang mở `Project/2. toon/girl_chibi_1.blend`:
+Kiểm tra trên file Blender đang mở `Project/2. toon/character_test.blend`:
 
 - Blender 5.2.1 LTS, cùng phiên người dùng, không mở tiến trình Blender phụ;
 - Source `girl chibi 1`: 1696 face, 50 control definition;
@@ -3603,7 +3603,7 @@ mỗi hướng đều chạy preview rồi Cancel, kiểm tra trạng thái view
 phục tọa độ chính xác, và cuối cùng Hide/Reveal lại vùng control. 15/15 kiểm tra
 đạt; view, active object và mode được phục hồi.
 
-File đang mở: `Project/2. toon/girl_chibi_1.blend`, Blender 5.2.1 LTS,
+File đang mở: `Project/2. toon/character_test.blend`, Blender 5.2.1 LTS,
 MCP kết nối đúng phiên. File đã dirty từ trước; không lưu đè.
 
 - Chọn `Arm.Shoulder.L`: 8 vertex control được chọn, transaction scope 203
@@ -4095,7 +4095,7 @@ Bản nâng cấp chỉ được coi là xong khi người dùng làm liên tụ
 
 # Kiểm tra làm sạch Source, Controller và Undo — 2026-09-21
 
-Blender 5.2.1 LTS trên Windows. Fixture là bản autosave `girl_chibi_1_18168_autosave.blend` có 264 Controller vertex; bài thử chạy nền chỉ đọc file và không lưu. Phiên Blender đang mở dùng cùng file, được nạp mã add-on local để chạy thử và phục hồi geometry/context.
+Blender 5.2.1 LTS trên Windows. Fixture là bản autosave `character_test_autosave.blend` có 264 Controller vertex; bài thử chạy nền chỉ đọc file và không lưu. Phiên Blender đang mở dùng cùng file, được nạp mã add-on local để chạy thử và phục hồi geometry/context.
 
 | Ca | Kỳ vọng | Kết quả |
 | --- | --- | --- |
@@ -5180,7 +5180,7 @@ The active project was not used or saved as a test fixture.
 
 ### Direct UI observation
 
-- Blender 5.2.1 LTS, disposable `C:\Users\abc\AppData\Local\Temp\danp_h05_ui_safe_copy.blend`;
+- Blender 5.2.1 LTS, disposable `<TEMP>\danp_h05_ui_safe_copy.blend`;
   add-on loaded from the working tree in a separate Blender process.
 - The target list displayed Basis, Smile and locked Blink. Selecting Blink
   displayed the lock warning and disabled editing; selecting Smile updated the
@@ -5212,7 +5212,7 @@ The active project was not used or saved as a test fixture.
 **H05 functional gate passes.** The remaining limitation is that the absolute
 target path was verified through the same operator in Blender background mode,
 not by a second panel click. The active project file
-`C:\Users\abc\.AI\Code\danp-animation\Project\2. toon\girl_chibi_1_compare.blend`
+`<PROJECT_ROOT>\Project\2. toon\character_test_compare.blend`
 was already dirty and was not modified or saved by either test path.
 
 ---
@@ -5581,7 +5581,7 @@ and confirms selection leaves Source geometry and control definitions unchanged.
 ## Live Blender session and remaining UI check
 
 MCP read-only inspection found
-`Project/2. toon/girl_chibi_1_compare.blend` open with the Controller in Edit Mode;
+`Project/2. toon/character_test_compare.blend` open with the Controller in Edit Mode;
 the file was already dirty. No changes were made or saved in that session.
 The actual Shift-mouse gesture in the live UI was not exercised, to preserve that
 dirty model. The row names and state markers were later loaded from the workspace
@@ -5926,7 +5926,7 @@ guardrail. This closes the fresh background measurement gap for this fixture,
 but it does **not** close the native UI/GPU performance or overlay gates.
 
 The benchmark ran Blender 5.2.1 LTS on Windows 11 against an unsaved temporary
-copy of `girl_chibi_1_compare.blend`. The saved Source has 1,698 vertices, 3,392
+copy of `character_test_compare.blend`. The saved Source has 1,698 vertices, 3,392
 edges, 1,696 faces, 49 control definitions and two Shape Keys. The benchmark
 reset visibility only in that temporary copy; 726 effective control vertices
 and 812 edges were selected. The active deformation target was `Key 1`.
@@ -6004,3 +6004,117 @@ outlier remains recorded here rather than hidden by raising the threshold.
 Background measurements exclude native mouse input, viewport redraw and GPU
 overlay drawing. They do not prove modal UI latency, animation playback
 performance or fault recovery in the GPU callback. Those remain direct UI gates.
+
+---
+
+<!-- source: docs/package/CHANGELOG.md -->
+
+# DANP Form — Package Changelog
+
+## 0.5.36
+
+- Initialize a Controller child from Object Mode or Source Edit Mode, with
+  rollback if initialization fails.
+- Keep Shape Key target handling explicit and route edits through the shared
+  deformation transaction.
+- Use Blender-native vertex/edge selection and G/R/S; align list, keyboard, and
+  visibility actions with the same control masks.
+- Make topology validation and repair explicit. Mesh duplicates require their
+  own Controller binding.
+- Log viewport overlay draw failures once per failure streak and clear stale
+  display batches without interrupting the viewport.
+
+This is an installable functional candidate. See the package README for open
+release gates.
+
+---
+
+<!-- source: docs/package/README_VI.md -->
+
+# DANP Form 0.5.36
+
+DANP Form là Blender extension giúp chỉnh Source Mesh bằng một Controller con
+có các đường điều khiển thưa. Add-on dùng selection vertex/edge và các phím G/R/S
+của Blender, sau đó truyền chuyển động control lên bề mặt Source.
+
+## Cài đặt
+
+Trong Blender Preferences, chọn **Install from Disk** và mở ZIP DANP Form này.
+Bật extension, rồi mở sidebar (`N`) trong 3D View và chọn **DANP Form**.
+
+## Bắt đầu
+
+1. Chọn mesh làm Source.
+2. Trong panel DANP Form, khởi tạo Controller.
+3. Edit Controller, chọn vertex hoặc edge trên Source và tạo control.
+4. Chọn handle Controller rồi dùng các phím **G**, **R** hoặc **S** như bình
+   thường.
+5. Dùng các nút hiển thị trong panel để ẩn, hiện hoặc quản lý đường control.
+
+Mỗi Source sở hữu Controller con riêng. Sao chép mesh không làm hai model dùng
+chung control; hãy khởi tạo riêng cho bản sao. Thay đổi Shape Key target được
+thực hiện tường minh trong panel.
+
+## Topology và phục hồi
+
+Thay đổi topology Source có thể làm mapping control cũ không còn hợp lệ. DANP
+Form sẽ tạm dừng biến dạng khi phát hiện mapping lỗi. Hãy Undo thao tác topology
+để trở về mapping cũ, hoặc dùng Validate/Repair hay Reset DANP Controls để tạo
+mapping mới theo topology hiện tại. **Reset Model** đưa mesh về dáng Init đã lưu
+và là thao tác riêng có thể Undo.
+
+Đây là bản chức năng có thể cài để kiểm thử. Kiểm thử UI trực tiếp cho phím tắt,
+visibility Undo/Redo/save-reopen, overlay GPU, hiệu năng UI và thông tin chủ thể
+bản quyền vẫn còn mở; chưa phải chứng nhận phát hành.
+
+## Giấy phép
+
+DANP Form dùng giấy phép GPL-3.0-or-later; gói có toàn văn giấy phép và thông
+báo thư viện bên thứ ba về NumPy tùy chọn.
+
+---
+
+<!-- source: docs/package/README.md -->
+
+# DANP Form 0.5.36
+
+DANP Form is a Blender extension for shaping a Source mesh through a sparse,
+editable Controller child. It uses Blender's normal vertex and edge selection
+and G/R/S tools, then transfers the control motion to the Source surface.
+
+## Install
+
+In Blender Preferences, choose **Install from Disk** and select this DANP Form
+ZIP. Enable the extension, then open a 3D View and choose **DANP Form** in the
+sidebar (`N`).
+
+## First use
+
+1. Select a mesh to use as the Source.
+2. In the DANP Form panel, initialize its Controller.
+3. Edit the Controller and create controls from selected Source vertices or
+   edges.
+4. Select Controller handles and use Blender's normal **G**, **R**, or **S**.
+5. Use the panel's visibility controls to hide, reveal, or manage control lines.
+
+Every Source owns its Controller child. Duplicating a mesh does not make its
+controls share a binding; initialize the duplicate separately. Shape Key target
+changes are explicit in the panel.
+
+## Topology and recovery
+
+Changing Source topology can invalidate persistent control IDs. DANP Form pauses
+deformation when it detects a stale mapping. Undo the topology edit to restore the
+previous mapping, or use Validate/Repair or Reset DANP Controls to create a new
+mapping on the current topology. **Reset Model** returns to the captured Init
+pose and is a separate, undoable action.
+
+This build is an installable functional candidate. Direct UI keymap/visibility
+Undo/Redo/save-reopen, GPU overlay review, native UI performance, and final
+maintainer attribution are still under review; do not treat it as release
+certification.
+
+## License
+
+DANP Form is distributed under GPL-3.0-or-later; the package includes the full
+license text and third-party notices for optional NumPy acceleration.

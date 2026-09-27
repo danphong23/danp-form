@@ -46,10 +46,3 @@ are recorded in the repository-side report
 `docs/testing/2026-09-27-h10-package-candidate.json`.
 The candidate is functional, not release-certified; direct C02/H08/UI performance
 checks and maintainer attribution remain open.
-
-**2026-09-27 post-diagnostics package:** after adding visible, throttled overlay
-failure diagnostics and passing the current 10 static / 11 background suites,
-rebuild a commit-pinned archive and smoke-test it on Blender 5.2.1. Keep the
-candidate explicitly uncertified while C02 UI, GPU overlay, native UI performance,
-and maintainer attribution remain open. Evidence is recorded in
-[`2026-09-27-h10-post-overlay-package.json`](../../docs/testing/2026-09-27-h10-post-overlay-package.json).

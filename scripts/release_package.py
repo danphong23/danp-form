@@ -12,29 +12,28 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_ROOT_FILES = (
-    "README.md", "README_VI.md", "CHANGELOG.md", "LICENSE.md",
-    "THIRD_PARTY_NOTICES.md",
+    "LICENSE.md", "THIRD_PARTY_NOTICES.md",
     "blender_manifest.toml",
 )
-FORBIDDEN_PARTS = {".git", "__pycache__", "tests", "test", ".pytest_cache"}
-EXCLUDED_DOCS = {
-    "docs/testing/2026-09-25-h10-package-candidate.md",
+PACKAGE_READMES = {
+    "README.md": ROOT / "docs" / "package" / "README.md",
+    "README_VI.md": ROOT / "docs" / "package" / "README_VI.md",
+    "CHANGELOG.md": ROOT / "docs" / "package" / "CHANGELOG.md",
 }
+FORBIDDEN_PARTS = {".git", "__pycache__", "docs", "tasks", "tests", "test", ".pytest_cache"}
+LOCAL_WINDOWS_PROFILE = re.compile(rb"(?:[A-Z]:|/)[\\/]+Users[\\/]+[^\\/]+[\\/]+", re.IGNORECASE)
+PRIVATE_ASSET_MARKERS = (b"girl_chibi_1",)
 
 
 def package_entries() -> dict[str, Path]:
     entries = {name: ROOT / name for name in PACKAGE_ROOT_FILES}
+    entries.update(PACKAGE_READMES)
     for path in (ROOT / "dan_form").rglob("*"):
         # Runtime currently consists only of Python modules. Add future assets
         # explicitly rather than shipping arbitrary files dropped into source.
         if not path.is_file() or "__pycache__" in path.parts or path.suffix != ".py":
             continue
         entries[path.relative_to(ROOT / "dan_form").as_posix()] = path
-    for folder in ("docs", "tasks"):
-        for path in (ROOT / folder).rglob("*.md"):
-            relative = path.relative_to(ROOT).as_posix()
-            if relative not in EXCLUDED_DOCS:
-                entries[relative] = path
     return entries
 
 
@@ -49,9 +48,11 @@ def validate(archive: Path) -> tuple[list[str], str]:
         if any(any(part in FORBIDDEN_PARTS for part in Path(name).parts)
                or name.endswith((".pyc", ".pyo")) for name in names):
             raise ValueError("Package contains a test/cache/build artifact")
+        for name in names:
+            _validate_public_content(name, package.read(name))
         required = {
             "__init__.py", "blender_manifest.toml", "LICENSE.md", "README.md",
-            "README_VI.md", "THIRD_PARTY_NOTICES.md",
+            "README_VI.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md",
         }
         missing = sorted(required - set(names))
         if missing:
@@ -67,6 +68,15 @@ def validate(archive: Path) -> tuple[list[str], str]:
             raise ValueError("Unexpected extension ID")
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         return names, digest
+
+
+def _validate_public_content(name: str, content: bytes) -> None:
+    """Reject machine-specific paths and user-project names in shipped files."""
+    if LOCAL_WINDOWS_PROFILE.search(content):
+        raise ValueError(f"Package member contains a local Windows profile path: {name}")
+    lowered = content.lower()
+    if any(marker in lowered for marker in PRIVATE_ASSET_MARKERS):
+        raise ValueError(f"Package member contains a private test asset name: {name}")
 
 
 def main() -> int:

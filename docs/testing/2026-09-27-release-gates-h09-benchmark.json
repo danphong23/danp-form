@@ -6,7 +6,7 @@
     "platform": "Windows-11-10.0.26200-SP0",
     "commit": "1c7c3fa4e43e50992ebcd3fc0459fee9e52c2374",
     "fixture_project": "generated two-control strip",
-    "benchmark_project": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h09_source_copy_20260927.blend"
+    "benchmark_project": "<TEMP>\\danp_h09_source_copy_20260927.blend"
   },
   "static_suites": [
     {
@@ -367,7 +367,7 @@
         "checks_count": 21
       },
       "output_tail": [
-        "00:02.422  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h07_topology_recovery.blend\"",
+        "00:02.422  blend            | Read blend: \"<TEMP>\\danp_h07_topology_recovery.blend\"",
         "Info: Topology repair is safe: +3 vertices, +3 edges, -0 vertices, -0 edges; 1 protected faces unchanged",
         "Error: DANP Form could not complete this action (INJECTED_PROXY_REBUILD_FAILURE).",
         "Info: DANP mapping repaired: +3 vertices, +3 edges; controls and Shape Keys preserved",
@@ -607,7 +607,7 @@
       "exception_in_log": false,
       "elapsed_seconds": 2.842,
       "report": {
-        "file": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-p1h7xe2y\\native_transform_fixture.blend",
+        "file": "<TEMP>\\danp-h04-safe-copy-p1h7xe2y\\native_transform_fixture.blend",
         "dirty_before": false,
         "checks": [
           "native Blender transform finishes",
@@ -652,8 +652,8 @@
         "runtime_clean": true
       },
       "output_tail": [
-        "00:02.266  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp-h04-safe-copy-p1h7xe2y\\native_transform_fixture.blend\"",
-        "DANP_RESULT_JSON={\"file\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp-h04-safe-copy-p1h7xe2y\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\", \"timer registration failure rolls back the owned native session\", \"timer callback exception rolls back geometry and clears owned state\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
+        "00:02.266  blend            | Read blend: \"<TEMP>\\danp-h04-safe-copy-p1h7xe2y\\native_transform_fixture.blend\"",
+        "DANP_RESULT_JSON={\"file\": \"<TEMP>\\\\danp-h04-safe-copy-p1h7xe2y\\\\native_transform_fixture.blend\", \"dirty_before\": false, \"checks\": [\"native Blender transform finishes\", \"depsgraph observer starts native transform session\", \"native Controller transform deforms Source\", \"adjacent unselected control remains stationary\", \"native proportional radius deforms nearby patch vertices\", \"native transform commits and closes runtime transaction\", \"commit records paired Source undo state\", \"unrelated undo does not rewind the latest transform\", \"paired undo restores Source exactly\", \"paired redo restores Source exactly\", \"native Rotate transform finishes\", \"depsgraph observer starts native Rotate session\", \"native Rotate transform deforms Source\", \"adjacent control remains stationary during Rotate\", \"native Rotate transform commits\", \"native Scale transform finishes\", \"depsgraph observer starts native Scale session\", \"native Scale transform deforms Source\", \"adjacent control remains stationary during Scale\", \"native Scale transform commits\", \"consecutive native Scale starts from the committed pose\", \"cancel test creates a live Source preview\", \"cancel restores Source exactly\", \"cancel restores Controller exactly\", \"timer registration failure rolls back the owned native session\", \"timer callback exception rolls back geometry and clears owned state\"], \"status\": \"PASS\", \"native_result\": [\"FINISHED\"], \"selected_vertices\": 2, \"adjacent_only_vertices\": 2, \"preview_delta\": 0.009999999873689375, \"adjacent_stationary_error\": 0.0, \"dirty_after\": false, \"restored_active\": \"DANP Native Transform Fixture\", \"restored_mode\": \"OBJECT\", \"source_restore_error\": 0.0, \"runtime_clean\": true}",
         "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
         "",
         "Blender quit"
@@ -678,7 +678,7 @@
     "report": {
       "status": "PASS",
       "fixture": {
-        "path": "C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h09_source_copy_20260927.blend",
+        "path": "<TEMP>\\danp_h09_source_copy_20260927.blend",
         "source_vertices": 1698,
         "source_edges": 3392,
         "source_faces": 1696,
@@ -716,12 +716,12 @@
       ]
     },
     "output_tail": [
-      "00:01.860  blend            | Read blend: \"C:\\Users\\abc\\AppData\\Local\\Temp\\danp_h09_source_copy_20260927.blend\"",
-      "DANP_RESULT_JSON={\"confirm_commit_ms\": 1.8810000037774444, \"fixture\": {\"active_target\": \"Key 1\", \"control_definitions\": 49, \"path\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp_h09_source_copy_20260927.blend\", \"selected_source_vertices\": 726, \"shape_key_count\": 2, \"source_edges\": 3392, \"source_faces\": 1696, \"source_vertices\": 1698, \"visible_controller_edges\": 812, \"visible_controller_vertices\": 726}, \"limitations\": [\"Background workflow timing excludes native mouse dispatch, viewport redraw, and GPU overlay drawing.\", \"Process peak working set is a process-lifetime high-water mark and includes file loading/setup.\", \"Control visibility is reset only in this unsaved disposable copy.\"], \"preview\": {\"changed_vertices\": 1698, \"measured_samples\": 30, \"median_ms\": 17.202199989696965, \"p95_ms\": 20.520600024610758, \"scope_vertices\": 1698, \"warmup_samples\": 4}, \"process_memory_after\": {\"process_peak_working_set_mb\": 280.77734375, \"working_set_mb\": 278.578125}, \"process_memory_before\": {\"process_peak_working_set_mb\": 280.77734375, \"working_set_mb\": 277.79296875}, \"status\": \"PASS\", \"thresholds\": {\"background_preview_p95_max_ms\": 40.0}}",
-      "DANP_RESULT_JSON={\"status\": \"PASS\", \"fixture\": {\"path\": \"C:\\\\Users\\\\abc\\\\AppData\\\\Local\\\\Temp\\\\danp_h09_source_copy_20260927.blend\", \"source_vertices\": 1698, \"source_edges\": 3392, \"source_faces\": 1696, \"control_definitions\": 49, \"visible_controller_vertices\": 726, \"visible_controller_edges\": 812, \"selected_source_vertices\": 726, \"shape_key_count\": 2, \"active_target\": \"Key 1\"}, \"preview\": {\"warmup_samples\": 4, \"measured_samples\": 30, \"median_ms\": 17.202199989696965, \"p95_ms\": 20.520600024610758, \"scope_vertices\": 1698, \"changed_vertices\": 1698}, \"confirm_commit_ms\": 1.8810000037774444, \"thresholds\": {\"background_preview_p95_max_ms\": 40.0}, \"process_memory_before\": {\"working_set_mb\": 277.79296875, \"process_peak_working_set_mb\": 280.77734375}, \"process_memory_after\": {\"working_set_mb\": 278.578125, \"process_peak_working_set_mb\": 280.77734375}, \"limitations\": [\"Background workflow timing excludes native mouse dispatch, viewport redraw, and GPU overlay drawing.\", \"Process peak working set is a process-lifetime high-water mark and includes file loading/setup.\", \"Control visibility is reset only in this unsaved disposable copy.\"]}",
+      "00:01.860  blend            | Read blend: \"<TEMP>\\danp_h09_source_copy_20260927.blend\"",
+      "DANP_RESULT_JSON={\"confirm_commit_ms\": 1.8810000037774444, \"fixture\": {\"active_target\": \"Key 1\", \"control_definitions\": 49, \"path\": \"<TEMP>\\\\danp_h09_source_copy_20260927.blend\", \"selected_source_vertices\": 726, \"shape_key_count\": 2, \"source_edges\": 3392, \"source_faces\": 1696, \"source_vertices\": 1698, \"visible_controller_edges\": 812, \"visible_controller_vertices\": 726}, \"limitations\": [\"Background workflow timing excludes native mouse dispatch, viewport redraw, and GPU overlay drawing.\", \"Process peak working set is a process-lifetime high-water mark and includes file loading/setup.\", \"Control visibility is reset only in this unsaved disposable copy.\"], \"preview\": {\"changed_vertices\": 1698, \"measured_samples\": 30, \"median_ms\": 17.202199989696965, \"p95_ms\": 20.520600024610758, \"scope_vertices\": 1698, \"warmup_samples\": 4}, \"process_memory_after\": {\"process_peak_working_set_mb\": 280.77734375, \"working_set_mb\": 278.578125}, \"process_memory_before\": {\"process_peak_working_set_mb\": 280.77734375, \"working_set_mb\": 277.79296875}, \"status\": \"PASS\", \"thresholds\": {\"background_preview_p95_max_ms\": 40.0}}",
+      "DANP_RESULT_JSON={\"status\": \"PASS\", \"fixture\": {\"path\": \"<TEMP>\\\\danp_h09_source_copy_20260927.blend\", \"source_vertices\": 1698, \"source_edges\": 3392, \"source_faces\": 1696, \"control_definitions\": 49, \"visible_controller_vertices\": 726, \"visible_controller_edges\": 812, \"selected_source_vertices\": 726, \"shape_key_count\": 2, \"active_target\": \"Key 1\"}, \"preview\": {\"warmup_samples\": 4, \"measured_samples\": 30, \"median_ms\": 17.202199989696965, \"p95_ms\": 20.520600024610758, \"scope_vertices\": 1698, \"changed_vertices\": 1698}, \"confirm_commit_ms\": 1.8810000037774444, \"thresholds\": {\"background_preview_p95_max_ms\": 40.0}, \"process_memory_before\": {\"working_set_mb\": 277.79296875, \"process_peak_working_set_mb\": 280.77734375}, \"process_memory_after\": {\"working_set_mb\": 278.578125, \"process_peak_working_set_mb\": 280.77734375}, \"limitations\": [\"Background workflow timing excludes native mouse dispatch, viewport redraw, and GPU overlay drawing.\", \"Process peak working set is a process-lifetime high-water mark and includes file loading/setup.\", \"Control visibility is reset only in this unsaved disposable copy.\"]}",
       "Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)",
       "",
       "Blender quit"
     ]
   }
-}
+}

@@ -36,7 +36,7 @@ temporary pick preview. No new deformation rules or phase 3/4 feature is introdu
 ## Verification
 
 Blender 5.2.1 LTS, Windows; the already-open
-`Project/2. toon/girl_chibi_1.blend`, Layout. No separate Blender process and no
+`Project/2. toon/character_test.blend`, Layout. No separate Blender process and no
 scene builder were used. File was dirty before and after; no save occurred.
 
 | Live suite | Checks | Result |

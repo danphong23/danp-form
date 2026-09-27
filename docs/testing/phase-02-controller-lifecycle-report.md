@@ -6,7 +6,7 @@
 
 Blender 5.2.1 LTS, workspace Layout, installed extension
 `bl_ext.user_default.dan_form` version 0.2.2. Tests used the already-open
-`C:/Users/abc/.AI/Code/danp-animation/Project/2. toon/girl_chibi_1.blend`.
+`<PROJECT_ROOT>/Project/2. toon/character_test.blend`.
 Active object before and after was Cube in Object Mode. The existing model
 `girl chibi 1` has four control definitions. Dirty was true before and after.
 No separate Blender process, scene builder, save, reopen or discard was used.
