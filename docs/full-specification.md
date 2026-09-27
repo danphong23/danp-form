@@ -5316,13 +5316,17 @@ The active project was not used or saved as a test fixture.
 - Expected stale topology, locked target, and invalid binding errors are
   surfaced as paused/error states. The overlay's broad exception boundary is
   intentionally retained so a GPU draw failure cannot break Blender's viewport;
-  it drops cached batches so stale geometry is not displayed.
+  it drops cached batches so stale geometry is not displayed and logs a
+  contextual traceback once per consecutive failure streak.
 
 ## Verification
 
 - Blender 5.2.1 background runtime fixture passed 12 checks across two complete
   register/unregister cycles, handler uniqueness, overlay lifecycle, undo/load
   cache invalidation, and re-registration.
+- Static regression coverage verifies overlay failures clear cached geometry,
+  emit diagnostic context, and avoid flooding Blender's console during repeated
+  draw failures. A GPU-backed injected-failure check remains open.
 - H04 native transform, H05 target workflow, H06 agent API and H07 recovery
   fixtures pass in their phase reports.
 - Existing representative performance evidence is recorded in

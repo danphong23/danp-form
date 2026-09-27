@@ -39,3 +39,10 @@ passed 9/9 static suites, 11/11 Blender suites and the representative benchmark.
 Release remains `INCOMPLETE`: direct C02 UI Undo/Redo/save-reopen, H08 GPU,
 native UI performance and maintainer attribution are outstanding. See the
 [2026-09-27 H09 benchmark report](../../docs/testing/2026-09-27-h09-large-preview-benchmark.md).
+
+**Post-overlay diagnostics regression, 2026-09-27:** the runner was repeated
+against source commit `4703f2f` after adding visible/throttled GPU overlay error
+reporting. All 10 static suites and all 11 Blender 5.2.1 background suites
+passed. This run did not include the large-mesh benchmark or GPU/UI checks;
+the report remains `INCOMPLETE` and is recorded at
+[`2026-09-27-post-overlay-diagnostics-gates.json`](../../docs/testing/2026-09-27-post-overlay-diagnostics-gates.json).

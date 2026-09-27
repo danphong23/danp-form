@@ -221,8 +221,8 @@
   },
   {
     "path": "docs/full-specification.md",
-    "sha256": "9ba94ddace0c8ab28253653d11202030fb9e55630e73c10111fce6269eb357a4",
-    "bytes": 360073
+    "sha256": "995403061ae38c51d928b2d92c0c85ee215302ace04e1e5c523f883ff7b5614c",
+    "bytes": 360368
   },
   {
     "path": "docs/product/leg-control-examples.md",
@@ -331,8 +331,8 @@
   },
   {
     "path": "docs/testing/2026-09-25-h08-runtime-architecture.md",
-    "sha256": "2083138bfca006316304adac14aa83479b402bf34b80fbb990b76779fb2ab269",
-    "bytes": 2077
+    "sha256": "6814e25d1d4b72f598e236dbb98bbbd547293ba959fcd93f93f08cba1cbe69d4",
+    "bytes": 2372
   },
   {
     "path": "docs/testing/2026-09-25-h09-release-gates.md",
@@ -571,8 +571,8 @@
   },
   {
     "path": "tasks/release-hardening/h09-release-gates.md",
-    "sha256": "e5581020b4224a8a996ebfea6e94d41c2d82add089bc4af5b233be804f36eaef",
-    "bytes": 2788
+    "sha256": "99a1250390116bc1f64f25bb21a9eb0adf4f33898a82548eae8ad4447ee38875",
+    "bytes": 3268
   },
   {
     "path": "tasks/release-hardening/h10-package-release.md",
