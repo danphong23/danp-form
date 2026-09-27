@@ -37,3 +37,12 @@ extract/import/register/unregister smoke; see
 `docs/testing/2026-09-26-h10-package-candidate.json` for checksum and report.
 H08 GPU, representative performance, C02 UI regression, and copyright-holder
 attribution remain open; this is not release certification.
+
+**2026-09-27 package follow-up:** a fresh 0.5.36 archive from the current
+verified source also passes package validation and Blender 5.2.1
+extract/import/register/unregister smoke. The archive is retained only under
+the ignored `dist/` output directory; its exact commit, checksum and gate status
+are recorded in
+[`docs/testing/2026-09-27-h10-package-candidate.json`](../../docs/testing/2026-09-27-h10-package-candidate.json).
+The candidate is functional, not release-certified; direct C02/H08/UI performance
+checks and maintainer attribution remain open.
